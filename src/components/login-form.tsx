@@ -43,12 +43,12 @@ export function LoginForm() {
         title: 'Login Berhasil',
         description: 'Anda akan diarahkan ke dashboard.',
       });
-      router.push('/dashboard');
+      // AuthProvider will handle redirect
     } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Login Gagal',
-        description: error.message,
+        description: 'Email atau password salah.',
       });
     } finally {
       setIsLoading(false);
@@ -58,14 +58,14 @@ export function LoginForm() {
   return (
     <Card className="w-full max-w-sm">
       <CardHeader>
-        <CardTitle>Login Guru</CardTitle>
-        <CardDescription>Masukkan kredensial Anda untuk mengakses dashboard.</CardDescription>
+        <CardTitle>Login</CardTitle>
+        <CardDescription>Masukkan kredensial Anda untuk mengakses akun.</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="guru@smpn1sampit.sch.id" {...form.register('email')} />
+            <Input id="email" type="email" placeholder="nama@email.com" {...form.register('email')} />
             {form.formState.errors.email && <p className="text-sm text-destructive mt-1">{form.formState.errors.email.message}</p>}
           </div>
           <div className="space-y-2">

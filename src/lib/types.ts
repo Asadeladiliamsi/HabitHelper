@@ -21,3 +21,12 @@ export const HABIT_NAMES = [
   'Wujudkan Sinergi',
   'Asah Gergaji',
 ];
+
+export type UserRole = 'guru' | 'siswa' | 'orangtua';
+
+export interface UserProfile {
+    uid: string;
+    email: string | null;
+    role: UserRole;
+    name?: string;
+}

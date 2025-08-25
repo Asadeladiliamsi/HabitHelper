@@ -75,8 +75,8 @@ export default function LandingPage() {
             <span className="font-bold text-xl text-primary">HabitHelper</span>
           </Link>
           <Button asChild>
-            <Link href="/dashboard">
-              Buka Dashboard
+            <Link href="/login">
+              Login
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
@@ -94,7 +94,7 @@ export default function LandingPage() {
             </p>
             <div className="mt-10 flex justify-center gap-4">
               <Button size="lg" asChild>
-                <Link href="/dashboard">Mulai Sekarang</Link>
+                <Link href="/register">Mulai Sekarang</Link>
               </Button>
             </div>
           </div>
