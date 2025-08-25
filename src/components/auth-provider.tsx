@@ -59,14 +59,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (loading) return;
 
-    const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
+    const isPublicRoute = PUBLIC_ROUTES.some(route => pathname.startsWith(route) && (route.length === 1 || pathname.length === route.length));
     const isGuestOnlyRoute = GUEST_ONLY_ROUTES.includes(pathname);
+    const isDashboardRoute = pathname.includes('/dashboard');
 
     if (user && userProfile) {
         // If user is logged in
         const dashboardRoute = getDashboardRouteForRole(userProfile.role);
         if (isGuestOnlyRoute) {
             // and tries to access login/register, redirect to their dashboard
+            router.push(dashboardRoute);
+        } else if (isDashboardRoute && pathname !== dashboardRoute) {
+             // if user is on a dashboard page but not their own, redirect them
+            // this is a fallback, ideally link shoudln't be there in the first place
             router.push(dashboardRoute);
         }
     } else if (!user && !isPublicRoute) {
