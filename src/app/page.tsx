@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, Zap, Target, ListChecks, Handshake, Ear, Combine, HeartPulse, LogIn } from 'lucide-react';
+import { CheckCircle, Zap, Target, ListChecks, Handshake, Ear, Combine, HeartPulse, ArrowRight } from 'lucide-react';
 import { Logo } from '@/components/icons/logo';
 
 const habits = [
@@ -75,9 +75,9 @@ export default function LandingPage() {
             <span className="font-bold text-xl text-primary">HabitHelper</span>
           </Link>
           <Button asChild>
-            <Link href="/login">
-              <LogIn className="mr-2 h-4 w-4" />
-              Login
+            <Link href="/dashboard">
+              Buka Dashboard
+              <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
         </div>
@@ -94,7 +94,7 @@ export default function LandingPage() {
             </p>
             <div className="mt-10 flex justify-center gap-4">
               <Button size="lg" asChild>
-                <Link href="/login">Mulai Sekarang</Link>
+                <Link href="/dashboard">Mulai Sekarang</Link>
               </Button>
             </div>
           </div>

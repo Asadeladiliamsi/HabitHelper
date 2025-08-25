@@ -8,19 +8,8 @@ import {
   Bell,
   FileText,
   Settings,
-  LogOut,
-  UserCircle,
 } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
   SidebarProvider,
   Sidebar,
@@ -88,33 +77,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-card px-4 sm:px-6">
           <SidebarTrigger className="md:hidden" />
           <div className="flex-1"></div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <Avatar>
-                  <AvatarImage src="https://placehold.co/100x100.png" alt="User" />
-                  <AvatarFallback>
-                    <UserCircle />
-                  </AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Akun Saya</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Pengaturan</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <Link href="/" legacyBehavior passHref>
-                <DropdownMenuItem>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Logout</span>
-                </DropdownMenuItem>
-              </Link>
-            </DropdownMenuContent>
-          </DropdownMenu>
+           <Button variant="ghost" size="icon" className="rounded-full" asChild>
+            <Link href="#">
+              <Settings />
+            </Link>
+          </Button>
         </header>
         <main className="flex-1 p-4 sm:p-6">{children}</main>
       </SidebarInset>
