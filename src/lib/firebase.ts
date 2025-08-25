@@ -3,12 +3,12 @@ import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyASvbApR6BP1T0g_ySTZWkxEdkVfsW_yiY",
-  authDomain: "habithelper-9o371.firebaseapp.com",
-  projectId: "habithelper-9o371",
-  storageBucket: "habithelper-9o371.appspot.com",
-  messagingSenderId: "140507692145",
-  appId: "1:140507692145:web:37f29c86ff391f3ec66fd0",
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
 
