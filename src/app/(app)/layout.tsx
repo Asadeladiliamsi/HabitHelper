@@ -70,10 +70,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <SidebarFooter>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton tooltip={{children: "Settings"}}>
+                <Link href="/settings">
+                  <SidebarMenuButton
+                    isActive={pathname.startsWith('/settings')}
+                    tooltip={{ children: 'Settings' }}
+                  >
                     <Settings />
                     <span>Settings</span>
-                </SidebarMenuButton>
+                  </SidebarMenuButton>
+                </Link>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarFooter>
