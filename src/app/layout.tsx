@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from '@/contexts/theme-provider';
+import { LanguageProvider } from '@/contexts/language-provider';
 
 export const metadata: Metadata = {
   title: 'HabitHelper',
@@ -26,8 +27,10 @@ export default function RootLayout({
           defaultTheme="system"
           enableSystem
         >
-          {children}
-          <Toaster />
+          <LanguageProvider>
+            {children}
+            <Toaster />
+          </LanguageProvider>
         </ThemeProvider>
       </body>
     </html>
