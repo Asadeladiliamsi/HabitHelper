@@ -37,8 +37,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const navItems = [
     { href: '/guru/dashboard', icon: LayoutDashboard, label: t.sidebar.dashboard },
     { href: '/guru/data-input', icon: FilePlus2, label: t.sidebar.dataInput },
-    { href: '/manage-students', icon: Users, label: t.sidebar.manageStudents },
-    { href: '/edit-scores', icon: Pencil, label: t.sidebar.editScores },
+    { href: '/guru/manage-students', icon: Users, label: t.sidebar.manageStudents },
+    { href: '/guru/edit-scores', icon: Pencil, label: t.sidebar.editScores },
     { href: '/guru/notifications', icon: Bell, label: t.sidebar.notifications },
     { href: '/guru/reports', icon: FileText, label: t.sidebar.reports },
   ];
