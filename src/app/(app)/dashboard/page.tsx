@@ -7,12 +7,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { overallHabitData } from '@/lib/mock-data';
 import {
-  Zap,
-  Target,
-  ListChecks,
-  Handshake,
-  Ear,
-  Combine,
+  Sunrise,
+  BookOpen,
   HeartPulse,
   Users,
   TrendingUp,
@@ -20,6 +16,9 @@ import {
   ArrowUp,
   ArrowDown,
   Minus,
+  Utensils,
+  HandHelping,
+  Church
 } from 'lucide-react';
 import type { Student, Habit } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -29,13 +28,12 @@ import { translations } from '@/lib/translations';
 
 
 const habitIcons: { [key: string]: React.ReactNode } = {
-  'Proaktif': <Zap className="h-5 w-5 text-yellow-500" />,
-  'Mulai dengan Tujuan Akhir': <Target className="h-5 w-5 text-red-500" />,
-  'Dahulukan yang Utama': <ListChecks className="h-5 w-5 text-blue-500" />,
-  'Berpikir Menang-Menang': <Handshake className="h-5 w-5 text-green-500" />,
-  'Berusaha Mengerti Dahulu, Baru Dimengerti': <Ear className="h-5 w-5 text-purple-500" />,
-  'Wujudkan Sinergi': <Combine className="h-5 w-5 text-orange-500" />,
-  'Asah Gergaji': <HeartPulse className="h-5 w-5 text-pink-500" />,
+  'Bangun Pagi': <Sunrise className="h-5 w-5 text-yellow-500" />,
+  'Taat Beribadah': <Church className="h-5 w-5 text-purple-500" />,
+  'Rajin Olahraga': <HeartPulse className="h-5 w-5 text-red-500" />,
+  'Makan Sehat & Bergizi': <Utensils className="h-5 w-5 text-green-500" />,
+  'Gemar Belajar': <BookOpen className="h-5 w-5 text-blue-500" />,
+  'Bermasyarakat': <HandHelping className="h-5 w-5 text-orange-500" />,
 };
 
 export default function DashboardPage() {
@@ -45,23 +43,12 @@ export default function DashboardPage() {
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
 
   const habitTranslationMapping: Record<string, string> = {
-    'Proaktif': tHabits.proactive.name,
-    'Mulai dengan Tujuan Akhir': tHabits.beginWithEnd.name,
-    'Dahulukan yang Utama': tHabits.firstThingsFirst.name,
-    'Berpikir Menang-Menang': tHabits.thinkWinWin.name,
-    'Berusaha Mengerti Dahulu, Baru Dimengerti': tHabits.seekFirstToUnderstand.name,
-    'Wujudkan Sinergi': tHabits.synergize.name,
-    'Asah Gergaji': tHabits.sharpenTheSaw.name,
-  };
-
-  const translatedHabitIcons: { [key: string]: React.ReactNode } = {
-    [tHabits.proactive.name]: habitIcons['Proaktif'],
-    [tHabits.beginWithEnd.name]: habitIcons['Mulai dengan Tujuan Akhir'],
-    [tHabits.firstThingsFirst.name]: habitIcons['Dahulukan yang Utama'],
-    [tHabits.thinkWinWin.name]: habitIcons['Berpikir Menang-Menang'],
-    [tHabits.seekFirstToUnderstand.name]: habitIcons['Berusaha Mengerti Dahulu, Baru Dimengerti'],
-    [tHabits.synergize.name]: habitIcons['Wujudkan Sinergi'],
-    [tHabits.sharpenTheSaw.name]: habitIcons['Asah Gergaji'],
+    'Bangun Pagi': tHabits.bangunPagi.name,
+    'Taat Beribadah': tHabits.taatBeribadah.name,
+    'Rajin Olahraga': tHabits.rajinOlahraga.name,
+    'Makan Sehat & Bergizi': tHabits.makanSehat.name,
+    'Gemar Belajar': tHabits.gemarBelajar.name,
+    'Bermasyarakat': tHabits.bermasyarakat.name,
   };
   
   return (
@@ -98,7 +85,7 @@ export default function DashboardPage() {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">7</div>
+            <div className="text-2xl font-bold">6</div>
             <p className="text-xs text-muted-foreground">{t.coreHabitsMonitored}</p>
           </CardContent>
         </Card>

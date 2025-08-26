@@ -13,13 +13,12 @@ export interface Student {
 }
 
 export const HABIT_NAMES = [
-  'Proaktif',
-  'Mulai dengan Tujuan Akhir',
-  'Dahulukan yang Utama',
-  'Berpikir Menang-Menang',
-  'Berusaha Mengerti Dahulu, Baru Dimengerti',
-  'Wujudkan Sinergi',
-  'Asah Gergaji',
+  'Bangun Pagi',
+  'Taat Beribadah',
+  'Rajin Olahraga',
+  'Makan Sehat & Bergizi',
+  'Gemar Belajar',
+  'Bermasyarakat',
 ];
 
 export type UserRole = 'guru' | 'siswa' | 'orangtua';

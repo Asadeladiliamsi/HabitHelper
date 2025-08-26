@@ -39,13 +39,12 @@ export function NotificationsClient() {
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
 
   const habitTranslationMapping: Record<string, string> = {
-    'Proaktif': tHabits.proactive.name,
-    'Mulai dengan Tujuan Akhir': tHabits.beginWithEnd.name,
-    'Dahulukan yang Utama': tHabits.firstThingsFirst.name,
-    'Berpikir Menang-Menang': tHabits.thinkWinWin.name,
-    'Berusaha Mengerti Dahulu, Baru Dimengerti': tHabits.seekFirstToUnderstand.name,
-    'Wujudkan Sinergi': tHabits.synergize.name,
-    'Asah Gergaji': tHabits.sharpenTheSaw.name,
+    'Bangun Pagi': tHabits.bangunPagi.name,
+    'Taat Beribadah': tHabits.taatBeribadah.name,
+    'Rajin Olahraga': tHabits.rajinOlahraga.name,
+    'Makan Sehat & Bergizi': tHabits.makanSehat.name,
+    'Gemar Belajar': tHabits.gemarBelajar.name,
+    'Bermasyarakat': tHabits.bermasyarakat.name,
   };
 
   const form = useForm<FormValues>({

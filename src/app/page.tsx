@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, Zap, Target, ListChecks, Handshake, Ear, Combine, HeartPulse, ArrowRight } from 'lucide-react';
+import { CheckCircle, Sunrise, BookOpen, HeartPulse, Users, TrendingUp, Activity, ArrowRight, Utensils, HandHelping, Church } from 'lucide-react';
 import { Logo } from '@/components/icons/logo';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
@@ -11,46 +11,40 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 
 const habits = [
   {
-    icon: <Zap className="h-8 w-8 text-accent" />,
-    name: 'Proaktif',
-    description: 'Mengambil inisiatif dan bertanggung jawab atas pilihan.',
-    translationKey: 'proactive'
+    icon: <Sunrise className="h-8 w-8 text-accent" />,
+    name: 'Bangun Pagi',
+    description: 'Memulai hari lebih awal untuk produktivitas.',
+    translationKey: 'bangunPagi'
   },
   {
-    icon: <Target className="h-8 w-8 text-accent" />,
-    name: 'Mulai dengan Tujuan Akhir',
-    description: 'Menetapkan tujuan dan visi untuk masa depan.',
-    translationKey: 'beginWithEnd'
-  },
-  {
-    icon: <ListChecks className="h-8 w-8 text-accent" />,
-    name: 'Dahulukan yang Utama',
-    description: 'Memprioritaskan hal-hal yang paling penting.',
-    translationKey: 'firstThingsFirst'
-  },
-  {
-    icon: <Handshake className="h-8 w-8 text-accent" />,
-    name: 'Berpikir Menang-Menang',
-    description: 'Mencari solusi yang menguntungkan semua pihak.',
-    translationKey: 'thinkWinWin'
-  },
-  {
-    icon: <Ear className="h-8 w-8 text-accent" />,
-    name: 'Berusaha Mengerti Dahulu',
-    description: 'Mendengarkan dengan empati untuk memahami orang lain.',
-    translationKey: 'seekFirstToUnderstand'
-  },
-  {
-    icon: <Combine className="h-8 w-8 text-accent" />,
-    name: 'Wujudkan Sinergi',
-    description: 'Bekerja sama untuk mencapai hasil yang lebih baik.',
-    translationKey: 'synergize'
+    icon: <Church className="h-8 w-8 text-accent" />,
+    name: 'Taat Beribadah',
+    description: 'Menjalankan kewajiban spiritual dengan rutin.',
+    translationKey: 'taatBeribadah'
   },
   {
     icon: <HeartPulse className="h-8 w-8 text-accent" />,
-    name: 'Asah Gergaji',
-    description: 'Memperbaharui diri secara terus-menerus.',
-    translationKey: 'sharpenTheSaw'
+    name: 'Rajin Olahraga',
+    description: 'Menjaga kesehatan dan kebugaran jasmani.',
+    translationKey: 'rajinOlahraga'
+  },
+  {
+    icon: <Utensils className="h-8 w-8 text-accent" />,
+    name: 'Makan Sehat & Bergizi',
+    description: 'Mengonsumsi makanan yang baik untuk tubuh.',
+    translationKey: 'makanSehat'
+  },
+  {
+    icon: <BookOpen className="h-8 w-8 text-accent" />,
+    name: 'Gemar Belajar',
+    description: 'Memiliki semangat untuk terus menambah ilmu.',
+    translationKey: 'gemarBelajar'
+  },
+  {
+    icon: <HandHelping className="h-8 w-8 text-accent" />,
+    name: 'Bermasyarakat',
+    description: 'Berinteraksi dan berkontribusi di lingkungan sosial.',
+    translationKey: 'bermasyarakat'
   },
 ];
 
@@ -155,7 +149,7 @@ export default function LandingPage() {
                 {t.habitsSubtitle}
               </p>
             </div>
-            <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
               {habits.map((habit) => (
                 <div key={habit.name} className="flex flex-col items-center text-center p-6 rounded-lg">
                   {habit.icon}
@@ -163,7 +157,6 @@ export default function LandingPage() {
                   <p className="mt-2 text-muted-foreground">{t.habits[habit.translationKey].description}</p>
                 </div>
               ))}
-               <div className="hidden xl:flex flex-col items-center text-center p-6 rounded-lg"></div>
             </div>
           </div>
         </section>
