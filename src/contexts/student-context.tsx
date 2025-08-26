@@ -15,11 +15,10 @@ interface StudentContextType {
 const StudentContext = createContext<StudentContextType | undefined>(undefined);
 
 export const StudentProvider = ({ children }: { children: ReactNode }) => {
-  const [students, setStudents] = useState<Student[]>(mockStudents);
+  const [students, setStudents] = useState<Student[]>([]);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true);
     try {
       const storedStudents = localStorage.getItem('studentsData');
       if (storedStudents) {
@@ -30,6 +29,8 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error("Failed to parse students from localStorage", error);
       setStudents(mockStudents);
+    } finally {
+      setIsMounted(true);
     }
   }, []);
 
@@ -82,9 +83,10 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
       })
     );
   };
-
+  
+  // Do not render children until the component has mounted and data is loaded
   if (!isMounted) {
-    return null; // Atau tampilkan UI loading skeleton
+    return null;
   }
 
   return (
