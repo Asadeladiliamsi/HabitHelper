@@ -42,6 +42,17 @@ export default function DashboardPage() {
   const { students } = useStudent();
   const { language } = useLanguage();
   const t = translations[language]?.dashboardPage || translations.en.dashboardPage;
+  const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
+
+  const habitTranslationMapping: Record<string, string> = {
+    'Proaktif': tHabits.proactive.name,
+    'Mulai dengan Tujuan Akhir': tHabits.beginWithEnd.name,
+    'Dahulukan yang Utama': tHabits.firstThingsFirst.name,
+    'Berpikir Menang-Menang': tHabits.thinkWinWin.name,
+    'Berusaha Mengerti Dahulu, Baru Dimengerti': tHabits.seekFirstToUnderstand.name,
+    'Wujudkan Sinergi': tHabits.synergize.name,
+    'Asah Gergaji': tHabits.sharpenTheSaw.name,
+  };
 
   
   return (
@@ -103,13 +114,14 @@ export default function DashboardPage() {
                 const change = habit['Minggu Ini'] - habit['Minggu Lalu'];
                 const ChangeIcon = change > 0 ? ArrowUp : change < 0 ? ArrowDown : Minus;
                 const changeColor = change > 0 ? 'text-green-600' : change < 0 ? 'text-red-600' : 'text-muted-foreground';
+                const translatedName = habitTranslationMapping[habit.name] || habit.name;
 
                 return (
                   <TableRow key={habit.name}>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         {habitIcons[habit.name]}
-                        <span className="font-medium">{habit.name}</span>
+                        <span className="font-medium">{translatedName}</span>
                       </div>
                     </TableCell>
                     <TableCell className="text-center font-mono">{habit['Minggu Lalu']}%</TableCell>
