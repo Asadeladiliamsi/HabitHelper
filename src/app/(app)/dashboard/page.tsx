@@ -5,7 +5,7 @@ import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { mockStudents, overallHabitData } from '@/lib/mock-data';
+import { overallHabitData } from '@/lib/mock-data';
 import {
   Zap,
   Target,
@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import type { Student, Habit } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { useStudent } from '@/contexts/student-context';
 
 const habitIcons: { [key: string]: React.ReactNode } = {
   'Proaktif': <Zap className="h-5 w-5 text-yellow-500" />,
@@ -35,6 +36,8 @@ const habitIcons: { [key: string]: React.ReactNode } = {
 };
 
 export default function DashboardPage() {
+  const { students } = useStudent();
+  
   return (
     <div className="flex flex-col gap-6">
       <header>
@@ -49,7 +52,7 @@ export default function DashboardPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockStudents.length}</div>
+            <div className="text-2xl font-bold">{students.length}</div>
             <p className="text-xs text-muted-foreground">Siswa aktif terpantau</p>
           </CardContent>
         </Card>
@@ -134,7 +137,7 @@ export default function DashboardPage() {
               <TableRow>
                 <TableHead>Siswa</TableHead>
                 <TableHead>Kelas</TableHead>
-                {mockStudents[0].habits.map((habit) => (
+                {students.length > 0 && students[0].habits.map((habit) => (
                   <TableHead key={habit.id} className="text-center">
                     <div className="flex justify-center">{habitIcons[habit.name]}</div>
                   </TableHead>
@@ -143,8 +146,8 @@ export default function DashboardPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockStudents.map((student: Student) => {
-                const averageScore = student.habits.reduce((acc, h) => acc + h.score, 0) / student.habits.length;
+              {students.map((student: Student) => {
+                const averageScore = student.habits.reduce((acc, h) => acc + h.score, 0) / (student.habits.length || 1);
                 return (
                   <TableRow key={student.id}>
                     <TableCell>

@@ -23,6 +23,7 @@ import {
   SidebarInset,
 } from '@/components/ui/sidebar';
 import { Logo } from '@/components/icons/logo';
+import { StudentProvider } from '@/contexts/student-context';
 
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -36,6 +37,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   return (
+    <StudentProvider>
       <SidebarProvider>
         <Sidebar>
           <SidebarHeader>
@@ -84,5 +86,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <main className="flex-1 p-4 sm:p-6">{children}</main>
         </SidebarInset>
       </SidebarProvider>
+    </StudentProvider>
   );
 }

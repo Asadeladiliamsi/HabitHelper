@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -9,12 +8,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, PlusCircle, Pencil, Trash2 } from 'lucide-react';
-import { mockStudents } from '@/lib/mock-data';
 import type { Student } from '@/lib/types';
 import { StudentDialog } from '@/components/student-dialog';
+import { useStudent } from '@/contexts/student-context';
+import { HABIT_NAMES } from '@/lib/types';
 
 export default function ManageStudentsPage() {
-  const [students, setStudents] = useState<Student[]>(mockStudents);
+  const { students, addStudent, updateStudent, deleteStudent } = useStudent();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
@@ -31,24 +31,25 @@ export default function ManageStudentsPage() {
   const handleDialogSave = (studentData: Omit<Student, 'id' | 'habits' | 'avatarUrl'>) => {
     if (selectedStudent) {
       // Update existing student
-      setStudents(students.map(s => 
-        s.id === selectedStudent.id ? { ...s, ...studentData } : s
-      ));
+      updateStudent(selectedStudent.id, studentData);
     } else {
       // Add new student
-      const newStudent: Student = {
-        id: `student-${Date.now()}`,
+      const newStudent: Omit<Student, 'id'> = {
         avatarUrl: 'https://placehold.co/100x100.png',
-        habits: [], // Add default habits if necessary
+        habits: HABIT_NAMES.map((name, index) => ({
+          id: `habit-${index + 1}`,
+          name: name,
+          score: 8, // Default score
+        })),
         ...studentData,
       };
-      setStudents([...students, newStudent]);
+      addStudent(newStudent);
     }
     setDialogOpen(false);
   };
 
   const handleDeleteStudent = (studentId: string) => {
-    setStudents(students.filter(s => s.id !== studentId));
+    deleteStudent(studentId);
   }
 
   return (
