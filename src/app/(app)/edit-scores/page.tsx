@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { useToast } from '@/hooks/use-toast';
 import type { Habit } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 const formSchema = z.object({
   studentId: z.string().min(1, 'Siswa harus dipilih.'),
@@ -41,21 +42,17 @@ export default function EditScoresPage() {
   const newScoreValue = form.watch('newScore');
 
   useEffect(() => {
-    // Check if the selected student still exists in the students list.
-    // This handles cases where a student is deleted.
     const studentExists = students.some((s) => s.id === selectedStudentId);
 
     if (selectedStudentId && studentExists) {
       const student = students.find((s) => s.id === selectedStudentId);
       setSelectedStudentHabits(student?.habits || []);
-      // Do not reset habitId here if it's still valid for the selected student
       const habitStillExists = student?.habits.some(h => h.id === form.getValues('habitId'));
       if (!habitStillExists) {
         form.setValue('habitId', '');
         setCurrentScore(null);
       }
     } else if (selectedStudentId && !studentExists) {
-        // If student is not found (e.g., deleted), reset the form.
         form.reset({ studentId: '', habitId: '', newScore: 8 });
         setSelectedStudentHabits([]);
         setCurrentScore(null);
@@ -87,6 +84,12 @@ export default function EditScoresPage() {
   };
 
   const isSliderDisabled = !selectedHabitId;
+
+  const getScoreColor = (score: number) => {
+    if (score <= 4) return 'text-red-600';
+    if (score <= 7) return 'text-yellow-600';
+    return 'text-green-600';
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -183,7 +186,9 @@ export default function EditScoresPage() {
                     />
                   )}
                 />
-                <span className="font-bold text-lg w-10 text-center">{newScoreValue}</span>
+                <span className={cn("font-bold text-lg w-10 text-center", getScoreColor(newScoreValue))}>
+                  {newScoreValue}
+                </span>
               </div>
             </div>
 
