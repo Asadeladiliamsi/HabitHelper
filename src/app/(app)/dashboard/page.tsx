@@ -6,8 +6,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { mockStudents, overallHabitData } from '@/lib/mock-data';
-import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import {
   Zap,
   Target,
@@ -19,8 +17,12 @@ import {
   Users,
   TrendingUp,
   Activity,
+  ArrowUp,
+  ArrowDown,
+  Minus,
 } from 'lucide-react';
 import type { Student, Habit } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 const habitIcons: { [key: string]: React.ReactNode } = {
   'Proaktif': <Zap className="h-5 w-5 text-yellow-500" />,
@@ -30,17 +32,6 @@ const habitIcons: { [key: string]: React.ReactNode } = {
   'Berusaha Mengerti Dahulu, Baru Dimengerti': <Ear className="h-5 w-5 text-purple-500" />,
   'Wujudkan Sinergi': <Combine className="h-5 w-5 text-orange-500" />,
   'Asah Gergaji': <HeartPulse className="h-5 w-5 text-pink-500" />,
-};
-
-const chartConfig = {
-  'Minggu Ini': {
-    label: 'Minggu Ini',
-    color: 'hsl(var(--accent))',
-  },
-  'Minggu Lalu': {
-    label: 'Minggu Lalu',
-    color: 'hsl(var(--primary))',
-  },
 };
 
 export default function DashboardPage() {
@@ -93,18 +84,41 @@ export default function DashboardPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Kebiasaan</TableHead>
-                <TableHead className="text-right">Minggu Lalu</TableHead>
-                <TableHead className="text-right">Minggu Ini</TableHead>
+                <TableHead className="text-center">Minggu Lalu</TableHead>
+                <TableHead>Minggu Ini</TableHead>
+                <TableHead className="text-center">Perubahan</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {overallHabitData.map((habit) => (
-                <TableRow key={habit.name}>
-                  <TableCell className="font-medium">{habit.name}</TableCell>
-                  <TableCell className="text-right">{habit['Minggu Lalu']}%</TableCell>
-                  <TableCell className="text-right">{habit['Minggu Ini']}%</TableCell>
-                </TableRow>
-              ))}
+              {overallHabitData.map((habit) => {
+                const change = habit['Minggu Ini'] - habit['Minggu Lalu'];
+                const ChangeIcon = change > 0 ? ArrowUp : change < 0 ? ArrowDown : Minus;
+                const changeColor = change > 0 ? 'text-green-600' : change < 0 ? 'text-red-600' : 'text-muted-foreground';
+
+                return (
+                  <TableRow key={habit.name}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        {habitIcons[habit.name]}
+                        <span className="font-medium">{habit.name}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center font-mono">{habit['Minggu Lalu']}%</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Progress value={habit['Minggu Ini']} className="w-24 h-2" />
+                        <span className="font-mono text-sm">{habit['Minggu Ini']}%</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                       <div className={cn("flex items-center justify-center gap-1 font-mono text-sm", changeColor)}>
+                          <ChangeIcon className="h-4 w-4" />
+                          <span>{Math.abs(change)}%</span>
+                        </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
             </TableBody>
           </Table>
         </CardContent>
