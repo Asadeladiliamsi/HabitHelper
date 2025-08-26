@@ -8,6 +8,7 @@ import {
   Bell,
   FileText,
   Settings,
+  Users,
 } from 'lucide-react';
 import {
   SidebarProvider,
@@ -24,10 +25,11 @@ import {
 import { Logo } from '@/components/icons/logo';
 
 const navItems = [
-  { href: '/guru/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { href: '/guru/data-input', icon: FilePlus2, label: 'Input Data' },
-  { href: '/guru/notifications', icon: Bell, label: 'Notifikasi' },
-  { href: '/guru/reports', icon: FileText, label: 'Laporan' },
+  { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { href: '/data-input', icon: FilePlus2, label: 'Input Data' },
+  { href: '/manage-students', icon: Users, label: 'Manajemen Siswa' },
+  { href: '/notifications', icon: Bell, label: 'Notifikasi' },
+  { href: '/reports', icon: FileText, label: 'Laporan' },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -50,7 +52,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <SidebarMenuItem key={item.href}>
                    <Link href={item.href}>
                     <SidebarMenuButton
-                      isActive={pathname === item.href}
+                      isActive={pathname.startsWith(item.href)}
                       tooltip={{ children: item.label }}
                     >
                       <item.icon />
