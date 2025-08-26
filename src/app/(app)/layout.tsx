@@ -10,6 +10,8 @@ import {
   Settings,
   Users,
   Pencil,
+  Home,
+  User,
 } from 'lucide-react';
 import {
   SidebarProvider,
@@ -27,23 +29,24 @@ import { Logo } from '@/components/icons/logo';
 import { StudentProvider } from '@/contexts/student-context';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
+import { ReactNode } from 'react';
 
+export interface NavItem {
+  href: string;
+  icon: React.ElementType;
+  label: string;
+}
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+export default function AppLayout({
+  children,
+  navItems,
+}: {
+  children: React.ReactNode;
+  navItems: NavItem[];
+}) {
   const pathname = usePathname();
   const { language } = useLanguage();
   const t = translations[language] || translations.en;
-
-  const role = pathname.split('/')[1];
-
-  const navItems = [
-    { href: `/${role}/dashboard`, icon: LayoutDashboard, label: t.sidebar.dashboard },
-    { href: `/${role}/data-input`, icon: FilePlus2, label: t.sidebar.dataInput },
-    { href: `/${role}/manage-students`, icon: Users, label: t.sidebar.manageStudents },
-    { href: `/${role}/edit-scores`, icon: Pencil, label: t.sidebar.editScores },
-    { href: `/${role}/notifications`, icon: Bell, label: t.sidebar.notifications },
-    { href: `/${role}/reports`, icon: FileText, label: t.sidebar.reports },
-  ];
 
   return (
     <StudentProvider>
