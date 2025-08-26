@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 type LanguageOption = {
-  value: 'id' | 'en' | 'es' | 'fr' | 'de' | 'ja';
+  value: 'id' | 'en' | 'es' | 'fr' | 'de' | 'ja' | 'pt' | 'ru' | 'zh' | 'hi' | 'ar' | 'ko';
   flag: string;
   name: string;
 };
@@ -18,6 +18,12 @@ const languages: LanguageOption[] = [
   { value: 'fr', flag: '🇫🇷', name: 'Français' },
   { value: 'de', flag: '🇩🇪', name: 'Deutsch' },
   { value: 'ja', flag: '🇯🇵', name: '日本語' },
+  { value: 'pt', flag: '🇵🇹', name: 'Português' },
+  { value: 'ru', flag: '🇷🇺', name: 'Русский' },
+  { value: 'zh', flag: '🇨🇳', name: '中文' },
+  { value: 'hi', flag: '🇮🇳', name: 'हिन्दी' },
+  { value: 'ar', flag: '🇸🇦', name: 'العربية' },
+  { value: 'ko', flag: '🇰🇷', name: '한국어' },
 ];
 
 export function LanguageSettings() {
@@ -27,7 +33,7 @@ export function LanguageSettings() {
     <RadioGroup
       value={language}
       onValueChange={(value) => setLanguage(value as any)}
-      className="grid max-w-4xl grid-cols-2 gap-4 sm:grid-cols-3"
+      className="grid max-w-4xl grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4"
     >
       {languages.map((lang) => (
         <div key={lang.value}>

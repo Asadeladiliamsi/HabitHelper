@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-type Language = 'id' | 'en' | 'es' | 'fr' | 'de' | 'ja';
+type Language = 'id' | 'en' | 'es' | 'fr' | 'de' | 'ja' | 'pt' | 'ru' | 'zh' | 'hi' | 'ar' | 'ko';
 
 interface LanguageContextType {
   language: Language;
@@ -14,7 +14,7 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 const STORAGE_KEY = 'habithelper-lang';
 
-const VALID_LANGUAGES: Language[] = ['id', 'en', 'es', 'fr', 'de', 'ja'];
+const VALID_LANGUAGES: Language[] = ['id', 'en', 'es', 'fr', 'de', 'ja', 'pt', 'ru', 'zh', 'hi', 'ar', 'ko'];
 
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   const [language, setLanguage] = useState<Language>('id'); 
