@@ -55,8 +55,12 @@ export const mockStudents: Student[] = [
   },
 ];
 
-export const overallHabitData = HABIT_NAMES.map(name => ({
-  name,
-  'Minggu Ini': Math.floor(Math.random() * 20) + 75,
-  'Minggu Lalu': Math.floor(Math.random() * 20) + 70,
-}));
+export const overallHabitData = [
+  { name: 'Proaktif', 'Minggu Ini': 88, 'Minggu Lalu': 82 },
+  { name: 'Mulai dengan Tujuan Akhir', 'Minggu Ini': 92, 'Minggu Lalu': 90 },
+  { name: 'Dahulukan yang Utama', 'Minggu Ini': 85, 'Minggu Lalu': 88 },
+  { name: 'Berpikir Menang-Menang', 'Minggu Ini': 95, 'Minggu Lalu': 91 },
+  { name: 'Berusaha Mengerti Dahulu, Baru Dimengerti', 'Minggu Ini': 89, 'Minggu Lalu': 85 },
+  { name: 'Wujudkan Sinergi', 'Minggu Ini': 91, 'Minggu Lalu': 93 },
+  { name: 'Asah Gergaji', 'Minggu Ini': 87, 'Minggu Lalu': 84 },
+];
