@@ -14,6 +14,7 @@ import type { Student } from '@/lib/types';
 import { StudentDialog } from '@/components/student-dialog';
 
 export default function ManageStudentsPage() {
+  const [students, setStudents] = useState<Student[]>(mockStudents);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
@@ -29,12 +30,25 @@ export default function ManageStudentsPage() {
   
   const handleDialogSave = (studentData: Omit<Student, 'id' | 'habits' | 'avatarUrl'>) => {
     if (selectedStudent) {
-      // Logic to update student
-      console.log('Updating student:', selectedStudent.id, studentData);
+      // Update existing student
+      setStudents(students.map(s => 
+        s.id === selectedStudent.id ? { ...s, ...studentData } : s
+      ));
     } else {
-      // Logic to add new student
-      console.log('Adding new student:', studentData);
+      // Add new student
+      const newStudent: Student = {
+        id: `student-${Date.now()}`,
+        avatarUrl: 'https://placehold.co/100x100.png',
+        habits: [], // Add default habits if necessary
+        ...studentData,
+      };
+      setStudents([...students, newStudent]);
     }
+    setDialogOpen(false);
+  };
+
+  const handleDeleteStudent = (studentId: string) => {
+    setStudents(students.filter(s => s.id !== studentId));
   }
 
   return (
@@ -61,7 +75,7 @@ export default function ManageStudentsPage() {
         <Card>
           <CardHeader>
             <CardTitle>Daftar Siswa</CardTitle>
-            <CardDescription>Total {mockStudents.length} siswa terdaftar dalam sistem.</CardDescription>
+            <CardDescription>Total {students.length} siswa terdaftar dalam sistem.</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
@@ -73,7 +87,7 @@ export default function ManageStudentsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {mockStudents.map((student) => (
+                {students.map((student) => (
                   <TableRow key={student.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -100,7 +114,10 @@ export default function ManageStudentsPage() {
                             <Pencil className="mr-2 h-4 w-4" />
                             Edit
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive focus:text-destructive">
+                          <DropdownMenuItem 
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => handleDeleteStudent(student.id)}
+                          >
                             <Trash2 className="mr-2 h-4 w-4" />
                             Hapus
                           </DropdownMenuItem>

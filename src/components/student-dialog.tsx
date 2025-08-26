@@ -40,6 +40,10 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student }: Student
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: '',
+      class: '',
+    }
   });
 
   useEffect(() => {
@@ -69,23 +73,19 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student }: Student
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
+            <div className="space-y-2">
+              <Label htmlFor="name">
                 Nama
               </Label>
-              <div className="col-span-3">
-                <Input id="name" {...register('name')} className="w-full" />
-                {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}
-              </div>
+              <Input id="name" {...register('name')} />
+              {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="class" className="text-right">
+            <div className="space-y-2">
+              <Label htmlFor="class">
                 Kelas
               </Label>
-               <div className="col-span-3">
-                <Input id="class" {...register('class')} className="w-full" />
-                {errors.class && <p className="text-sm text-destructive mt-1">{errors.class.message}</p>}
-              </div>
+              <Input id="class" {...register('class')} />
+              {errors.class && <p className="text-sm text-destructive mt-1">{errors.class.message}</p>}
             </div>
           </div>
           <DialogFooter>
