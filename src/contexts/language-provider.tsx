@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
@@ -27,10 +26,10 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
       if (storedLanguage && VALID_LANGUAGES.includes(storedLanguage)) {
         setLanguage(storedLanguage);
       } else {
-        setLanguage('id');
+        setLanguage('id'); // Default language
       }
     } catch (error) {
-      console.error("Failed to parse language from localStorage", error);
+      console.error("Failed to read language from localStorage", error);
       setLanguage('id');
     }
   }, []);
@@ -49,11 +48,14 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   const value = {
     language,
     setLanguage: (lang: Language) => {
-      setLanguage(lang);
+      if (VALID_LANGUAGES.includes(lang)) {
+        setLanguage(lang);
+      }
     },
   };
 
   if (!isMounted) {
+    // Render nothing or a fallback UI on the server or before hydration
     return null;
   }
 

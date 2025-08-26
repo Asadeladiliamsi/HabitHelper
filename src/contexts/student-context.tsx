@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
@@ -16,7 +15,7 @@ interface StudentContextType {
 const StudentContext = createContext<StudentContextType | undefined>(undefined);
 
 export const StudentProvider = ({ children }: { children: ReactNode }) => {
-  const [students, setStudents] = useState<Student[]>([]);
+  const [students, setStudents] = useState<Student[]>(mockStudents);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -85,7 +84,7 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
   };
 
   if (!isMounted) {
-    return null;
+    return null; // Atau tampilkan UI loading skeleton
   }
 
   return (
