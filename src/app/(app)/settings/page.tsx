@@ -1,5 +1,6 @@
+import { ThemeSettings } from '@/components/theme-settings';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Settings } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
 
 export default function SettingsPage() {
   return (
@@ -10,19 +11,52 @@ export default function SettingsPage() {
           Kelola pengaturan aplikasi dan preferensi Anda di sini.
         </p>
       </header>
-      <Card className="flex flex-1 items-center justify-center rounded-lg border-2 border-dashed shadow-sm">
-        <CardContent className="flex flex-col items-center gap-4 p-6 text-center">
-          <div className="rounded-full border bg-card p-4">
-            <Settings className="h-12 w-12 text-muted-foreground" />
-          </div>
-          <CardTitle className="text-2xl font-bold tracking-tight">
-            Halaman Sedang Dibangun
-          </CardTitle>
-          <CardDescription className="max-w-xs text-muted-foreground">
-            Fitur untuk mengelola pengaturan aplikasi akan segera hadir. Nantikan pembaruan dari kami.
-          </CardDescription>
-        </CardContent>
-      </Card>
+
+      <div className="space-y-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Tampilan</CardTitle>
+            <CardDescription>
+              Sesuaikan tampilan aplikasi. Aktifkan mode gelap atau terang.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ThemeSettings />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Profil</CardTitle>
+            <CardDescription>
+              Kelola informasi profil Anda. (Segera Hadir)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-center p-8 border-2 border-dashed rounded-md bg-muted/50">
+              <p className="text-sm text-muted-foreground">
+                Pengaturan profil akan tersedia di sini.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Notifikasi</CardTitle>
+            <CardDescription>
+              Atur preferensi notifikasi Anda. (Segera Hadir)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+             <div className="flex items-center justify-center p-8 border-2 border-dashed rounded-md bg-muted/50">
+              <p className="text-sm text-muted-foreground">
+                Pengaturan notifikasi akan tersedia di sini.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
