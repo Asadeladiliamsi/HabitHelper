@@ -89,23 +89,24 @@ export default function DashboardPage() {
           <CardTitle>Perkembangan Kebiasaan Umum</CardTitle>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={chartConfig} className="h-64 w-full">
-            <BarChart accessibilityLayer data={overallHabitData}>
-              <CartesianGrid vertical={false} />
-              <XAxis
-                dataKey="name"
-                tickLine={false}
-                tickMargin={10}
-                axisLine={false}
-                tickFormatter={(value) => value.slice(0, 3)}
-              />
-              <YAxis />
-              <ChartTooltip content={<ChartTooltipContent />} />
-              <ChartLegend content={<ChartLegendContent />} />
-              <Bar dataKey="Minggu Lalu" fill="var(--color-Minggu Lalu)" radius={4} />
-              <Bar dataKey="Minggu Ini" fill="var(--color-Minggu Ini)" radius={4} />
-            </BarChart>
-          </ChartContainer>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Kebiasaan</TableHead>
+                <TableHead className="text-right">Minggu Lalu</TableHead>
+                <TableHead className="text-right">Minggu Ini</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {overallHabitData.map((habit) => (
+                <TableRow key={habit.name}>
+                  <TableCell className="font-medium">{habit.name}</TableCell>
+                  <TableCell className="text-right">{habit['Minggu Lalu']}%</TableCell>
+                  <TableCell className="text-right">{habit['Minggu Ini']}%</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 
