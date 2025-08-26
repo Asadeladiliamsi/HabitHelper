@@ -44,10 +44,11 @@ export default function EditScoresPage() {
     if (selectedStudentId) {
       const student = students.find((s) => s.id === selectedStudentId);
       setSelectedStudentHabits(student?.habits || []);
-      form.setValue('habitId', ''); // Reset habit selection
+      form.setValue('habitId', ''); 
       setCurrentScore(null);
     } else {
       setSelectedStudentHabits([]);
+      setCurrentScore(null);
     }
   }, [selectedStudentId, students, form]);
 
@@ -58,7 +59,7 @@ export default function EditScoresPage() {
       setCurrentScore(score);
       form.setValue('newScore', score);
     } else {
-        setCurrentScore(null);
+      setCurrentScore(null);
     }
   }, [selectedHabitId, selectedStudentHabits, form]);
   
@@ -71,6 +72,8 @@ export default function EditScoresPage() {
       description: `Nilai ${habit?.name} untuk ${student?.name} telah diubah menjadi ${data.newScore}.`,
     });
   };
+
+  const isSliderDisabled = !selectedHabitId;
 
   return (
     <div className="flex flex-col gap-6">
@@ -147,28 +150,29 @@ export default function EditScoresPage() {
               )}
             </div>
             
-            {currentScore !== null && (
-              <div className="space-y-3">
-                <Label>Ubah Nilai (Nilai saat ini: {currentScore})</Label>
-                <div className="flex items-center gap-4">
-                  <Controller
-                    control={form.control}
-                    name="newScore"
-                    render={({ field }) => (
-                      <Slider
-                        value={[field.value]}
-                        onValueChange={(value) => field.onChange(value[0])}
-                        min={1}
-                        max={10}
-                        step={1}
-                        className="flex-1"
-                      />
-                    )}
-                  />
-                  <span className="font-bold text-lg w-10 text-center">{newScoreValue}</span>
-                </div>
+            <div className="space-y-3">
+              <Label>
+                Ubah Nilai {currentScore !== null ? ` (Nilai saat ini: ${currentScore})` : ''}
+              </Label>
+              <div className="flex items-center gap-4">
+                <Controller
+                  control={form.control}
+                  name="newScore"
+                  render={({ field }) => (
+                    <Slider
+                      value={[field.value]}
+                      onValueChange={(value) => field.onChange(value[0])}
+                      min={1}
+                      max={10}
+                      step={1}
+                      className="flex-1"
+                      disabled={isSliderDisabled}
+                    />
+                  )}
+                />
+                <span className="font-bold text-lg w-10 text-center">{newScoreValue}</span>
               </div>
-            )}
+            </div>
 
             <Button type="submit" className="w-full" disabled={!form.formState.isValid}>
               Simpan Perubahan
