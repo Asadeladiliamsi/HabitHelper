@@ -34,7 +34,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { language } = useLanguage();
   const t = translations[language] || translations.en;
 
-  const navItems: { href: string; icon: React.ElementType; label: string }[] = [];
+  const navItems = [
+    { href: '/guru/dashboard', icon: LayoutDashboard, label: t.sidebar.dashboard },
+    { href: '/guru/data-input', icon: FilePlus2, label: t.sidebar.dataInput },
+    { href: '/manage-students', icon: Users, label: t.sidebar.manageStudents },
+    { href: '/edit-scores', icon: Pencil, label: t.sidebar.editScores },
+    { href: '/guru/notifications', icon: Bell, label: t.sidebar.notifications },
+    { href: '/guru/reports', icon: FileText, label: t.sidebar.reports },
+  ];
 
   return (
     <StudentProvider>
