@@ -102,7 +102,7 @@ export default function LandingPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem asChild>
-                <Link href="/guru/dashboard">Guru</Link>
+                <Link href="/dashboard">Guru</Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/siswa/dashboard">Siswa</Link>
@@ -133,7 +133,7 @@ export default function LandingPage() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="center">
                   <DropdownMenuItem asChild>
-                    <Link href="/guru/dashboard">Guru</Link>
+                    <Link href="/dashboard">Guru</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href="/siswa/dashboard">Siswa</Link>

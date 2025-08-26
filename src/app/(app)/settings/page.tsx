@@ -4,7 +4,6 @@
 import { ThemeSettings } from '@/components/theme-settings';
 import { LanguageSettings } from '@/components/language-settings';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
 
