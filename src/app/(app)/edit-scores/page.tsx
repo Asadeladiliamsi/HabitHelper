@@ -31,7 +31,17 @@ export default function EditScoresPage() {
   const [currentScore, setCurrentScore] = useState<number | null>(null);
   const { language } = useLanguage();
   const t = translations[language]?.editScoresPage || translations.en.editScoresPage;
+  const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
 
+  const habitTranslationMapping: Record<string, string> = {
+    'Proaktif': tHabits.proactive.name,
+    'Mulai dengan Tujuan Akhir': tHabits.beginWithEnd.name,
+    'Dahulukan yang Utama': tHabits.firstThingsFirst.name,
+    'Berpikir Menang-Menang': tHabits.thinkWinWin.name,
+    'Berusaha Mengerti Dahulu, Baru Dimengerti': tHabits.seekFirstToUnderstand.name,
+    'Wujudkan Sinergi': tHabits.synergize.name,
+    'Asah Gergaji': tHabits.sharpenTheSaw.name,
+  };
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -82,9 +92,10 @@ export default function EditScoresPage() {
     updateHabitScore(data.studentId, data.habitId, data.newScore);
     const student = students.find((s) => s.id === data.studentId);
     const habit = selectedStudentHabits.find((h) => h.id === data.habitId);
+    const translatedHabitName = habit ? (habitTranslationMapping[habit.name] || habit.name) : '';
     toast({
       title: t.toast.title,
-      description: `${t.toast.description1} ${habit?.name} ${t.toast.description2} ${student?.name} ${t.toast.description3} ${data.newScore}.`,
+      description: `${t.toast.description1} ${translatedHabitName} ${t.toast.description2} ${student?.name} ${t.toast.description3} ${data.newScore}.`,
     });
   };
 
@@ -157,7 +168,7 @@ export default function EditScoresPage() {
                     <SelectContent>
                       {selectedStudentHabits.map((habit) => (
                         <SelectItem key={habit.id} value={habit.id}>
-                          {habit.name}
+                          {habitTranslationMapping[habit.name] || habit.name}
                         </SelectItem>
                       ))}
                     </SelectContent>

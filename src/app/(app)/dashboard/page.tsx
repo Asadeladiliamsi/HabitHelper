@@ -54,6 +54,15 @@ export default function DashboardPage() {
     'Asah Gergaji': tHabits.sharpenTheSaw.name,
   };
 
+  const translatedHabitIcons: { [key: string]: React.ReactNode } = {
+    [tHabits.proactive.name]: habitIcons['Proaktif'],
+    [tHabits.beginWithEnd.name]: habitIcons['Mulai dengan Tujuan Akhir'],
+    [tHabits.firstThingsFirst.name]: habitIcons['Dahulukan yang Utama'],
+    [tHabits.thinkWinWin.name]: habitIcons['Berpikir Menang-Menang'],
+    [tHabits.seekFirstToUnderstand.name]: habitIcons['Berusaha Mengerti Dahulu, Baru Dimengerti'],
+    [tHabits.synergize.name]: habitIcons['Wujudkan Sinergi'],
+    [tHabits.sharpenTheSaw.name]: habitIcons['Asah Gergaji'],
+  };
   
   return (
     <div className="flex flex-col gap-6">
@@ -155,11 +164,16 @@ export default function DashboardPage() {
               <TableRow>
                 <TableHead>{t.student}</TableHead>
                 <TableHead>{t.class}</TableHead>
-                {students.length > 0 && students[0].habits.map((habit) => (
-                  <TableHead key={habit.id} className="text-center">
-                    <div className="flex justify-center">{habitIcons[habit.name]}</div>
-                  </TableHead>
-                ))}
+                {students.length > 0 && students[0].habits.map((habit) => {
+                  const translatedHabitName = habitTranslationMapping[habit.name] || habit.name;
+                  return (
+                    <TableHead key={habit.id} className="text-center">
+                      <div className="flex justify-center" title={translatedHabitName}>
+                        {habitIcons[habit.name]}
+                      </div>
+                    </TableHead>
+                  )
+                })}
                 <TableHead>{t.average}</TableHead>
               </TableRow>
             </TableHeader>

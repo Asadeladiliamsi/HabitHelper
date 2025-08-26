@@ -47,6 +47,17 @@ export function DataInputClient() {
   const { students } = useStudent();
   const { language } = useLanguage();
   const t = translations[language]?.dataInputClient || translations.en.dataInputClient;
+  const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
+
+  const habitTranslationMapping: Record<string, string> = {
+    'Proaktif': tHabits.proactive.name,
+    'Mulai dengan Tujuan Akhir': tHabits.beginWithEnd.name,
+    'Dahulukan yang Utama': tHabits.firstThingsFirst.name,
+    'Berpikir Menang-Menang': tHabits.thinkWinWin.name,
+    'Berusaha Mengerti Dahulu, Baru Dimengerti': tHabits.seekFirstToUnderstand.name,
+    'Wujudkan Sinergi': tHabits.synergize.name,
+    'Asah Gergaji': tHabits.sharpenTheSaw.name,
+  };
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -61,6 +72,7 @@ export function DataInputClient() {
   const onSubmit = async (data: FormValues) => {
     setIsLoading(true);
     console.log('Data yang disubmit:', data);
+    const translatedHabitName = habitTranslationMapping[data.habitName] || data.habitName;
 
     // Simulasi pemanggilan API
     await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -68,7 +80,7 @@ export function DataInputClient() {
     setIsLoading(false);
     toast({
       title: t.toast.title,
-      description: `${t.toast.description1} ${data.habitName} ${t.toast.description2}`,
+      description: `${t.toast.description1} ${translatedHabitName} ${t.toast.description2}`,
     });
     form.reset({
       studentId: data.studentId,
@@ -129,7 +141,7 @@ export function DataInputClient() {
                     <SelectContent>
                       {HABIT_NAMES.map((name) => (
                         <SelectItem key={name} value={name}>
-                          {name}
+                          {habitTranslationMapping[name] || name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -175,7 +187,7 @@ export function DataInputClient() {
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {field.value ? format(field.value, 'PPP') : <span>{t.datePlaceholder}</span>}
+                      {field.value ? format(field.value, 'PPP', { locale: language === 'id' ? require('date-fns/locale/id') : require('date-fns/locale/en-US') }) : <span>{t.datePlaceholder}</span>}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">

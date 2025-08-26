@@ -36,7 +36,17 @@ export function NotificationsClient() {
   const [error, setError] = useState<string | null>(null);
   const { language } = useLanguage();
   const t = translations[language]?.notificationsClient || translations.en.notificationsClient;
+  const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
 
+  const habitTranslationMapping: Record<string, string> = {
+    'Proaktif': tHabits.proactive.name,
+    'Mulai dengan Tujuan Akhir': tHabits.beginWithEnd.name,
+    'Dahulukan yang Utama': tHabits.firstThingsFirst.name,
+    'Berpikir Menang-Menang': tHabits.thinkWinWin.name,
+    'Berusaha Mengerti Dahulu, Baru Dimengerti': tHabits.seekFirstToUnderstand.name,
+    'Wujudkan Sinergi': tHabits.synergize.name,
+    'Asah Gergaji': tHabits.sharpenTheSaw.name,
+  };
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -107,7 +117,7 @@ export function NotificationsClient() {
                   <SelectContent>
                     {HABIT_NAMES.map((name) => (
                       <SelectItem key={name} value={name}>
-                        {name}
+                        {habitTranslationMapping[name] || name}
                       </SelectItem>
                     ))}
                   </SelectContent>
