@@ -16,7 +16,7 @@ export default function ManageStudentsPage() {
             <Users className="h-12 w-12 text-muted-foreground" />
           </div>
           <CardTitle className="text-2xl font-bold tracking-tight">
-            Halaman Sedang Dibangun
+            Tambah, edit, atau hapus data/jumlah siswa
           </CardTitle>
           <CardDescription className="max-w-xs text-muted-foreground">
             Fitur untuk menambah, mengedit, dan menghapus siswa akan segera hadir. Nantikan pembaruan dari kami.
