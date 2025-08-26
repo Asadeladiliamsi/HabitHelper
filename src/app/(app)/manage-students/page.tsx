@@ -33,14 +33,13 @@ export default function ManageStudentsPage() {
     setDialogOpen(true);
   };
   
-  const handleDialogSave = (studentData: Omit<Student, 'id' | 'habits' | 'avatarUrl'>) => {
+  const handleDialogSave = (studentData: Omit<Student, 'id' | 'habits'>) => {
     if (selectedStudent) {
       // Update existing student
       updateStudent(selectedStudent.id, studentData);
     } else {
       // Add new student
       const newStudent: Omit<Student, 'id'> = {
-        avatarUrl: 'https://placehold.co/100x100.png',
         habits: HABIT_NAMES.map((name, index) => ({
           id: `habit-${index + 1}`,
           name: name,

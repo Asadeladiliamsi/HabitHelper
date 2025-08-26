@@ -8,7 +8,7 @@ import type { Student } from '@/lib/types';
 interface StudentContextType {
   students: Student[];
   addStudent: (newStudent: Omit<Student, 'id'>) => void;
-  updateStudent: (studentId: string, updatedData: Partial<Omit<Student, 'id' | 'habits' | 'avatarUrl'>>) => void;
+  updateStudent: (studentId: string, updatedData: Partial<Omit<Student, 'id' | 'habits'>>) => void;
   deleteStudent: (studentId: string) => void;
   updateHabitScore: (studentId: string, habitId: string, newScore: number) => void;
 }
@@ -53,7 +53,7 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
     setStudents((prevStudents) => [...prevStudents, newStudent]);
   };
 
-  const updateStudent = (studentId: string, updatedData: Partial<Omit<Student, 'id' | 'habits' | 'avatarUrl'>>) => {
+  const updateStudent = (studentId: string, updatedData: Partial<Omit<Student, 'id' | 'habits'>>) => {
     setStudents((prevStudents) =>
       prevStudents.map((student) =>
         student.id === studentId ? { ...student, ...updatedData } : student
