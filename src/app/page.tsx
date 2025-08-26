@@ -7,6 +7,7 @@ import { CheckCircle, Zap, Target, ListChecks, Handshake, Ear, Combine, HeartPul
 import { Logo } from '@/components/icons/logo';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const habits = [
   {
@@ -92,12 +93,25 @@ export default function LandingPage() {
             <Logo />
             <span className="font-bold text-xl text-primary">HabitHelper</span>
           </Link>
-          <Button asChild>
-            <Link href="/dashboard">
-              {t.openDashboard}
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button>
+                {t.openDashboard}
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild>
+                <Link href="/guru/dashboard">Guru</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/siswa/dashboard">Siswa</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/orangtua/dashboard">Orang Tua</Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
 
@@ -112,7 +126,7 @@ export default function LandingPage() {
             </p>
             <div className="mt-10 flex justify-center gap-4">
                <Button size="lg" asChild>
-                <Link href="/dashboard">{t.viewDemo}</Link>
+                <Link href="/guru/dashboard">{t.viewDemo}</Link>
               </Button>
             </div>
           </div>
