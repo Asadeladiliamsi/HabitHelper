@@ -1,8 +1,8 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { mockStudents } from '@/lib/mock-data';
-import type { Student, Habit } from '@/lib/types';
+import type { Student } from '@/lib/types';
 
 interface StudentContextType {
   students: Student[];
@@ -15,7 +15,36 @@ interface StudentContextType {
 const StudentContext = createContext<StudentContextType | undefined>(undefined);
 
 export const StudentProvider = ({ children }: { children: ReactNode }) => {
-  const [students, setStudents] = useState<Student[]>(mockStudents);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  useEffect(() => {
+    // This effect runs only once on the client after hydration
+    try {
+      const storedStudents = localStorage.getItem('studentsData');
+      if (storedStudents) {
+        setStudents(JSON.parse(storedStudents));
+      } else {
+        setStudents(mockStudents);
+      }
+    } catch (error) {
+      console.error("Failed to parse students from localStorage", error);
+      setStudents(mockStudents); // Fallback to mock data on error
+    }
+    setIsInitialLoad(false); // Mark initial load as complete
+  }, []); // Empty dependency array ensures this runs only on the client side once
+
+  useEffect(() => {
+    // This effect runs whenever students data changes, but not on the initial load from localStorage
+    if (!isInitialLoad) {
+      try {
+        localStorage.setItem('studentsData', JSON.stringify(students));
+      } catch (error) {
+        console.error("Failed to save students to localStorage", error);
+      }
+    }
+  }, [students, isInitialLoad]);
+
 
   const addStudent = (newStudentData: Omit<Student, 'id'>) => {
     const newStudent: Student = {
