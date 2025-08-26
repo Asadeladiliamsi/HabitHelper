@@ -2,13 +2,14 @@
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { mockStudents } from '@/lib/mock-data';
-import type { Student } from '@/lib/types';
+import type { Student, Habit } from '@/lib/types';
 
 interface StudentContextType {
   students: Student[];
   addStudent: (newStudent: Omit<Student, 'id'>) => void;
   updateStudent: (studentId: string, updatedData: Partial<Omit<Student, 'id' | 'habits' | 'avatarUrl'>>) => void;
   deleteStudent: (studentId: string) => void;
+  updateHabitScore: (studentId: string, habitId: string, newScore: number) => void;
 }
 
 const StudentContext = createContext<StudentContextType | undefined>(undefined);
@@ -37,9 +38,27 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
       prevStudents.filter((student) => student.id !== studentId)
     );
   };
+  
+  const updateHabitScore = (studentId: string, habitId: string, newScore: number) => {
+    setStudents((prevStudents) =>
+      prevStudents.map((student) => {
+        if (student.id === studentId) {
+          const updatedHabits = student.habits.map((habit) => {
+            if (habit.id === habitId) {
+              return { ...habit, score: newScore };
+            }
+            return habit;
+          });
+          return { ...student, habits: updatedHabits };
+        }
+        return student;
+      })
+    );
+  };
+
 
   return (
-    <StudentContext.Provider value={{ students, addStudent, updateStudent, deleteStudent }}>
+    <StudentContext.Provider value={{ students, addStudent, updateStudent, deleteStudent, updateHabitScore }}>
       {children}
     </StudentContext.Provider>
   );
