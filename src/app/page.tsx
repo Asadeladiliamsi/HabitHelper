@@ -125,9 +125,24 @@ export default function LandingPage() {
               {t.heroSubtitle}
             </p>
             <div className="mt-10 flex justify-center gap-4">
-               <Button size="lg" asChild>
-                <Link href="/guru/dashboard">{t.viewDemo}</Link>
-              </Button>
+               <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="lg">
+                    {t.viewDemo}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center">
+                  <DropdownMenuItem asChild>
+                    <Link href="/guru/dashboard">Guru</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/siswa/dashboard">Siswa</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/orangtua/dashboard">Orang Tua</Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </section>
