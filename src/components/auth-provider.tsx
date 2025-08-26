@@ -42,6 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setLoading(true);
       if (user) {
         setUser(user);
         const profile = await getUserProfile(user.uid);
@@ -59,22 +60,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (loading) return;
 
-    const isPublicRoute = PUBLIC_ROUTES.some(route => pathname.startsWith(route) && (route.length === 1 || pathname.length === route.length || route.endsWith('*')));
+    const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
     const isGuestOnlyRoute = GUEST_ONLY_ROUTES.includes(pathname);
-
+    
     if (user && userProfile) {
-        // If user is logged in
-        const dashboardRoute = getDashboardRouteForRole(userProfile.role);
-        // and tries to access login/register, or is on the landing page, redirect to their dashboard
-        if (isGuestOnlyRoute || pathname === '/') {
-            router.push(dashboardRoute);
-        }
+      const dashboardRoute = getDashboardRouteForRole(userProfile.role);
+      // If user is logged in and tries to access guest-only pages, redirect to dashboard
+      if (isGuestOnlyRoute) {
+        router.push(dashboardRoute);
+      }
     } else if (!user && !isPublicRoute) {
-        // If user is not logged in and tries to access a protected route
-        router.push('/login');
+      // If user is not logged in and tries to access a protected route, redirect to login
+      router.push('/login');
     }
 
-  }, [user, userProfile, loading, router, pathname]);
+  }, [loading, user, userProfile, pathname, router]);
 
   if (loading) {
      return (
@@ -82,6 +82,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
+  }
+
+  // Render children only when loading is complete and routing logic has been checked
+  // This prevents rendering a page briefly before redirecting
+  const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
+  if (!loading && !user && !isPublicRoute) {
+    return null; // Don't render protected routes while redirecting to login
+  }
+  
+  const isGuestOnlyRoute = GUEST_ONLY_ROUTES.includes(pathname);
+  if (!loading && user && isGuestOnlyRoute) {
+      return null; // Don't render login/register while redirecting to dashboard
   }
 
   return <AuthContext.Provider value={{ user, userProfile }}>{children}</AuthContext.Provider>;
