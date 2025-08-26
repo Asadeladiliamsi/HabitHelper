@@ -9,6 +9,7 @@ import {
   FileText,
   Settings,
   Users,
+  Pencil,
 } from 'lucide-react';
 import {
   SidebarProvider,
@@ -29,6 +30,7 @@ const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/data-input', icon: FilePlus2, label: 'Input Data' },
   { href: '/manage-students', icon: Users, label: 'Manajemen Siswa' },
+  { href: '/edit-scores', icon: Pencil, label: 'Edit Nilai' },
   { href: '/notifications', icon: Bell, label: 'Notifikasi' },
   { href: '/reports', icon: FileText, label: 'Laporan' },
 ];
