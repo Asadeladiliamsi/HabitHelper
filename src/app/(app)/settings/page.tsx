@@ -27,15 +27,15 @@ export default function SettingsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Profil</CardTitle>
+            <CardTitle>Pilihan Bahasa</CardTitle>
             <CardDescription>
-              Kelola informasi profil Anda. (Segera Hadir)
+              Pilih bahasa yang Anda inginkan untuk aplikasi. (Segera Hadir)
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-center p-8 border-2 border-dashed rounded-md bg-muted/50">
               <p className="text-sm text-muted-foreground">
-                Pengaturan profil akan tersedia di sini.
+                Pengaturan bahasa akan tersedia di sini.
               </p>
             </div>
           </CardContent>
