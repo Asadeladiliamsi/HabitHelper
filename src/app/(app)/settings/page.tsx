@@ -29,12 +29,56 @@ const translations = {
     notificationsTitle: 'Notifications',
     notificationsDescription: 'Manage your notification preferences. (Coming Soon)',
     notificationsContent: 'Notification settings will be available here.',
+  },
+  es: {
+    title: 'Configuración',
+    description: 'Administre la configuración y las preferencias de su aplicación aquí.',
+    displayTitle: 'Apariencia',
+    displayDescription: 'Personaliza la apariencia de la aplicación. Cambia entre el modo oscuro y claro.',
+    languageTitle: 'Selección de idioma',
+    languageDescription: 'Elige el idioma que deseas para la aplicación.',
+    notificationsTitle: 'Notificaciones',
+    notificationsDescription: 'Administre sus preferencias de notificación. (Próximamente)',
+    notificationsContent: 'La configuración de notificaciones estará disponible aquí.',
+  },
+  fr: {
+    title: 'Paramètres',
+    description: 'Gérez les paramètres et les préférences de votre application ici.',
+    displayTitle: 'Apparence',
+    displayDescription: 'Personnalisez l\'apparence de l\'application. Basculez entre le mode sombre et le mode clair.',
+    languageTitle: 'Sélection de la langue',
+    languageDescription: 'Choisissez la langue que vous souhaitez pour l\'application.',
+    notificationsTitle: 'Notifications',
+    notificationsDescription: 'Gérez vos préférences de notification. (Bientôt disponible)',
+    notificationsContent: 'Les paramètres de notification seront disponibles ici.',
+  },
+  de: {
+    title: 'Einstellungen',
+    description: 'Verwalten Sie hier Ihre Anwendungseinstellungen und Präferenzen.',
+    displayTitle: 'Erscheinungsbild',
+    displayDescription: 'Passen Sie das Erscheinungsbild der App an. Wechseln Sie zwischen dunklem und hellem Modus.',
+    languageTitle: 'Sprachauswahl',
+    languageDescription: 'Wählen Sie die gewünschte Sprache für die Anwendung.',
+    notificationsTitle: 'Benachrichtigungen',
+    notificationsDescription: 'Verwalten Sie Ihre Benachrichtigungseinstellungen. (Demnächst verfügbar)',
+    notificationsContent: 'Benachrichtigungseinstellungen werden hier verfügbar sein.',
+  },
+  ja: {
+    title: '設定',
+    description: 'ここでアプリケーションの設定と個人設定を管理します。',
+    displayTitle: '外観',
+    displayDescription: 'アプリの外観をカスタマイズします。ダークモードとライトモードを切り替えます。',
+    languageTitle: '言語選択',
+    languageDescription: 'アプリケーションに使用する言語を選択してください。',
+    notificationsTitle: '通知',
+    notificationsDescription: '通知設定を管理します。（近日公開）',
+    notificationsContent: '通知設定はここに表示されます。',
   }
 }
 
 export default function SettingsPage() {
   const { language } = useLanguage();
-  const t = translations[language];
+  const t = translations[language] || translations.en;
 
   return (
     <div className="flex flex-col gap-6">

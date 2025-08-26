@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-type Language = 'id' | 'en';
+type Language = 'id' | 'en' | 'es' | 'fr' | 'de' | 'ja';
 
 interface LanguageContextType {
   language: Language;
@@ -14,6 +14,8 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 const STORAGE_KEY = 'habithelper-lang';
 
+const VALID_LANGUAGES: Language[] = ['id', 'en', 'es', 'fr', 'de', 'ja'];
+
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   const [language, setLanguage] = useState<Language>('id'); 
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -22,7 +24,7 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
     // This effect runs only once on the client after hydration
     try {
       const storedLanguage = localStorage.getItem(STORAGE_KEY) as Language | null;
-      if (storedLanguage && ['id', 'en'].includes(storedLanguage)) {
+      if (storedLanguage && VALID_LANGUAGES.includes(storedLanguage)) {
         setLanguage(storedLanguage);
       } else {
         setLanguage('id'); // Default to Indonesian
