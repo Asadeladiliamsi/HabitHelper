@@ -34,14 +34,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { language } = useLanguage();
   const t = translations[language] || translations.en;
 
-  const navItems = [
-    { href: '/dashboard', icon: LayoutDashboard, label: t.sidebar.dashboard },
-    { href: '/data-input', icon: FilePlus2, label: t.sidebar.dataInput },
-    { href: '/manage-students', icon: Users, label: t.sidebar.manageStudents },
-    { href: '/edit-scores', icon: Pencil, label: t.sidebar.editScores },
-    { href: '/notifications', icon: Bell, label: t.sidebar.notifications },
-    { href: '/reports', icon: FileText, label: t.sidebar.reports },
-  ];
+  const navItems: { href: string; icon: React.ElementType; label: string }[] = [];
 
   return (
     <StudentProvider>
