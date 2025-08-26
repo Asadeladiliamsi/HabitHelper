@@ -12,11 +12,16 @@ import type { Student } from '@/lib/types';
 import { StudentDialog } from '@/components/student-dialog';
 import { useStudent } from '@/contexts/student-context';
 import { HABIT_NAMES } from '@/lib/types';
+import { useLanguage } from '@/contexts/language-provider';
+import { translations } from '@/lib/translations';
+
 
 export default function ManageStudentsPage() {
   const { students, addStudent, updateStudent, deleteStudent } = useStudent();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const { language } = useLanguage();
+  const t = translations[language]?.manageStudentsPage || translations.en.manageStudentsPage;
 
   const handleAddStudent = () => {
     setSelectedStudent(null);
@@ -63,28 +68,28 @@ export default function ManageStudentsPage() {
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <header>
-            <h1 className="text-3xl font-bold tracking-tight">Manajemen Siswa</h1>
+            <h1 className="text-3xl font-bold tracking-tight">{t.title}</h1>
             <p className="text-muted-foreground">
-              Tambah, edit, atau hapus data siswa di sini.
+              {t.description}
             </p>
           </header>
           <Button onClick={handleAddStudent}>
             <PlusCircle className="mr-2 h-4 w-4" />
-            Tambah Siswa Baru
+            {t.addNewStudent}
           </Button>
         </div>
         <Card>
           <CardHeader>
-            <CardTitle>Daftar Siswa</CardTitle>
-            <CardDescription>Total {students.length} siswa terdaftar dalam sistem.</CardDescription>
+            <CardTitle>{t.studentList}</CardTitle>
+            <CardDescription>{t.totalStudents1} {students.length} {t.totalStudents2}</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Siswa</TableHead>
-                  <TableHead>Kelas</TableHead>
-                  <TableHead className="text-right">Aksi</TableHead>
+                  <TableHead>{t.student}</TableHead>
+                  <TableHead>{t.class}</TableHead>
+                  <TableHead className="text-right">{t.actions}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -107,20 +112,20 @@ export default function ManageStudentsPage() {
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon">
                             <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Menu</span>
+                            <span className="sr-only">{t.menu}</span>
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => handleEditStudent(student)}>
                             <Pencil className="mr-2 h-4 w-4" />
-                            Edit
+                            {t.edit}
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             className="text-destructive focus:text-destructive"
                             onClick={() => handleDeleteStudent(student.id)}
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
-                            Hapus
+                            {t.delete}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

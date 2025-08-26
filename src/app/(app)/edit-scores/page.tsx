@@ -13,6 +13,8 @@ import { Slider } from '@/components/ui/slider';
 import { useToast } from '@/hooks/use-toast';
 import type { Habit } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/contexts/language-provider';
+import { translations } from '@/lib/translations';
 
 const formSchema = z.object({
   studentId: z.string().min(1, 'Siswa harus dipilih.'),
@@ -27,6 +29,9 @@ export default function EditScoresPage() {
   const { toast } = useToast();
   const [selectedStudentHabits, setSelectedStudentHabits] = useState<Habit[]>([]);
   const [currentScore, setCurrentScore] = useState<number | null>(null);
+  const { language } = useLanguage();
+  const t = translations[language]?.editScoresPage || translations.en.editScoresPage;
+
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -78,8 +83,8 @@ export default function EditScoresPage() {
     const student = students.find((s) => s.id === data.studentId);
     const habit = selectedStudentHabits.find((h) => h.id === data.habitId);
     toast({
-      title: 'Nilai Berhasil Diperbarui!',
-      description: `Nilai ${habit?.name} untuk ${student?.name} telah diubah menjadi ${data.newScore}.`,
+      title: t.toast.title,
+      description: `${t.toast.description1} ${habit?.name} ${t.toast.description2} ${student?.name} ${t.toast.description3} ${data.newScore}.`,
     });
   };
 
@@ -94,29 +99,29 @@ export default function EditScoresPage() {
   return (
     <div className="flex flex-col gap-6">
       <header>
-        <h1 className="text-3xl font-bold tracking-tight">Edit Nilai Perkembangan</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{t.title}</h1>
         <p className="text-muted-foreground">
-          Ubah atau perbarui nilai perkembangan kebiasaan siswa di sini.
+          {t.description}
         </p>
       </header>
       <Card className="mx-auto w-full max-w-2xl">
         <CardHeader>
-          <CardTitle>Form Edit Nilai</CardTitle>
+          <CardTitle>{t.formTitle}</CardTitle>
           <CardDescription>
-            Pilih siswa, kebiasaan yang ingin diubah, lalu sesuaikan nilainya.
+            {t.formDescription}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-2">
-              <Label>Pilih Siswa</Label>
+              <Label>{t.selectStudent}</Label>
               <Controller
                 control={form.control}
                 name="studentId"
                 render={({ field }) => (
                   <Select onValueChange={field.onChange} value={field.value}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Pilih nama siswa..." />
+                      <SelectValue placeholder={t.selectStudentPlaceholder} />
                     </SelectTrigger>
                     <SelectContent>
                       {students.map((student) => (
@@ -136,7 +141,7 @@ export default function EditScoresPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Pilih Kebiasaan</Label>
+              <Label>{t.selectHabit}</Label>
               <Controller
                 control={form.control}
                 name="habitId"
@@ -147,7 +152,7 @@ export default function EditScoresPage() {
                     disabled={!selectedStudentId}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Pilih kebiasaan..." />
+                      <SelectValue placeholder={t.selectHabitPlaceholder} />
                     </SelectTrigger>
                     <SelectContent>
                       {selectedStudentHabits.map((habit) => (
@@ -168,7 +173,7 @@ export default function EditScoresPage() {
             
             <div className="space-y-3">
               <Label>
-                Ubah Nilai {currentScore !== null ? ` (Nilai saat ini: ${currentScore})` : ''}
+                {t.changeScore} {currentScore !== null ? ` (${t.currentScore}: ${currentScore})` : ''}
               </Label>
               <div className="flex items-center gap-4">
                 <Controller
@@ -193,7 +198,7 @@ export default function EditScoresPage() {
             </div>
 
             <Button type="submit" className="w-full" disabled={!form.formState.isValid}>
-              Simpan Perubahan
+              {t.saveButton}
             </Button>
           </form>
         </CardContent>

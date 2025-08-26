@@ -1,44 +1,55 @@
+'use client';
+
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle, Zap, Target, ListChecks, Handshake, Ear, Combine, HeartPulse, ArrowRight } from 'lucide-react';
 import { Logo } from '@/components/icons/logo';
+import { useLanguage } from '@/contexts/language-provider';
+import { translations } from '@/lib/translations';
 
 const habits = [
   {
     icon: <Zap className="h-8 w-8 text-accent" />,
     name: 'Proaktif',
     description: 'Mengambil inisiatif dan bertanggung jawab atas pilihan.',
+    translationKey: 'proactive'
   },
   {
     icon: <Target className="h-8 w-8 text-accent" />,
     name: 'Mulai dengan Tujuan Akhir',
     description: 'Menetapkan tujuan dan visi untuk masa depan.',
+    translationKey: 'beginWithEnd'
   },
   {
     icon: <ListChecks className="h-8 w-8 text-accent" />,
     name: 'Dahulukan yang Utama',
     description: 'Memprioritaskan hal-hal yang paling penting.',
+    translationKey: 'firstThingsFirst'
   },
   {
     icon: <Handshake className="h-8 w-8 text-accent" />,
     name: 'Berpikir Menang-Menang',
     description: 'Mencari solusi yang menguntungkan semua pihak.',
+    translationKey: 'thinkWinWin'
   },
   {
     icon: <Ear className="h-8 w-8 text-accent" />,
     name: 'Berusaha Mengerti Dahulu',
     description: 'Mendengarkan dengan empati untuk memahami orang lain.',
+    translationKey: 'seekFirstToUnderstand'
   },
   {
     icon: <Combine className="h-8 w-8 text-accent" />,
     name: 'Wujudkan Sinergi',
     description: 'Bekerja sama untuk mencapai hasil yang lebih baik.',
+    translationKey: 'synergize'
   },
   {
     icon: <HeartPulse className="h-8 w-8 text-accent" />,
     name: 'Asah Gergaji',
     description: 'Memperbaharui diri secara terus-menerus.',
+    translationKey: 'sharpenTheSaw'
   },
 ];
 
@@ -47,25 +58,32 @@ const features = [
     name: 'Dashboard Monitoring',
     description: 'Visualisasikan kemajuan siswa dengan grafik interaktif dan laporan ringkas.',
     icon: <CheckCircle className="h-6 w-6 text-primary" />,
+    translationKey: 'monitoringDashboard'
   },
   {
     name: 'Input Data Harian',
     description: 'Guru dapat dengan mudah mencatat perkembangan kebiasaan siswa setiap hari.',
     icon: <CheckCircle className="h-6 w-6 text-primary" />,
+    translationKey: 'dailyDataInput'
   },
   {
     name: 'Notifikasi AI Cerdas',
     description: 'Dapatkan pemberitahuan otomatis jika ada penurunan kebiasaan siswa.',
     icon: <CheckCircle className="h-6 w-6 text-primary" />,
+    translationKey: 'smartAINotifications'
   },
   {
     name: 'Laporan Komprehensif',
     description: 'Ekspor data perkembangan siswa untuk evaluasi dan pelaporan.',
     icon: <CheckCircle className="h-6 w-6 text-primary" />,
+    translationKey: 'comprehensiveReports'
   },
 ];
 
 export default function LandingPage() {
+  const { language } = useLanguage();
+  const t = translations[language]?.landingPage || translations.en.landingPage;
+
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -76,7 +94,7 @@ export default function LandingPage() {
           </Link>
           <Button asChild>
             <Link href="/dashboard">
-              Buka Dashboard
+              {t.openDashboard}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
@@ -87,14 +105,14 @@ export default function LandingPage() {
         <section className="py-20 md:py-32">
           <div className="container max-w-7xl text-center">
             <h1 className="font-headline text-4xl font-bold tracking-tight text-primary sm:text-5xl md:text-6xl">
-              Membentuk Karakter Hebat, Satu Kebiasaan Setiap Hari
+              {t.heroTitle}
             </h1>
             <p className="mt-6 max-w-3xl mx-auto text-lg text-muted-foreground md:text-xl">
-              HabitHelper adalah platform digital untuk memantau program "7 Kebiasaan Anak Indonesia Hebat" di SMPN 1 Sampit, membantu guru dan orang tua membimbing siswa menjadi pribadi yang unggul.
+              {t.heroSubtitle}
             </p>
             <div className="mt-10 flex justify-center gap-4">
                <Button size="lg" asChild>
-                <Link href="/dashboard">Lihat Demo</Link>
+                <Link href="/dashboard">{t.viewDemo}</Link>
               </Button>
             </div>
           </div>
@@ -103,17 +121,17 @@ export default function LandingPage() {
         <section id="habits" className="py-20 md:py-24 bg-card border-y">
           <div className="container max-w-7xl">
             <div className="text-center mb-12">
-              <h2 className="font-headline text-3xl font-bold text-primary sm:text-4xl">7 Kebiasaan Anak Indonesia Hebat</h2>
+              <h2 className="font-headline text-3xl font-bold text-primary sm:text-4xl">{t.habitsTitle}</h2>
               <p className="mt-4 text-lg text-muted-foreground">
-                Landasan untuk membangun karakter siswa yang proaktif, bertanggung jawab, dan kolaboratif.
+                {t.habitsSubtitle}
               </p>
             </div>
             <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {habits.map((habit) => (
                 <div key={habit.name} className="flex flex-col items-center text-center p-6 rounded-lg">
                   {habit.icon}
-                  <h3 className="mt-4 font-bold text-xl text-primary">{habit.name}</h3>
-                  <p className="mt-2 text-muted-foreground">{habit.description}</p>
+                  <h3 className="mt-4 font-bold text-xl text-primary">{t.habits[habit.translationKey].name}</h3>
+                  <p className="mt-2 text-muted-foreground">{t.habits[habit.translationKey].description}</p>
                 </div>
               ))}
                <div className="hidden xl:flex flex-col items-center text-center p-6 rounded-lg"></div>
@@ -124,9 +142,9 @@ export default function LandingPage() {
         <section id="features" className="py-20 md:py-24">
           <div className="container max-w-7xl">
             <div className="text-center mb-12">
-                <h2 className="font-headline text-3xl font-bold text-primary sm:text-4xl">Fitur Unggulan Kami</h2>
+                <h2 className="font-headline text-3xl font-bold text-primary sm:text-4xl">{t.featuresTitle}</h2>
                 <p className="mt-4 text-lg text-muted-foreground">
-                    Dirancang untuk mendukung ekosistem pendidikan yang efektif dan kolaboratif.
+                    {t.featuresSubtitle}
                 </p>
             </div>
             <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
@@ -135,8 +153,8 @@ export default function LandingPage() {
                   <div className="flex items-start gap-4">
                     {feature.icon}
                     <div>
-                      <h3 className="font-bold text-xl text-primary">{feature.name}</h3>
-                      <p className="mt-1 text-muted-foreground">{feature.description}</p>
+                      <h3 className="font-bold text-xl text-primary">{t.features[feature.translationKey].name}</h3>
+                      <p className="mt-1 text-muted-foreground">{t.features[feature.translationKey].description}</p>
                     </div>
                   </div>
                 </Card>
@@ -148,7 +166,7 @@ export default function LandingPage() {
 
       <footer className="border-t py-6">
         <div className="container max-w-7xl text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} HabitHelper | SMPN 1 Sampit. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} {t.footer}</p>
         </div>
       </footer>
     </div>

@@ -24,6 +24,9 @@ import {
 import type { Student, Habit } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useStudent } from '@/contexts/student-context';
+import { useLanguage } from '@/contexts/language-provider';
+import { translations } from '@/lib/translations';
+
 
 const habitIcons: { [key: string]: React.ReactNode } = {
   'Proaktif': <Zap className="h-5 w-5 text-yellow-500" />,
@@ -37,59 +40,62 @@ const habitIcons: { [key: string]: React.ReactNode } = {
 
 export default function DashboardPage() {
   const { students } = useStudent();
+  const { language } = useLanguage();
+  const t = translations[language]?.dashboardPage || translations.en.dashboardPage;
+
   
   return (
     <div className="flex flex-col gap-6">
       <header>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">Selamat datang kembali, Guru!</p>
+        <h1 className="text-3xl font-bold tracking-tight">{t.title}</h1>
+        <p className="text-muted-foreground">{t.welcome}</p>
       </header>
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Siswa</CardTitle>
+            <CardTitle className="text-sm font-medium">{t.totalStudents}</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{students.length}</div>
-            <p className="text-xs text-muted-foreground">Siswa aktif terpantau</p>
+            <p className="text-xs text-muted-foreground">{t.activeStudents}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Keterlibatan Rata-rata</CardTitle>
+            <CardTitle className="text-sm font-medium">{t.averageEngagement}</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">85.2%</div>
-            <p className="text-xs text-muted-foreground">+3.1% dari minggu lalu</p>
+            <p className="text-xs text-muted-foreground">{t.engagementTrend}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Kebiasaan Terpantau</CardTitle>
+            <CardTitle className="text-sm font-medium">{t.monitoredHabits}</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">7</div>
-            <p className="text-xs text-muted-foreground">Kebiasaan inti dipantau</p>
+            <p className="text-xs text-muted-foreground">{t.coreHabitsMonitored}</p>
           </CardContent>
         </Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Perkembangan Kebiasaan Umum</CardTitle>
+          <CardTitle>{t.overallHabitProgress}</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Kebiasaan</TableHead>
-                <TableHead className="text-center">Minggu Lalu</TableHead>
-                <TableHead>Minggu Ini</TableHead>
-                <TableHead className="text-center">Perubahan</TableHead>
+                <TableHead>{t.habit}</TableHead>
+                <TableHead className="text-center">{t.lastWeek}</TableHead>
+                <TableHead>{t.thisWeek}</TableHead>
+                <TableHead className="text-center">{t.change}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -129,20 +135,20 @@ export default function DashboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Progress Individu Siswa</CardTitle>
+          <CardTitle>{t.individualProgress}</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Siswa</TableHead>
-                <TableHead>Kelas</TableHead>
+                <TableHead>{t.student}</TableHead>
+                <TableHead>{t.class}</TableHead>
                 {students.length > 0 && students[0].habits.map((habit) => (
                   <TableHead key={habit.id} className="text-center">
                     <div className="flex justify-center">{habitIcons[habit.name]}</div>
                   </TableHead>
                 ))}
-                <TableHead>Rata-rata</TableHead>
+                <TableHead>{t.average}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

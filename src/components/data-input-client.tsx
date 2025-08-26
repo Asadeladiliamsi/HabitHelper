@@ -20,13 +20,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { CalendarIcon, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import type { Student } from '@/lib/types';
 import { HABIT_NAMES } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { useStudent } from '@/contexts/student-context';
+import { useLanguage } from '@/contexts/language-provider';
+import { translations } from '@/lib/translations';
 
-interface DataInputClientProps {
-  students: Student[];
-}
 
 const formSchema = z.object({
   studentId: z.string().min(1, 'Siswa harus dipilih.'),
@@ -42,9 +41,12 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function DataInputClient({ students }: DataInputClientProps) {
+export function DataInputClient() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { students } = useStudent();
+  const { language } = useLanguage();
+  const t = translations[language]?.dataInputClient || translations.en.dataInputClient;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -65,8 +67,8 @@ export function DataInputClient({ students }: DataInputClientProps) {
 
     setIsLoading(false);
     toast({
-      title: 'Sukses!',
-      description: `Data untuk ${data.habitName} berhasil disimpan.`,
+      title: t.toast.title,
+      description: `${t.toast.description1} ${data.habitName} ${t.toast.description2}`,
     });
     form.reset({
       studentId: data.studentId,
@@ -79,22 +81,22 @@ export function DataInputClient({ students }: DataInputClientProps) {
   return (
     <Card className="mx-auto w-full max-w-2xl">
       <CardHeader>
-        <CardTitle>Form Input Harian</CardTitle>
+        <CardTitle>{t.formTitle}</CardTitle>
         <CardDescription>
-          Pilih siswa, kebiasaan, dan masukkan skor harian beserta tanggalnya.
+          {t.formDescription}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="studentId">Pilih Siswa</Label>
+            <Label htmlFor="studentId">{t.selectStudent}</Label>
             <Controller
               control={form.control}
               name="studentId"
               render={({ field }) => (
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <SelectTrigger id="studentId">
-                    <SelectValue placeholder="Pilih nama siswa..." />
+                    <SelectValue placeholder={t.selectStudentPlaceholder} />
                   </SelectTrigger>
                   <SelectContent>
                     {students.map((student) => (
@@ -115,14 +117,14 @@ export function DataInputClient({ students }: DataInputClientProps) {
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="habitName">Pilih Karakter/Kebiasaan</Label>
+              <Label htmlFor="habitName">{t.selectHabit}</Label>
               <Controller
                 control={form.control}
                 name="habitName"
                 render={({ field }) => (
                   <Select onValueChange={field.onChange} value={field.value}>
                     <SelectTrigger id="habitName">
-                      <SelectValue placeholder="Pilih kebiasaan..." />
+                      <SelectValue placeholder={t.selectHabitPlaceholder} />
                     </SelectTrigger>
                     <SelectContent>
                       {HABIT_NAMES.map((name) => (
@@ -141,7 +143,7 @@ export function DataInputClient({ students }: DataInputClientProps) {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="score">Skor (1-10)</Label>
+              <Label htmlFor="score">{t.score}</Label>
               <Input
                 id="score"
                 type="number"
@@ -158,7 +160,7 @@ export function DataInputClient({ students }: DataInputClientProps) {
           </div>
           
           <div className="space-y-2">
-            <Label>Tanggal</Label>
+            <Label>{t.date}</Label>
             <Controller
               control={form.control}
               name="date"
@@ -173,7 +175,7 @@ export function DataInputClient({ students }: DataInputClientProps) {
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {field.value ? format(field.value, 'PPP') : <span>Pilih tanggal</span>}
+                      {field.value ? format(field.value, 'PPP') : <span>{t.datePlaceholder}</span>}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -194,10 +196,10 @@ export function DataInputClient({ students }: DataInputClientProps) {
           <Button type="submit" disabled={isLoading} className="w-full">
             {isLoading ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menyimpan...
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t.saving}
               </>
             ) : (
-              'Simpan Data'
+              t.saveButton
             )}
           </Button>
         </form>

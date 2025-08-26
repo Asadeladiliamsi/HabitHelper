@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -17,6 +16,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Student } from '@/lib/types';
 import { useEffect } from 'react';
+import { useLanguage } from '@/contexts/language-provider';
+import { translations } from '@/lib/translations';
+
 
 interface StudentDialogProps {
   isOpen: boolean;
@@ -33,6 +35,9 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export function StudentDialog({ isOpen, onOpenChange, onSave, student }: StudentDialogProps) {
+  const { language } = useLanguage();
+  const t = translations[language]?.studentDialog || translations.en.studentDialog;
+
   const {
     register,
     handleSubmit,
@@ -67,30 +72,30 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student }: Student
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit(onSubmit)}>
           <DialogHeader>
-            <DialogTitle>{student ? 'Edit Siswa' : 'Tambah Siswa Baru'}</DialogTitle>
+            <DialogTitle>{student ? t.editTitle : t.addTitle}</DialogTitle>
             <DialogDescription>
-              {student ? 'Ubah detail siswa di bawah ini.' : 'Isi detail untuk siswa baru di bawah ini.'}
+              {student ? t.editDescription : t.addDescription}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="name">
-                Nama
+                {t.name}
               </Label>
               <Input id="name" {...register('name')} />
               {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="class">
-                Kelas
+                {t.class}
               </Label>
               <Input id="class" {...register('class')} />
               {errors.class && <p className="text-sm text-destructive mt-1">{errors.class.message}</p>}
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Batal</Button>
-            <Button type="submit">Simpan</Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>{t.cancel}</Button>
+            <Button type="submit">{t.save}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

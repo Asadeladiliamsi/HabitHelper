@@ -1,16 +1,22 @@
+'use client';
+
 import { DataInputClient } from '@/components/data-input-client';
-import { mockStudents } from '@/lib/mock-data';
+import { useLanguage } from '@/contexts/language-provider';
+import { translations } from '@/lib/translations';
 
 export default function DataInputPage() {
+  const { language } = useLanguage();
+  const t = translations[language]?.dataInputPage || translations.en.dataInputPage;
+
   return (
     <div className="flex flex-col gap-6">
       <header>
-        <h1 className="text-3xl font-bold tracking-tight">Input Data Harian</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{t.title}</h1>
         <p className="text-muted-foreground">
-          Catat perkembangan kebiasaan siswa di sini secara rutin.
+          {t.description}
         </p>
       </header>
-      <DataInputClient students={mockStudents} />
+      <DataInputClient />
     </div>
   );
 }
