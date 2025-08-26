@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
@@ -16,10 +17,10 @@ const StudentContext = createContext<StudentContextType | undefined>(undefined);
 
 export const StudentProvider = ({ children }: { children: ReactNode }) => {
   const [students, setStudents] = useState<Student[]>([]);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    // This effect runs only once on the client after hydration
+    setIsMounted(true);
     try {
       const storedStudents = localStorage.getItem('studentsData');
       if (storedStudents) {
@@ -29,21 +30,19 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (error) {
       console.error("Failed to parse students from localStorage", error);
-      setStudents(mockStudents); // Fallback to mock data on error
+      setStudents(mockStudents);
     }
-    setIsInitialLoad(false); // Mark initial load as complete
-  }, []); // Empty dependency array ensures this runs only on the client side once
+  }, []);
 
   useEffect(() => {
-    // This effect runs whenever students data changes, but not on the initial load from localStorage
-    if (!isInitialLoad) {
+    if (isMounted) {
       try {
         localStorage.setItem('studentsData', JSON.stringify(students));
       } catch (error) {
         console.error("Failed to save students to localStorage", error);
       }
     }
-  }, [students, isInitialLoad]);
+  }, [students, isMounted]);
 
 
   const addStudent = (newStudentData: Omit<Student, 'id'>) => {
@@ -85,6 +84,9 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
+  if (!isMounted) {
+    return null;
+  }
 
   return (
     <StudentContext.Provider value={{ students, addStudent, updateStudent, deleteStudent, updateHabitScore }}>
