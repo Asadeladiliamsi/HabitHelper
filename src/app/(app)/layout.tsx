@@ -52,8 +52,8 @@ export default function AppLayout({
   ];
 
   const getRoleTitle = () => {
-    if (pathname.startsWith('/siswa')) return 'Dasbor Siswa';
-    if (pathname.startsWith('/orangtua')) return 'Dasbor Orang Tua';
+    // Since we are simplifying to a single teacher-focused layout,
+    // we can hardcode this for now.
     return t.sidebar.teacherDashboard;
   };
 
