@@ -21,7 +21,6 @@ import {
   Activity,
 } from 'lucide-react';
 import type { Student, Habit } from '@/lib/types';
-import { useAuth } from '@/components/auth-provider';
 
 const habitIcons: { [key: string]: React.ReactNode } = {
   'Proaktif': <Zap className="h-5 w-5 text-yellow-500" />,
@@ -45,13 +44,12 @@ const chartConfig = {
 };
 
 export default function GuruDashboardPage() {
-  const { userProfile } = useAuth();
   
   return (
     <div className="flex flex-col gap-6">
       <header>
         <h1 className="text-3xl font-bold tracking-tight">Dashboard Guru</h1>
-        <p className="text-muted-foreground">Selamat datang kembali, {userProfile?.name || 'Guru'}!</p>
+        <p className="text-muted-foreground">Selamat datang kembali, Guru!</p>
       </header>
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

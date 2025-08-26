@@ -75,8 +75,8 @@ export default function LandingPage() {
             <span className="font-bold text-xl text-primary">HabitHelper</span>
           </Link>
           <Button asChild>
-            <Link href="/login">
-              Login
+            <Link href="/guru/dashboard">
+              Buka Dashboard
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
@@ -93,8 +93,8 @@ export default function LandingPage() {
               HabitHelper adalah platform digital untuk memantau program "7 Kebiasaan Anak Indonesia Hebat" di SMPN 1 Sampit, membantu guru dan orang tua membimbing siswa menjadi pribadi yang unggul.
             </p>
             <div className="mt-10 flex justify-center gap-4">
-              <Button size="lg" asChild>
-                <Link href="/register">Mulai Sekarang</Link>
+               <Button size="lg" asChild>
+                <Link href="/guru/dashboard">Lihat Demo</Link>
               </Button>
             </div>
           </div>
