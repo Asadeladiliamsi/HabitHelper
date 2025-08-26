@@ -41,11 +41,24 @@ export default function EditScoresPage() {
   const newScoreValue = form.watch('newScore');
 
   useEffect(() => {
-    if (selectedStudentId) {
+    // Check if the selected student still exists in the students list.
+    // This handles cases where a student is deleted.
+    const studentExists = students.some((s) => s.id === selectedStudentId);
+
+    if (selectedStudentId && studentExists) {
       const student = students.find((s) => s.id === selectedStudentId);
       setSelectedStudentHabits(student?.habits || []);
-      form.setValue('habitId', ''); 
-      setCurrentScore(null);
+      // Do not reset habitId here if it's still valid for the selected student
+      const habitStillExists = student?.habits.some(h => h.id === form.getValues('habitId'));
+      if (!habitStillExists) {
+        form.setValue('habitId', '');
+        setCurrentScore(null);
+      }
+    } else if (selectedStudentId && !studentExists) {
+        // If student is not found (e.g., deleted), reset the form.
+        form.reset({ studentId: '', habitId: '', newScore: 8 });
+        setSelectedStudentHabits([]);
+        setCurrentScore(null);
     } else {
       setSelectedStudentHabits([]);
       setCurrentScore(null);
@@ -98,7 +111,7 @@ export default function EditScoresPage() {
                 control={form.control}
                 name="studentId"
                 render={({ field }) => (
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <SelectTrigger>
                       <SelectValue placeholder="Pilih nama siswa..." />
                     </SelectTrigger>
