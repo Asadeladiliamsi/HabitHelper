@@ -1,7 +1,8 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
   FilePlus2,
@@ -10,6 +11,8 @@ import {
   Settings,
   Users,
   Pencil,
+  LogOut,
+  Loader2,
 } from 'lucide-react';
 import {
   SidebarProvider,
@@ -26,6 +29,8 @@ import {
 import { Logo } from '@/components/icons/logo';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
+import { useAuth } from '@/contexts/auth-context';
+import { Button } from '@/components/ui/button';
 
 export interface NavItem {
   href: string;
@@ -39,8 +44,17 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { language } = useLanguage();
+  const { user, userProfile, loading, logout } = useAuth();
   const t = translations[language] || translations.en;
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [loading, user, router]);
+
 
   const navItems: NavItem[] = [
     { href: '/dashboard', icon: LayoutDashboard, label: t.sidebar.dashboard },
@@ -50,6 +64,14 @@ export default function AppLayout({
     { href: '/notifications', icon: Bell, label: t.sidebar.notifications },
     { href: '/reports', icon: FileText, label: t.sidebar.reports },
   ];
+
+  if (loading || !user) {
+     return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
       <SidebarProvider>
@@ -81,7 +103,7 @@ export default function AppLayout({
           </SidebarContent>
           <SidebarFooter>
             <SidebarMenu>
-              <SidebarMenuItem>
+               <SidebarMenuItem>
                 <Link href="/settings">
                   <SidebarMenuButton
                     isActive={pathname === '/settings'}
@@ -92,6 +114,16 @@ export default function AppLayout({
                   </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={logout}
+                  tooltip={{ children: t.sidebar.logout }}
+                  className="w-full"
+                >
+                  <LogOut />
+                  <span>{t.sidebar.logout}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarFooter>
         </Sidebar>
@@ -99,7 +131,13 @@ export default function AppLayout({
           <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-card px-4 sm:px-6">
             <SidebarTrigger className="md:hidden" />
             <div className="flex-1">
-                <span className="text-sm font-semibold capitalize">{t.sidebar.teacherDashboard}</span>
+                <span className="font-semibold capitalize text-sm">
+                  {userProfile?.role === 'guru' ? t.sidebar.teacherDashboard : 
+                   userProfile?.role === 'siswa' ? 'Dasbor Siswa' : 
+                   'Dasbor Orang Tua'
+                  }
+                </span>
+                 <span className="text-sm text-muted-foreground ml-2">({user?.email})</span>
             </div>
           </header>
           <main className="flex-1 p-4 sm:p-6">{children}</main>

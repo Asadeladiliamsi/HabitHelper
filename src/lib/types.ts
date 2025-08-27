@@ -22,11 +22,11 @@ export const HABIT_NAMES = [
   'Tidur Cepat',
 ];
 
-export type UserRole = 'guru' | 'siswa' | 'orangtua';
+export type UserRole = 'guru' | 'siswa' | 'orangtua' | 'admin';
 
 export interface UserProfile {
-    uid: string;
-    email: string | null;
-    role: UserRole;
-    name?: string;
+  uid: string;
+  email: string | null;
+  name: string;
+  role: UserRole;
 }
