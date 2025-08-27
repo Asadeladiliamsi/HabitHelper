@@ -14,6 +14,7 @@ import {
   LogOut,
   Loader2,
   Shield,
+  Heart,
 } from 'lucide-react';
 import {
   SidebarProvider,
@@ -75,6 +76,10 @@ export default function AppLayout({
     { href: '/admin/dashboard', icon: Shield, label: 'Dasbor Admin' },
   ];
 
+  const orangtuaNavItems: NavItem[] = [
+    { href: '/orangtua/dashboard', icon: Heart, label: 'Dasbor Orang Tua' },
+  ];
+
   const getNavItems = () => {
     switch (userProfile?.role) {
       case 'siswa':
@@ -83,6 +88,8 @@ export default function AppLayout({
         return guruNavItems;
       case 'admin':
         return adminNavItems;
+      case 'orangtua':
+        return orangtuaNavItems;
       default:
         return [];
     }
@@ -106,6 +113,8 @@ export default function AppLayout({
         return 'Dasbor Siswa';
       case 'admin':
         return 'Dasbor Admin';
+      case 'orangtua':
+        return 'Dasbor Orang Tua';
       default:
         return 'Dasbor';
     }
