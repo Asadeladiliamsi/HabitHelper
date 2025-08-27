@@ -26,8 +26,16 @@ const nisnLoginSchema = z.object({
     password: z.string().min(6, { message: 'Kata sandi minimal 6 karakter.' }),
 });
 
+const parentLoginSchema = z.object({
+  email: z.string().email({ message: 'Email tidak valid.' }),
+  password: z.string().min(6, { message: 'Kata sandi minimal 6 karakter.' }),
+});
+
+
 type EmailLoginValues = z.infer<typeof emailLoginSchema>;
 type NisnLoginValues = z.infer<typeof nisnLoginSchema>;
+type ParentLoginValues = z.infer<typeof parentLoginSchema>;
+
 
 export default function LoginPage() {
   const { login, loginWithNisn } = useAuth();
@@ -51,30 +59,37 @@ export default function LoginPage() {
       }
   })
 
-  const onEmailSubmit = async (data: EmailLoginValues) => {
+  const parentForm = useForm<ParentLoginValues>({
+    resolver: zodResolver(parentLoginSchema),
+    defaultValues: {
+        email: '',
+        password: '',
+    }
+  })
+
+  const handleLogin = async (loginFn: Promise<any>) => {
     setIsLoading(true);
     setError(null);
     try {
-      await login(data.email, data.password);
+      await loginFn;
       router.push('/dashboard');
     } catch (err: any) {
       setError(err.message);
     } finally {
       setIsLoading(false);
     }
+  }
+
+  const onEmailSubmit = (data: EmailLoginValues) => {
+    handleLogin(login(data.email, data.password));
   };
 
-  const onNisnSubmit = async (data: NisnLoginValues) => {
-      setIsLoading(true);
-      setError(null);
-      try {
-          await loginWithNisn(data.nisn, data.password);
-          router.push('/dashboard');
-      } catch (err: any) {
-          setError(err.message);
-      } finally {
-          setIsLoading(false);
-      }
+  const onNisnSubmit = (data: NisnLoginValues) => {
+      handleLogin(loginWithNisn(data.nisn, data.password));
+  }
+
+  const onParentSubmit = (data: ParentLoginValues) => {
+    handleLogin(login(data.email, data.password));
   }
 
   return (
@@ -85,9 +100,10 @@ export default function LoginPage() {
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="guru">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="guru">Guru / Admin</TabsTrigger>
                 <TabsTrigger value="siswa">Siswa</TabsTrigger>
+                <TabsTrigger value="orangtua">Orang Tua</TabsTrigger>
             </TabsList>
             <div className="pt-6">
                 {error && (
@@ -101,8 +117,8 @@ export default function LoginPage() {
             <TabsContent value="guru">
                  <form onSubmit={emailForm.handleSubmit(onEmailSubmit)} className="space-y-4">
                     <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input id="email" type="email" placeholder="email@contoh.com" {...emailForm.register('email')} />
+                        <Label htmlFor="email-guru">Email</Label>
+                        <Input id="email-guru" type="email" placeholder="email@contoh.com" {...emailForm.register('email')} />
                         {emailForm.formState.errors.email && <p className="text-sm text-destructive">{emailForm.formState.errors.email.message}</p>}
                     </div>
                     <div className="space-y-2">
@@ -129,6 +145,23 @@ export default function LoginPage() {
                     </div>
                     <Button type="submit" className="w-full" disabled={isLoading}>
                         {isLoading ? <Loader2 className="animate-spin" /> : 'Masuk sebagai Siswa'}
+                    </Button>
+                </form>
+            </TabsContent>
+             <TabsContent value="orangtua">
+                <form onSubmit={parentForm.handleSubmit(onParentSubmit)} className="space-y-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="email-orangtua">Email</Label>
+                        <Input id="email-orangtua" type="email" placeholder="email@contoh.com" {...parentForm.register('email')} />
+                        {parentForm.formState.errors.email && <p className="text-sm text-destructive">{parentForm.formState.errors.email.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="password-orangtua">Kata Sandi</Label>
+                        <Input id="password-orangtua" type="password" placeholder="••••••••" {...parentForm.register('password')} />
+                        {parentForm.formState.errors.password && <p className="text-sm text-destructive">{parentForm.formState.errors.password.message}</p>}
+                    </div>
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                        {isLoading ? <Loader2 className="animate-spin" /> : 'Masuk sebagai Orang Tua'}
                     </Button>
                 </form>
             </TabsContent>
