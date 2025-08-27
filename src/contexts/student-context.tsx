@@ -6,6 +6,7 @@ import { collection, doc, getDocs, onSnapshot, setDoc, deleteDoc, writeBatch } f
 import { mockStudents } from '@/lib/mock-data';
 import type { Student } from '@/lib/types';
 import { HABIT_NAMES } from '@/lib/types';
+import { useAuth } from './auth-context';
 
 interface StudentContextType {
   students: Student[];
@@ -36,10 +37,24 @@ const seedInitialData = async () => {
 };
 
 export const StudentProvider = ({ children }: { children: ReactNode }) => {
+  const { user, loading: authLoading } = useAuth();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (authLoading) {
+      // Tunggu hingga status autentikasi selesai dimuat
+      setLoading(true);
+      return;
+    }
+
+    if (!user) {
+      // Jika tidak ada pengguna, reset state dan hentikan
+      setStudents([]);
+      setLoading(false);
+      return;
+    }
+    
     // Seed data on initial load if necessary
     seedInitialData();
 
@@ -53,7 +68,7 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [user, authLoading]);
   
   const addStudent = async (newStudentData: Omit<Student, 'id'>) => {
     const studentId = `student-${Date.now()}`;
@@ -106,10 +121,6 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
     }
   };
   
-  if (loading) {
-    return null; // Or a loading spinner
-  }
-
   return (
     <StudentContext.Provider value={{ students, loading, addStudent, updateStudent, deleteStudent, updateHabitScore }}>
       {children}
