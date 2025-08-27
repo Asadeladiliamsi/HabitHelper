@@ -15,7 +15,7 @@ interface AuthContextType {
   login: (email: string, pass: string) => Promise<any>;
   loginWithNisn: (nisn: string, pass: string) => Promise<any>;
   signup: (email: string, pass: string) => Promise<any>;
-  validateAndCreateUserProfile: (name: string, email: string, pass: string, role: UserRole, nisn?: string) => Promise<void>;
+  validateAndCreateUserProfile: (name: string, email: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -92,27 +92,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return createUserWithEmailAndPassword(auth, email, pass);
   };
 
-  const validateAndCreateUserProfile = async (name: string, email: string, pass: string, role: UserRole, nisn?: string) => {
-     if (role === 'siswa') {
-      if (!nisn) {
-        throw new Error('NISN wajib diisi untuk mendaftar sebagai siswa.');
-      }
-      const isRegistered = await isNisnRegistered(nisn);
-      if (!isRegistered) {
-        throw new Error(`NISN "${nisn}" tidak terdaftar. Harap hubungi guru Anda untuk mendaftarkan NISN Anda terlebih dahulu.`);
-      }
-    }
-    
+  const validateAndCreateUserProfile = async (name: string, email: string, pass: string) => {
      // Create the user in Firebase Auth first
      const userCredential = await signup(email, pass);
 
      const userDocRef = doc(db, 'users', userCredential.user.uid);
-     const userProfileData: Omit<UserProfile, 'createdAt'> = {
+     // All new signups are 'siswa' by default. Admin can change role later.
+     const userProfileData: Omit<UserProfile, 'createdAt' | 'nisn'> = {
         uid: userCredential.user.uid,
         email: email,
         name: name,
-        role: role,
-        ...(role === 'siswa' && nisn && { nisn }),
+        role: 'siswa',
       };
      await setDoc(userDocRef, {
         ...userProfileData,

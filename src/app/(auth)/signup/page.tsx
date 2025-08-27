@@ -18,7 +18,6 @@ const formSchema = z.object({
   name: z.string().min(3, { message: 'Nama minimal 3 karakter.' }),
   email: z.string().email({ message: 'Email tidak valid.' }),
   password: z.string().min(6, { message: 'Kata sandi minimal 6 karakter.' }),
-  nisn: z.string().min(1, { message: 'NISN harus diisi.' }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -35,7 +34,6 @@ export default function SignupPage() {
       name: '',
       email: '',
       password: '',
-      nisn: '',
     },
   });
 
@@ -43,7 +41,7 @@ export default function SignupPage() {
     setError(null);
     setIsLoading(true);
     try {
-      await validateAndCreateUserProfile(data.name, data.email, data.password, 'siswa', data.nisn);
+      await validateAndCreateUserProfile(data.name, data.email, data.password);
       router.push('/dashboard');
     } catch (err: any) {
        if (err.code === 'auth/email-already-in-use') {
@@ -87,12 +85,7 @@ export default function SignupPage() {
             <Input id="password" type="password" placeholder="••••••••" {...form.register('password')} />
             {form.formState.errors.password && <p className="text-sm text-destructive">{form.formState.errors.password.message}</p>}
           </div>
-           <div className="space-y-2">
-            <Label htmlFor="nisn">NISN (Nomor Induk Siswa Nasional)</Label>
-            <Input id="nisn" type="text" placeholder="Masukkan NISN Anda" {...form.register('nisn')} />
-            {form.formState.errors.nisn && <p className="text-sm text-destructive">{form.formState.errors.nisn.message}</p>}
-          </div>
-
+          
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? <Loader2 className="animate-spin" /> : 'Daftar'}
           </Button>
