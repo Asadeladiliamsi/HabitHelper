@@ -24,12 +24,15 @@ export default function DashboardPage() {
         router.replace('/admin/dashboard');
       } else if (userProfile.role === 'orangtua') {
         router.replace('/orangtua/dashboard');
+      } else if (userProfile.role === 'siswa' && !userProfile.nisn) {
+        // Jika siswa belum verifikasi NISN, arahkan ke halaman verifikasi
+        router.replace('/verify-nisn');
       }
     }
   }, [loading, userProfile, router]);
 
   // Tampilkan loader saat memeriksa otentikasi atau jika pengguna belum dimuat
-  if (loading || !userProfile) {
+  if (loading || !userProfile || (userProfile.role === 'siswa' && !userProfile.nisn)) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />

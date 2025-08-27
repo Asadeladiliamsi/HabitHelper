@@ -15,6 +15,7 @@ interface AuthContextType {
   signup: (email: string, pass: string) => Promise<any>;
   validateAndCreateUserProfile: (name: string, email: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
+  verifyAndLinkNisn: (uid: string, nisn: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -67,7 +68,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
      const userCredential = await signup(email, pass);
      const userDocRef = doc(db, 'users', userCredential.user.uid);
      
-     const profileData: UserProfile = {
+     const profileData: Omit<UserProfile, 'nisn'> = {
         uid: userCredential.user.uid,
         email: email,
         name: name,
@@ -80,13 +81,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
   };
 
+  const verifyAndLinkNisn = async (uid: string, nisn: string) => {
+    // 1. Check if a student with this NISN exists in the 'students' collection
+    const studentsQuery = query(collection(db, 'students'), where('nisn', '==', nisn));
+    const studentSnapshot = await getDocs(studentsQuery);
+
+    if (studentSnapshot.empty) {
+      throw new Error('NISN tidak ditemukan. Pastikan NISN sudah benar dan terdaftar oleh guru Anda.');
+    }
+
+    // 2. Check if this NISN is already linked to another user account
+    const usersQuery = query(collection(db, 'users'), where('nisn', '==', nisn));
+    const userSnapshot = await getDocs(usersQuery);
+
+    if (!userSnapshot.empty) {
+      // Check if it's the same user trying to re-verify, which is okay.
+      const isSameUser = userSnapshot.docs.some(doc => doc.id === uid);
+      if (!isSameUser) {
+        throw new Error('NISN ini sudah ditautkan ke akun lain.');
+      }
+    }
+    
+    // 3. Link the NISN to the user's profile
+    const userDocRef = doc(db, 'users', uid);
+    await updateDoc(userDocRef, { nisn: nisn });
+    
+    // Update local userProfile state
+    setUserProfile(prevProfile => prevProfile ? { ...prevProfile, nisn } : null);
+  };
+
+
   const logout = async () => {
     setUserProfile(null);
     await signOut(auth);
     router.push('/login');
   };
 
-  const value = { user, userProfile, loading, login, signup, validateAndCreateUserProfile, logout };
+  const value = { user, userProfile, loading, login, signup, validateAndCreateUserProfile, logout, verifyAndLinkNisn };
 
   return (
     <AuthContext.Provider value={value}>

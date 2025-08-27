@@ -33,6 +33,7 @@ export interface UserProfile {
   email: string | null;
   name: string;
   role: UserRole;
+  nisn?: string; // NISN is now optional and added after verification
 }
 
 export interface HabitEntry {

@@ -55,8 +55,8 @@ export function SiswaDashboardClient() {
     );
   }
 
-  // Find student data based on the logged-in user's email.
-  const studentData = students.find(s => s.email === userProfile?.email);
+  // Find student data based on the logged-in user's verified NISN.
+  const studentData = students.find(s => s.nisn === userProfile?.nisn);
 
   if (!studentData) {
     return (
@@ -65,7 +65,7 @@ export function SiswaDashboardClient() {
           <CardTitle>Data Siswa Belum Ditemukan</CardTitle>
         </CardHeader>
         <CardContent>
-          <p>Profil Anda belum terhubung dengan data siswa di sistem. Mohon hubungi guru Anda untuk memastikan email yang Anda gunakan untuk mendaftar sudah ditambahkan ke profil siswa oleh guru.</p>
+          <p>Profil Anda belum terhubung dengan data siswa di sistem. Mohon hubungi guru Anda untuk memastikan NISN yang Anda gunakan untuk verifikasi sudah benar dan terdaftar.</p>
         </CardContent>
       </Card>
     );
