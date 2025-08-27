@@ -19,20 +19,17 @@ export default function DashboardPage() {
         return;
       }
       
-      // Arahkan berdasarkan peran
       if (userProfile.role === 'admin') {
         router.replace('/admin/dashboard');
       } else if (userProfile.role === 'orangtua') {
         router.replace('/orangtua/dashboard');
       } else if (userProfile.role === 'siswa' && !userProfile.nisn) {
-        // Jika siswa belum verifikasi NISN, arahkan ke halaman verifikasi
         router.replace('/verify-nisn');
       }
     }
   }, [loading, userProfile, router]);
 
-  // Tampilkan loader saat memeriksa otentikasi atau jika pengguna belum dimuat
-  if (loading || !userProfile || userProfile.role === 'admin' || userProfile.role === 'orangtua' || (userProfile.role === 'siswa' && !userProfile.nisn)) {
+  if (loading || !userProfile || ['admin', 'orangtua'].includes(userProfile.role) || (userProfile.role === 'siswa' && !userProfile.nisn)) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -40,7 +37,6 @@ export default function DashboardPage() {
     );
   }
   
-  // Tampilkan dasbor yang sesuai berdasarkan peran
   return (
     <StudentProvider>
        {userProfile.role === 'guru' && (
@@ -48,7 +44,7 @@ export default function DashboardPage() {
             <DashboardClient />
           </div>
        )}
-       {userProfile.role === 'siswa' && (
+       {userProfile.role === 'siswa' && userProfile.nisn && (
           <div className="flex flex-col gap-6">
             <SiswaDashboardClient />
           </div>
