@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Student } from '@/lib/types';
 import { useAuth } from './auth-context';
@@ -25,18 +25,11 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (authLoading) {
+    if (authLoading || !user || !userProfile) {
       setLoading(true);
       return;
     }
 
-    if (!user || !userProfile) {
-      setLoading(false);
-      setStudents([]);
-      return;
-    }
-
-    setLoading(true);
     const q = query(collection(db, 'students'));
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -114,6 +107,14 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
     }
   };
   
+  if (loading) {
+    return (
+     <div className="flex h-screen items-center justify-center">
+       <Loader2 className="h-8 w-8 animate-spin" />
+     </div>
+   );
+ }
+
   const contextValue = { students, loading, addStudent, updateStudent, deleteStudent, updateHabitScore };
 
   return (
