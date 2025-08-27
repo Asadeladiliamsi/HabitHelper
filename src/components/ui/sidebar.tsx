@@ -538,6 +538,7 @@ const SidebarMenuButton = React.forwardRef<
   React.ComponentProps<"button"> & {
     asChild?: boolean
     tooltip?: string | React.ComponentProps<typeof TooltipContent>
+    isActive?: boolean
   } & VariantProps<typeof sidebarMenuButtonVariants>
 >(
   (
@@ -547,6 +548,7 @@ const SidebarMenuButton = React.forwardRef<
       size = "default",
       tooltip,
       className,
+      isActive,
       ...props
     },
     ref
@@ -559,6 +561,7 @@ const SidebarMenuButton = React.forwardRef<
         ref={ref}
         data-sidebar="menu-button"
         data-size={size}
+        data-active={isActive}
         className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
         {...props}
       />
@@ -758,3 +761,5 @@ export {
   SidebarTrigger,
   useSidebar,
 }
+
+    

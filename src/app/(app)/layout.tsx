@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   FilePlus2,
@@ -37,6 +38,7 @@ export default function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
   const { language } = useLanguage();
   const t = translations[language] || translations.en;
 
@@ -72,6 +74,7 @@ export default function AppLayout({
               <SidebarMenuItem key={item.href}>
                  <Link href={item.href}>
                   <SidebarMenuButton
+                    isActive={pathname === item.href}
                     tooltip={{ children: item.label }}
                   >
                     <item.icon />
@@ -87,6 +90,7 @@ export default function AppLayout({
             <SidebarMenuItem>
               <Link href="/settings">
                 <SidebarMenuButton
+                  isActive={pathname === '/settings'}
                   tooltip={{ children: t.sidebar.settings }}
                 >
                   <Settings />
@@ -109,3 +113,5 @@ export default function AppLayout({
     </SidebarProvider>
   );
 }
+
+    

@@ -58,7 +58,7 @@ export default function SiswaLayout({
               <SidebarMenuItem key={item.href}>
                  <Link href={item.href}>
                   <SidebarMenuButton
-                    isActive={pathname.startsWith(item.href)}
+                    isActive={pathname === item.href}
                     tooltip={{ children: item.label }}
                   >
                     <item.icon />
@@ -74,7 +74,7 @@ export default function SiswaLayout({
             <SidebarMenuItem>
               <Link href="/settings">
                 <SidebarMenuButton
-                  isActive={pathname.startsWith('/settings')}
+                  isActive={pathname === '/settings'}
                   tooltip={{ children: t.sidebar.settings }}
                 >
                   <Settings />
@@ -98,3 +98,5 @@ export default function SiswaLayout({
     </SidebarProvider>
   );
 }
+
+    
