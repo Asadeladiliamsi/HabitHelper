@@ -29,14 +29,12 @@ interface StudentContextType {
 const StudentContext = createContext<StudentContextType | undefined>(undefined);
 
 export const StudentProvider = ({ children }: { children: ReactNode }) => {
-  const { user, userProfile, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Wait for auth to finish and user profile to be loaded.
-    // This is the critical part: do nothing if we don't have a user or their profile.
-    if (authLoading || !user || !userProfile) {
+    if (authLoading || !user) {
       setLoading(true);
       return;
     }
@@ -44,7 +42,7 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
     const studentsCollectionRef = collection(db, 'students');
 
     const unsubscribe = onSnapshot(studentsCollectionRef, async (snapshot) => {
-        if (snapshot.empty && user) {
+        if (snapshot.empty) {
             console.log('No students found. Seeding initial mock data...');
             setLoading(true);
             try {
@@ -59,7 +57,6 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
                 });
                 await batch.commit();
                 console.log('Mock data seeded successfully.');
-                // Snapshot will re-fire with the new data, so we don't set loading to false here.
             } catch(error) {
                 console.error("Error seeding data:", error);
                 setLoading(false);
@@ -71,17 +68,16 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
         }
     }, (error) => {
         console.error("Error fetching students:", error);
-        setStudents([]); // Clear students on error
+        setStudents([]); 
         setLoading(false);
     });
 
-    // Cleanup subscription on unmount or when user logs out
     return () => {
       unsubscribe();
-      setStudents([]); // Clear students on unmount/logout
-      setLoading(true); // Reset loading state
+      setStudents([]);
+      setLoading(true);
     };
-  }, [user, userProfile, authLoading]); // Rerun effect when auth state changes
+  }, [user, authLoading]);
   
   const addStudent = async (newStudentData: Omit<Student, 'id' | 'avatarUrl'>) => {
     if (!user) {
@@ -140,6 +136,14 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
   
   const contextValue = { students, loading, addStudent, updateStudent, deleteStudent, updateHabitScore };
   
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <StudentContext.Provider value={contextValue}>
       {children}
