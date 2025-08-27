@@ -10,15 +10,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
 import type { Student, UserProfile } from '@/lib/types';
+import { Input } from './ui/input';
+import { Table, TableBody, TableCell, TableRow } from './ui/table';
+import { Search } from 'lucide-react';
+import { ScrollArea } from './ui/scroll-area';
 
 interface LinkParentDialogProps {
   isOpen: boolean;
@@ -36,10 +32,12 @@ export function LinkParentDialog({
   parents,
 }: LinkParentDialogProps) {
   const [selectedParentId, setSelectedParentId] = useState<string | null>(student.parentId || null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     if (isOpen) {
       setSelectedParentId(student.parentId || null);
+      setSearchTerm('');
     }
   }, [isOpen, student]);
 
@@ -49,6 +47,13 @@ export function LinkParentDialog({
     }
   };
 
+  const filteredParents = parents.filter(parent =>
+    parent.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (parent.email && parent.email.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+  
+  const selectedParentName = parents.find(p => p.uid === selectedParentId)?.name || '';
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
@@ -57,31 +62,49 @@ export function LinkParentDialog({
           <DialogDescription>
             Pilih akun orang tua untuk ditautkan ke siswa{' '}
             <span className="font-semibold">{student.name}</span>.
+            {selectedParentId && <p className="font-semibold text-foreground pt-2">Terpilih: {selectedParentName}</p>}
           </DialogDescription>
         </DialogHeader>
-        <Command className="rounded-lg border shadow-md">
-          <CommandInput placeholder="Cari nama orang tua..." />
-          <CommandList>
-            <CommandEmpty>Tidak ada orang tua ditemukan.</CommandEmpty>
-            <CommandGroup>
-              {parents.map((parent) => (
-                <CommandItem
-                  key={parent.uid}
-                  value={parent.name}
-                  onSelect={() => {
-                    setSelectedParentId(parent.uid);
-                  }}
-                  className={`cursor-pointer ${selectedParentId === parent.uid ? 'bg-accent text-accent-foreground' : ''}`}
-                >
-                  <div className="flex flex-col">
-                    <span>{parent.name}</span>
-                    <span className="text-xs text-muted-foreground">{parent.email}</span>
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
+
+        <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+                placeholder="Cari nama atau email orang tua..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+            />
+        </div>
+        
+        <ScrollArea className="h-60 rounded-md border">
+           <Table>
+                <TableBody>
+                {filteredParents.length > 0 ? (
+                    filteredParents.map((parent) => (
+                    <TableRow
+                        key={parent.uid}
+                        onClick={() => setSelectedParentId(parent.uid)}
+                        className={`cursor-pointer ${selectedParentId === parent.uid ? 'bg-accent text-accent-foreground' : ''}`}
+                    >
+                        <TableCell>
+                            <div className="flex flex-col">
+                                <span className="font-medium">{parent.name}</span>
+                                <span className="text-xs text-muted-foreground">{parent.email}</span>
+                            </div>
+                        </TableCell>
+                    </TableRow>
+                    ))
+                ) : (
+                    <TableRow>
+                    <TableCell colSpan={1} className="h-24 text-center">
+                        Tidak ada orang tua ditemukan.
+                    </TableCell>
+                    </TableRow>
+                )}
+                </TableBody>
+            </Table>
+        </ScrollArea>
+       
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Batal
