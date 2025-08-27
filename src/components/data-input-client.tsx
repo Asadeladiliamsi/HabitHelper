@@ -34,7 +34,7 @@ const formSchema = z.object({
   score: z.coerce
     .number()
     .min(1, 'Skor minimal 1.')
-    .max(10, 'Skor maksimal 10.'),
+    .max(4, 'Skor maksimal 4.'),
   date: z.date({
     required_error: 'Tanggal harus diisi.',
   }),
@@ -66,7 +66,7 @@ export function DataInputClient() {
     defaultValues: {
       studentId: '',
       habitName: '',
-      score: 8,
+      score: 4,
       date: new Date(),
     },
   });
@@ -87,7 +87,7 @@ export function DataInputClient() {
     form.reset({
       studentId: data.studentId,
       habitName: '',
-      score: 8,
+      score: 4,
       date: data.date,
     });
   };
@@ -162,7 +162,7 @@ export function DataInputClient() {
                 id="score"
                 type="number"
                 min="1"
-                max="10"
+                max="4"
                 {...form.register('score')}
               />
               {form.formState.errors.score && (

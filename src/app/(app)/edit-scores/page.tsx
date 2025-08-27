@@ -21,7 +21,7 @@ import { StudentProvider } from '@/contexts/student-context';
 const formSchema = z.object({
   studentId: z.string().min(1, 'Siswa harus dipilih.'),
   habitId: z.string().min(1, 'Kebiasaan harus dipilih.'),
-  newScore: z.number().min(1).max(10),
+  newScore: z.number().min(1).max(4),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -50,7 +50,7 @@ function EditScoresClient() {
     defaultValues: {
       studentId: '',
       habitId: '',
-      newScore: 8,
+      newScore: 4,
     },
   });
 
@@ -70,7 +70,7 @@ function EditScoresClient() {
         setCurrentScore(null);
       }
     } else if (selectedStudentId && !studentExists) {
-        form.reset({ studentId: '', habitId: '', newScore: 8 });
+        form.reset({ studentId: '', habitId: '', newScore: 4 });
         setSelectedStudentHabits([]);
         setCurrentScore(null);
     } else {
@@ -82,7 +82,7 @@ function EditScoresClient() {
   useEffect(() => {
     if (selectedHabitId && selectedStudentHabits.length > 0) {
       const habit = selectedStudentHabits.find((h) => h.id === selectedHabitId);
-      const score = habit?.score || 8;
+      const score = habit?.score || 4;
       setCurrentScore(score);
       form.setValue('newScore', score);
     } else {
@@ -104,8 +104,8 @@ function EditScoresClient() {
   const isSliderDisabled = !selectedHabitId;
 
   const getScoreColor = (score: number) => {
-    if (score <= 4) return 'text-red-600';
-    if (score <= 7) return 'text-yellow-600';
+    if (score <= 1) return 'text-red-600';
+    if (score <= 3) return 'text-yellow-600';
     return 'text-green-600';
   };
 
@@ -190,7 +190,7 @@ function EditScoresClient() {
                       value={[field.value]}
                       onValueChange={(value) => field.onChange(value[0])}
                       min={1}
-                      max={10}
+                      max={4}
                       step={1}
                       className="flex-1"
                       disabled={isSliderDisabled}

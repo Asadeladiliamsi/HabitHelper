@@ -60,7 +60,7 @@ Habit Name: {{{habitName}}}
 Habit Scores (last 3 days): {{{habitScores}}}
 
 Rules for notification:
-1.  A significant decline is defined as a decrease of at least 3 points each day for 3 consecutive days. The habit scores are on a scale of 1-10.
+1.  A significant decline is defined as a decrease of at least 1 point each day for 3 consecutive days. The habit scores are on a scale of 1-4.
 
 Based on these rules, determine if a notification should be sent. If so, generate a message that informs the teacher about the decline in the student's habit and suggests they check in with the student.
 

@@ -22,9 +22,9 @@ import { translations } from '@/lib/translations';
 const formSchema = z.object({
   studentId: z.string().min(1, 'Siswa harus dipilih.'),
   habitName: z.string().min(1, 'Kebiasaan harus dipilih.'),
-  score1: z.coerce.number().min(1).max(10),
-  score2: z.coerce.number().min(1).max(10),
-  score3: z.coerce.number().min(1).max(10),
+  score1: z.coerce.number().min(1).max(4),
+  score2: z.coerce.number().min(1).max(4),
+  score3: z.coerce.number().min(1).max(4),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -53,9 +53,9 @@ export function NotificationsClient() {
     defaultValues: {
       studentId: '',
       habitName: '',
-      score1: 10,
-      score2: 7,
-      score3: 4,
+      score1: 4,
+      score2: 3,
+      score3: 2,
     },
   });
 
@@ -131,9 +131,9 @@ export function NotificationsClient() {
         <div>
           <Label>{t.last3Scores}</Label>
           <div className="grid grid-cols-3 gap-2 mt-1">
-            <Input {...form.register('score1')} type="number" min="1" max="10" placeholder={t.day1} />
-            <Input {...form.register('score2')} type="number" min="1" max="10" placeholder={t.day2} />
-            <Input {...form.register('score3')} type="number" min="1" max="10" placeholder={t.day3} />
+            <Input {...form.register('score1')} type="number" min="1" max="4" placeholder={t.day1} />
+            <Input {...form.register('score2')} type="number" min="1" max="4" placeholder={t.day2} />
+            <Input {...form.register('score3')} type="number" min="1" max="4" placeholder={t.day3} />
           </div>
         </div>
 

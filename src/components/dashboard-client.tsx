@@ -191,7 +191,7 @@ export function DashboardClient() {
                     ))}
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Progress value={averageScore * 10} className="w-24" />
+                        <Progress value={(averageScore / 4) * 100} className="w-24" />
                         <span className="font-mono text-sm text-muted-foreground">{averageScore.toFixed(1)}</span>
                       </div>
                     </TableCell>

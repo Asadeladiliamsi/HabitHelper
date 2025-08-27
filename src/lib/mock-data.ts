@@ -2,18 +2,18 @@ import type { Student, Habit } from '@/lib/types';
 import { HABIT_NAMES } from '@/lib/types';
 
 const staticScores: { [key: string]: number[] } = {
-  'student-1': [10, 8, 9, 7, 8, 10, 9],
-  'student-2': [8, 9, 7, 10, 8, 9, 8],
-  'student-3': [9, 7, 10, 8, 9, 7, 10],
-  'student-4': [7, 10, 8, 9, 7, 8, 7],
-  'student-5': [10, 8, 9, 7, 10, 9, 9],
+  'student-1': [4, 3, 4, 3, 4, 4, 4],
+  'student-2': [3, 4, 3, 4, 3, 4, 3],
+  'student-3': [4, 3, 4, 3, 4, 3, 4],
+  'student-4': [3, 4, 3, 4, 3, 4, 3],
+  'student-5': [4, 3, 4, 3, 4, 4, 4],
 };
 
 const createHabits = (studentId: string): Habit[] => {
   return HABIT_NAMES.map((name, index) => ({
     id: `habit-${index + 1}`,
     name: name,
-    score: staticScores[studentId]?.[index] || 8,
+    score: staticScores[studentId]?.[index] || 3,
   }));
 };
 
