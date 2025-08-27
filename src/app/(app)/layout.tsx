@@ -104,8 +104,6 @@ export default function AppLayout({
         return t.sidebar.teacherDashboard;
       case 'siswa':
         return 'Dasbor Siswa';
-      case 'orangtua':
-        return 'Dasbor Orang Tua';
       case 'admin':
         return 'Dasbor Admin';
       default:
