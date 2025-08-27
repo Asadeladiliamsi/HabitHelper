@@ -15,6 +15,7 @@ import {
 import { mockStudents } from '@/lib/mock-data';
 import type { Student } from '@/lib/types';
 import { useAuth } from './auth-context';
+import { Loader2 } from 'lucide-react';
 
 interface StudentContextType {
   students: Student[];
@@ -34,6 +35,7 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     // Wait for auth to finish and user profile to be loaded.
+    // This is the critical part: do nothing if we don't have a user or their profile.
     if (authLoading || !user || !userProfile) {
       setLoading(true);
       return;
@@ -73,12 +75,13 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
         setLoading(false);
     });
 
+    // Cleanup subscription on unmount or when user logs out
     return () => {
       unsubscribe();
       setStudents([]); // Clear students on unmount/logout
       setLoading(true); // Reset loading state
     };
-  }, [user, userProfile, authLoading]);
+  }, [user, userProfile, authLoading]); // Rerun effect when auth state changes
   
   const addStudent = async (newStudentData: Omit<Student, 'id' | 'avatarUrl'>) => {
     if (!user) {
@@ -86,8 +89,7 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     const studentId = `student-${Date.now()}`;
-    const newStudent: Student = {
-      id: studentId,
+    const newStudent: Omit<Student, 'id'> = {
       ...newStudentData,
       avatarUrl: `https://placehold.co/100x100.png?text=${newStudentData.name.charAt(0)}`,
     };
@@ -136,13 +138,11 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
     }
   };
   
+  const contextValue = { students, loading, addStudent, updateStudent, deleteStudent, updateHabitScore };
+  
   return (
-    <StudentContext.Provider value={{ students, loading, addStudent, updateStudent, deleteStudent, updateHabitScore }}>
-      {loading ? (
-        <div className="flex h-screen items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin" />
-        </div>
-      ) : children}
+    <StudentContext.Provider value={contextValue}>
+      {children}
     </StudentContext.Provider>
   );
 };
