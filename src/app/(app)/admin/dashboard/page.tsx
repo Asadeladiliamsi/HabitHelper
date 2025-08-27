@@ -18,7 +18,7 @@ export default function AdminDashboardPage() {
         }
     }, [loading, userProfile, router]);
 
-    if (loading || userProfile?.role !== 'admin') {
+    if (loading || !userProfile || userProfile.role !== 'admin') {
         return (
           <div className="flex h-full w-full items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin" />

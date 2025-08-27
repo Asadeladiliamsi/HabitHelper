@@ -20,7 +20,7 @@ function DataMasterTabs() {
   const parentUsers = users.filter(u => u.role === 'orangtua');
 
   return (
-    <Tabs defaultValue="data-input">
+    <Tabs defaultValue="manage-students">
       <TabsList className="grid w-full grid-cols-3">
         <TabsTrigger value="data-input">
           {t.sidebar.dataInput}
