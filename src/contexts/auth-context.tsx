@@ -13,6 +13,7 @@ interface AuthContextType {
   userProfile: UserProfile | null;
   loading: boolean;
   login: (email: string, pass: string) => Promise<any>;
+  loginWithNisn: (nisn: string, pass: string) => Promise<any>;
   signup: (email: string, pass: string) => Promise<any>;
   logout: () => Promise<any>;
   validateAndCreateUserProfile: (user: User, name: string, role: UserRole, nisn?: string) => Promise<void>;
@@ -68,6 +69,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const loginWithNisn = async (nisn: string, pass: string) => {
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where('nisn', '==', nisn), where('role', '==', 'siswa'));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+        throw new Error(`NISN "${nisn}" tidak ditemukan atau bukan milik siswa.`);
+    }
+
+    const userData = querySnapshot.docs[0].data() as UserProfile;
+    const email = userData.email;
+
+    if (!email) {
+        throw new Error(`Pengguna dengan NISN "${nisn}" tidak memiliki email terdaftar.`);
+    }
+
+    return login(email, pass);
+  };
+
   const signup = async (email: string, pass: string) => {
     return createUserWithEmailAndPassword(auth, email, pass);
   };
@@ -103,7 +123,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push('/login');
   };
 
-  const value = { user, userProfile, loading, login, signup, logout, validateAndCreateUserProfile };
+  const value = { user, userProfile, loading, login, loginWithNisn, signup, logout, validateAndCreateUserProfile };
 
   return (
     <AuthContext.Provider value={value}>
