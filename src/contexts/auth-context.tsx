@@ -38,8 +38,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (docSnap.exists()) {
           setUserProfile(docSnap.data() as UserProfile);
         } else {
-          // This case can happen if the user exists in Auth but not in Firestore.
-          // For this app's logic, we can treat them as not fully set up.
           setUserProfile(null);
         }
       } else {
@@ -83,21 +81,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       await setDoc(doc(db, 'users', newUser.uid), userProfileData);
       
-      // onAuthStateChanged will handle the rest, no need to push here
-      // router.push('/dashboard');
-
     } catch (error) {
-      let description = 'Terjadi kesalahan saat mendaftar. Silakan coba lagi.';
-      if ((error as {code?: string}).code === 'auth/email-already-in-use') {
-        description = 'Email ini sudah terdaftar. Silakan gunakan email lain atau masuk.';
-      }
+      const isEmailInUse = (error as { code?: string }).code === 'auth/email-already-in-use';
       
       toast({
         title: 'Pendaftaran Gagal',
-        description: description,
+        description: isEmailInUse 
+          ? 'Email ini sudah terdaftar. Silakan gunakan email lain atau masuk.'
+          : 'Terjadi kesalahan saat mendaftar. Silakan coba lagi.',
         variant: 'destructive',
       });
-      console.error("Error signing up:", error);
+
+      if (!isEmailInUse) {
+        console.error("Error signing up:", error);
+      }
     } finally {
       setLoading(false);
     }
