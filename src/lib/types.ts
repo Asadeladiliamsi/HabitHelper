@@ -32,6 +32,7 @@ export interface UserProfile {
   email: string | null;
   name: string;
   role: UserRole;
+  nisn?: string; // NISN is optional and only for students
 }
 
 export interface HabitEntry {

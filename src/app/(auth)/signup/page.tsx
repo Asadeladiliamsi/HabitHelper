@@ -41,8 +41,11 @@ export default function SignupPage() {
     setError(null);
     setIsLoading(true);
     try {
-      await validateAndCreateUserProfile(data.name, data.email, data.password);
-      router.push('/dashboard');
+      // We are creating a user with the 'siswa' role by default.
+      // NISN verification will happen after login.
+      await validateAndCreateUserProfile(data.name, data.email, data.password, 'siswa');
+      // Redirect to login so they can sign in and then verify their NISN.
+      router.push('/login'); 
     } catch (err: any) {
        if (err.code === 'auth/email-already-in-use') {
         setError('Email ini sudah terdaftar. Silakan gunakan email lain atau masuk.');
