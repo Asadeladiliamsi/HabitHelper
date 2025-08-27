@@ -17,6 +17,9 @@ import {
   Church,
   Bed
 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import type { Student } from '@/lib/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 const habitIcons: { [key: string]: React.ReactNode } = {
   'Bangun Pagi': <Sunrise className="h-5 w-5 text-yellow-500" />,
@@ -34,6 +37,19 @@ export function OrangTuaDashboardClient() {
   const { language } = useLanguage();
   const t = translations[language]?.dashboardPage || translations.en.dashboardPage;
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
+
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+
+  // Find all children linked to this parent
+  const parentStudents = students.filter(s => s.parentId === userProfile?.uid);
+
+  useEffect(() => {
+    // Set the first child as selected by default
+    if (parentStudents.length > 0 && !selectedStudentId) {
+      setSelectedStudentId(parentStudents[0].id);
+    }
+  }, [parentStudents, selectedStudentId]);
+
 
   const habitTranslationMapping: Record<string, string> = {
     'Bangun Pagi': tHabits.bangunPagi.name,
@@ -53,71 +69,99 @@ export function OrangTuaDashboardClient() {
     );
   }
 
-  // Find student data based on the logged-in parent's UID.
-  const studentData = students.find(s => s.parentId === userProfile?.uid);
-
-  if (!studentData) {
+  if (parentStudents.length === 0) {
     return (
       <Card>
         <CardHeader>
           <CardTitle>Data Anak Belum Ditautkan</CardTitle>
         </CardHeader>
         <CardContent>
-          <p>Akun Anda belum ditautkan dengan data siswa di sistem. Mohon hubungi pihak sekolah atau guru wali kelas untuk menautkan akun Anda ke data anak Anda.</p>
+          <p>Akun Anda belum ditautkan dengan data siswa manapun di sistem. Mohon hubungi pihak sekolah atau guru wali kelas untuk menautkan akun Anda ke data anak Anda.</p>
         </CardContent>
       </Card>
     );
   }
+  
+  const selectedStudentData = parentStudents.find(s => s.id === selectedStudentId);
 
-  const averageScore = studentData.habits.reduce((acc, h) => acc + h.score, 0) / (studentData.habits.length || 1);
+  const averageScore = selectedStudentData?.habits.reduce((acc, h) => acc + h.score, 0) / (selectedStudentData.habits.length || 1) || 0;
 
   return (
     <div className="flex flex-col gap-6">
       <header>
-        <h1 className="text-3xl font-bold tracking-tight">Dasbor Perkembangan {studentData.name}</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Dasbor Perkembangan Anak</h1>
         <p className="text-muted-foreground">Selamat datang, {userProfile?.name}. Pantau progres anak Anda di sini.</p>
       </header>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Progres Kebiasaan Anak Anda</CardTitle>
-          <CardDescription>Berikut adalah rekapitulasi nilai dari 7 kebiasaan inti yang dijalani oleh {studentData.name}.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Kebiasaan</TableHead>
-                <TableHead className="text-right">Nilai Terakhir</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {studentData.habits.map((habit) => (
-                <TableRow key={habit.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      {habitIcons[habit.name]}
-                      <span className="font-medium">{habitTranslationMapping[habit.name] || habit.name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <span className="font-mono text-lg font-bold">{habit.score}</span>
-                  </TableCell>
+      {parentStudents.length > 1 && (
+        <Card>
+            <CardHeader>
+                <CardTitle>Pilih Anak</CardTitle>
+                <CardDescription>Anda memiliki lebih dari satu anak terdaftar. Pilih anak yang ingin Anda lihat progresnya.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                 <Select value={selectedStudentId || ''} onValueChange={setSelectedStudentId}>
+                    <SelectTrigger className="w-full max-w-sm">
+                        <SelectValue placeholder="Pilih nama anak..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {parentStudents.map(student => (
+                            <SelectItem key={student.id} value={student.id}>
+                                {student.name} - Kelas {student.class}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </CardContent>
+        </Card>
+      )}
+
+      {selectedStudentData ? (
+        <Card>
+            <CardHeader>
+            <CardTitle>Progres Kebiasaan {selectedStudentData.name}</CardTitle>
+            <CardDescription>Berikut adalah rekapitulasi nilai dari 7 kebiasaan inti yang dijalani oleh {selectedStudentData.name}.</CardDescription>
+            </CardHeader>
+            <CardContent>
+            <Table>
+                <TableHeader>
+                <TableRow>
+                    <TableHead>Kebiasaan</TableHead>
+                    <TableHead className="text-right">Nilai Terakhir</TableHead>
                 </TableRow>
-              ))}
-               <TableRow className="bg-muted/50 font-bold">
-                  <TableCell>Rata-rata Keseluruhan</TableCell>
-                  <TableCell className="text-right">
-                     <div className="flex items-center justify-end gap-2">
-                        <Progress value={(averageScore / 4) * 100} className="w-24 h-2" />
-                        <span className="font-mono text-sm">{averageScore.toFixed(1)}</span>
-                      </div>
-                  </TableCell>
-                </TableRow>
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                {selectedStudentData.habits.map((habit) => (
+                    <TableRow key={habit.id}>
+                    <TableCell>
+                        <div className="flex items-center gap-3">
+                        {habitIcons[habit.name]}
+                        <span className="font-medium">{habitTranslationMapping[habit.name] || habit.name}</span>
+                        </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                        <span className="font-mono text-lg font-bold">{habit.score}</span>
+                    </TableCell>
+                    </TableRow>
+                ))}
+                <TableRow className="bg-muted/50 font-bold">
+                    <TableCell>Rata-rata Keseluruhan</TableCell>
+                    <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                            <Progress value={(averageScore / 4) * 100} className="w-24 h-2" />
+                            <span className="font-mono text-sm">{averageScore.toFixed(1)}</span>
+                        </div>
+                    </TableCell>
+                    </TableRow>
+                </TableBody>
+            </Table>
+            </CardContent>
+        </Card>
+      ) : (
+         <div className="flex h-48 items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      )}
     </div>
   );
 }
