@@ -7,7 +7,6 @@ import { CheckCircle, Sunrise, BookOpen, HeartPulse, Users, TrendingUp, Activity
 import { Logo } from '@/components/icons/logo';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const habits = [
   {
@@ -93,25 +92,12 @@ export default function LandingPage() {
             <Logo />
             <span className="font-bold text-xl text-primary">HabitHelper</span>
           </Link>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button>
-                {t.openDashboard}
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem asChild>
-                <Link href="/dashboard">Guru</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/siswa/dashboard">Siswa</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/orangtua/dashboard">Orang Tua</Link>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Link href="/login">
+            <Button>
+              {t.openDashboard}
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </Link>
         </div>
       </header>
 
@@ -125,24 +111,11 @@ export default function LandingPage() {
               {t.heroSubtitle}
             </p>
             <div className="mt-10 flex justify-center gap-4">
-               <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+               <Link href="/login">
                   <Button size="lg">
                     {t.viewDemo}
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="center">
-                  <DropdownMenuItem asChild>
-                    <Link href="/dashboard">Guru</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/siswa/dashboard">Siswa</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/orangtua/dashboard">Orang Tua</Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                </Link>
             </div>
           </div>
         </section>
