@@ -45,11 +45,10 @@ export default function SignupPage() {
       router.push('/dashboard');
     } catch (err: any) {
       if (err.code === 'auth/email-already-in-use') {
-        setError('Email ini sudah terdaftar. Silakan gunakan email lain.');
+        setError('Email ini sudah terdaftar. Silakan gunakan email lain atau masuk.');
       } else {
-        setError('Gagal mendaftar. Silakan coba lagi nanti.');
+        setError('Gagal mendaftar. Terjadi kesalahan yang tidak diketahui.');
       }
-      console.error(err);
     } finally {
       setIsLoading(false);
     }
@@ -58,8 +57,8 @@ export default function SignupPage() {
   return (
     <Card>
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl">Buat Akun</CardTitle>
-        <CardDescription>Daftar sebagai siswa untuk mulai melacak kebiasaan Anda.</CardDescription>
+        <CardTitle className="text-2xl">Buat Akun Siswa</CardTitle>
+        <CardDescription>Daftar untuk mulai melacak kebiasaan Anda.</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -92,7 +91,7 @@ export default function SignupPage() {
         <div className="mt-4 text-center text-sm">
           Sudah punya akun?{' '}
           <Link href="/login" className="underline">
-            Masuk
+            Masuk di sini
           </Link>
         </div>
       </CardContent>
