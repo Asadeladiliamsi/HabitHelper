@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAuth } from '@/contexts/auth-context';
 import { Loader2 } from 'lucide-react';
 import type { UserRole } from '@/lib/types';
@@ -16,9 +15,6 @@ import type { UserRole } from '@/lib/types';
 const formSchema = z.object({
   email: z.string().email('Email tidak valid.'),
   password: z.string().min(6, 'Kata sandi minimal 6 karakter.'),
-  role: z.enum(['guru', 'siswa', 'orangtua'], {
-    required_error: 'Anda harus memilih peran.',
-  }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -30,7 +26,7 @@ export default function SignupPage() {
   });
 
   const onSubmit = (data: FormValues) => {
-    signup(data.email, data.password, data.role as UserRole);
+    signup(data.email, data.password);
   };
 
   return (
@@ -52,29 +48,6 @@ export default function SignupPage() {
             <Label htmlFor="password">Kata Sandi</Label>
             <Input id="password" type="password" {...form.register('password')} />
             {form.formState.errors.password && <p className="text-sm text-destructive">{form.formState.errors.password.message}</p>}
-          </div>
-
-          <div className="space-y-2">
-            <Label>Daftar sebagai</Label>
-            <RadioGroup
-              onValueChange={(value) => form.setValue('role', value as UserRole)}
-              defaultValue={form.getValues('role')}
-              className="flex gap-4"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="guru" id="guru" />
-                <Label htmlFor="guru">Guru</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="siswa" id="siswa" />
-                <Label htmlFor="siswa">Siswa</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="orangtua" id="orangtua" />
-                <Label htmlFor="orangtua">Orang Tua</Label>
-              </div>
-            </RadioGroup>
-            {form.formState.errors.role && <p className="text-sm text-destructive">{form.formState.errors.role.message}</p>}
           </div>
 
           <Button type="submit" className="w-full" disabled={loading}>

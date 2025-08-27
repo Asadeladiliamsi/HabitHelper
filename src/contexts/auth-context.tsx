@@ -15,7 +15,7 @@ interface AuthContextType {
   userProfile: UserProfile | null;
   loading: boolean;
   login: (email: string, pass: string) => Promise<void>;
-  signup: (email: string, pass: string, role: UserRole) => Promise<void>;
+  signup: (email: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -67,7 +67,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const signup = async (email: string, pass: string, role: UserRole) => {
+  const signup = async (email: string, pass: string) => {
     setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
@@ -76,7 +76,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const userProfileData: UserProfile = {
         uid: newUser.uid,
         email: newUser.email,
-        role: role,
+        role: 'siswa', // Default role is 'siswa'
       };
 
       await setDoc(doc(db, 'users', newUser.uid), userProfileData);
