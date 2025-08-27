@@ -33,7 +33,7 @@ export default function ManageStudentsPage() {
     setDialogOpen(true);
   };
   
-  const handleDialogSave = (studentData: Omit<Student, 'id' | 'habits'>) => {
+  const handleDialogSave = (studentData: Omit<Student, 'id' | 'habits' | 'avatarUrl'>) => {
     if (selectedStudent) {
       // Update existing student
       updateStudent(selectedStudent.id, studentData);
@@ -45,6 +45,7 @@ export default function ManageStudentsPage() {
           name: name,
           score: 8, // Default score
         })),
+        avatarUrl: `https://placehold.co/100x100.png?text=${studentData.name.charAt(0)}`,
         ...studentData,
       };
       addStudent(newStudent);

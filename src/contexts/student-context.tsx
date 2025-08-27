@@ -10,10 +10,10 @@ import {
   deleteDoc,
   writeBatch,
   getDocs,
+  setDoc,
 } from 'firebase/firestore';
 import { mockStudents } from '@/lib/mock-data';
 import type { Student } from '@/lib/types';
-import { HABIT_NAMES } from '@/lib/types';
 import { useAuth } from './auth-context';
 
 interface StudentContextType {
@@ -39,40 +39,35 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
     }
 
     if (!user) {
-      setStudents([]); // Clear data when user logs out
+      setStudents([]);
       setLoading(false);
       return;
     }
 
     const studentsCollectionRef = collection(db, 'students');
 
-    // Listener for real-time updates
-    const unsubscribe = onSnapshot(studentsCollectionRef, (snapshot) => {
-        const studentsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
-        setStudents(studentsList);
-        setLoading(false); // Set loading to false once we get data
-    }, (error) => {
-        console.error("Error fetching students:", error);
-        setStudents([]);
-        setLoading(false);
-    });
-
-    // Check for initial data and seed if necessary
-    const checkForInitialData = async () => {
-        const snapshot = await getDocs(studentsCollectionRef);
-        if (snapshot.empty) {
+    const unsubscribe = onSnapshot(studentsCollectionRef, async (snapshot) => {
+        if (snapshot.empty && user) {
             console.log('No students found. Seeding initial mock data...');
+            setLoading(true);
             const batch = writeBatch(db);
             mockStudents.forEach((student) => {
                 const docRef = doc(db, 'students', student.id);
                 batch.set(docRef, student);
             });
             await batch.commit();
-            // The onSnapshot listener will automatically pick up the newly seeded data.
+            // After seeding, the snapshot will re-fire with the new data.
+            // We don't set loading to false here to wait for the next snapshot.
+        } else {
+            const studentsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
+            setStudents(studentsList);
+            setLoading(false);
         }
-    };
-
-    checkForInitialData();
+    }, (error) => {
+        console.error("Error fetching students:", error);
+        setStudents([]);
+        setLoading(false);
+    });
 
     return () => unsubscribe();
   }, [user, authLoading]);
@@ -85,19 +80,11 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
     const studentId = `student-${Date.now()}`;
     const newStudent: Student = {
       id: studentId,
-      habits: HABIT_NAMES.map((name, index) => ({
-          id: `habit-${index + 1}`,
-          name: name,
-          score: 8, // Default score
-      })),
       ...newStudentData,
     };
     try {
       const studentDocRef = doc(db, 'students', studentId);
-      const batch = writeBatch(db);
-      batch.set(studentDocRef, newStudent);
-      await batch.commit();
-
+      await setDoc(studentDocRef, newStudent);
     } catch (error) {
       console.error("Error adding student: ", error);
     }

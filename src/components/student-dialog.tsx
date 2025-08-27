@@ -15,23 +15,20 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Student } from '@/lib/types';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-
 
 interface StudentDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onSave: (data: Omit<Student, 'id' | 'habits'>) => void;
+  onSave: (data: Omit<Student, 'id' | 'habits' | 'avatarUrl'>) => void;
   student: Student | null;
 }
 
 const formSchema = z.object({
   name: z.string().min(3, { message: 'Nama harus memiliki setidaknya 3 karakter.' }),
   class: z.string().min(1, { message: 'Kelas harus diisi.' }),
-  avatar: z.any().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -39,13 +36,11 @@ type FormValues = z.infer<typeof formSchema>;
 export function StudentDialog({ isOpen, onOpenChange, onSave, student }: StudentDialogProps) {
   const { language } = useLanguage();
   const t = translations[language]?.studentDialog || translations.en.studentDialog;
-  const [preview, setPreview] = useState<string | null>(null);
 
   const {
     register,
     handleSubmit,
     reset,
-    watch,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -55,37 +50,20 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student }: Student
     }
   });
 
-  const avatarFile = watch('avatar');
-
   useEffect(() => {
     if (isOpen) {
       if (student) {
         reset({ name: student.name, class: student.class });
-        setPreview(student.avatarUrl);
       } else {
         reset({ name: '', class: '' });
-        setPreview(null);
       }
     }
   }, [isOpen, student, reset]);
-  
-  useEffect(() => {
-    if (avatarFile && avatarFile.length > 0) {
-      const file = avatarFile[0];
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  }, [avatarFile]);
-
 
   const onSubmit = (data: FormValues) => {
     onSave({
       name: data.name,
       class: data.class,
-      avatarUrl: preview || 'https://placehold.co/100x100.png',
     });
     onOpenChange(false);
   };
@@ -101,16 +79,6 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student }: Student
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-             <div className="space-y-2">
-                <Label htmlFor="avatar">Foto Profil</Label>
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-20 w-20">
-                    <AvatarImage src={preview || ''} data-ai-hint="person portrait" />
-                    <AvatarFallback>{student?.name.charAt(0) || 'S'}</AvatarFallback>
-                  </Avatar>
-                  <Input id="avatar" type="file" {...register('avatar')} accept="image/*" />
-                </div>
-              </div>
             <div className="space-y-2">
               <Label htmlFor="name">
                 {t.name}
