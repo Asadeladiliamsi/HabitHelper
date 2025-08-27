@@ -9,20 +9,31 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import type { UserRole } from '@/lib/types';
+import { cn } from '@/lib/utils';
+
 
 const formSchema = z.object({
   name: z.string().min(3, { message: 'Nama minimal 3 karakter.' }),
   email: z.string().email({ message: 'Email tidak valid.' }),
   password: z.string().min(6, { message: 'Kata sandi minimal 6 karakter.' }),
-  role: z.enum(['guru', 'orangtua'], {
+  role: z.enum(['guru', 'siswa', 'orangtua'], {
     required_error: 'Anda harus memilih peran.',
   }),
+  nisn: z.string().optional(),
+}).refine(data => {
+    if (data.role === 'siswa' && (!data.nisn || data.nisn.trim() === '')) {
+        return false;
+    }
+    return true;
+}, {
+    message: 'NISN harus diisi untuk peran siswa.',
+    path: ['nisn'],
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -40,19 +51,17 @@ export default function SignupPage() {
       email: '',
       password: '',
       role: 'guru',
+      nisn: '',
     },
   });
+
+  const selectedRole = form.watch('role');
 
   const onSubmit = async (data: FormValues) => {
     setError(null);
     setIsLoading(true);
     try {
-      // Create the user in Firebase Auth first
-      const userCredential = await signup(data.email, data.password);
-      
-      // Then, validate and create the user profile in Firestore.
-      await validateAndCreateUserProfile(userCredential.user, data.name, data.role as UserRole);
-      
+      await validateAndCreateUserProfile(data.name, data.email, data.password, data.role as UserRole, data.nisn);
       router.push('/dashboard');
     } catch (err: any) {
        if (err.code === 'auth/email-already-in-use') {
@@ -106,12 +115,18 @@ export default function SignupPage() {
                 <RadioGroup
                   onValueChange={field.onChange}
                   defaultValue={field.value}
-                  className="grid grid-cols-2 gap-4"
+                  className="grid grid-cols-3 gap-4"
                 >
                   <div>
                     <RadioGroupItem value="guru" id="guru" className="peer sr-only" />
                     <Label htmlFor="guru" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
                       Guru
+                    </Label>
+                  </div>
+                   <div>
+                    <RadioGroupItem value="siswa" id="siswa" className="peer sr-only" />
+                    <Label htmlFor="siswa" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
+                      Siswa
                     </Label>
                   </div>
                   <div>
@@ -125,6 +140,13 @@ export default function SignupPage() {
             />
             {form.formState.errors.role && <p className="text-sm text-destructive mt-2">{form.formState.errors.role.message}</p>}
           </div>
+          
+           <div className={cn("space-y-2 transition-all duration-300", selectedRole === 'siswa' ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0 overflow-hidden')}>
+              <Label htmlFor="nisn">NISN (Nomor Induk Siswa Nasional)</Label>
+              <Input id="nisn" type="text" placeholder="Masukkan NISN yang didaftarkan guru" {...form.register('nisn')} />
+              {form.formState.errors.nisn && <p className="text-sm text-destructive">{form.formState.errors.nisn.message}</p>}
+            </div>
+
 
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? <Loader2 className="animate-spin" /> : 'Daftar'}
