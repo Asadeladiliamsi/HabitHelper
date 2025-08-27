@@ -19,8 +19,8 @@ import { useAuth } from './auth-context';
 interface StudentContextType {
   students: Student[];
   loading: boolean;
-  addStudent: (newStudent: Omit<Student, 'id'>) => Promise<void>;
-  updateStudent: (studentId: string, updatedData: Partial<Omit<Student, 'id' | 'habits'>>) => Promise<void>;
+  addStudent: (newStudent: Omit<Student, 'id' | 'avatarUrl'>) => Promise<void>;
+  updateStudent: (studentId: string, updatedData: Partial<Omit<Student, 'id' | 'habits' | 'avatarUrl'>>) => Promise<void>;
   deleteStudent: (studentId: string) => Promise<void>;
   updateHabitScore: (studentId: string, habitId: string, newScore: number) => Promise<void>;
 }
@@ -28,19 +28,14 @@ interface StudentContextType {
 const StudentContext = createContext<StudentContextType | undefined>(undefined);
 
 export const StudentProvider = ({ children }: { children: ReactNode }) => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, userProfile, loading: authLoading } = useAuth();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (authLoading) {
+    // Wait for auth to finish and user profile to be loaded.
+    if (authLoading || !user || !userProfile) {
       setLoading(true);
-      return;
-    }
-
-    if (!user) {
-      setStudents([]);
-      setLoading(false);
       return;
     }
 
@@ -50,14 +45,23 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
         if (snapshot.empty && user) {
             console.log('No students found. Seeding initial mock data...');
             setLoading(true);
-            const batch = writeBatch(db);
-            mockStudents.forEach((student) => {
-                const docRef = doc(db, 'students', student.id);
-                batch.set(docRef, student);
-            });
-            await batch.commit();
-            // After seeding, the snapshot will re-fire with the new data.
-            // We don't set loading to false here to wait for the next snapshot.
+            try {
+                const batch = writeBatch(db);
+                mockStudents.forEach((student) => {
+                    const studentWithPlaceholderAvatar = {
+                      ...student,
+                      avatarUrl: `https://placehold.co/100x100.png?text=${student.name.charAt(0)}`
+                    };
+                    const docRef = doc(db, 'students', student.id);
+                    batch.set(docRef, studentWithPlaceholderAvatar);
+                });
+                await batch.commit();
+                console.log('Mock data seeded successfully.');
+                // Snapshot will re-fire with the new data, so we don't set loading to false here.
+            } catch(error) {
+                console.error("Error seeding data:", error);
+                setLoading(false);
+            }
         } else {
             const studentsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
             setStudents(studentsList);
@@ -65,14 +69,18 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
         }
     }, (error) => {
         console.error("Error fetching students:", error);
-        setStudents([]);
+        setStudents([]); // Clear students on error
         setLoading(false);
     });
 
-    return () => unsubscribe();
-  }, [user, authLoading]);
+    return () => {
+      unsubscribe();
+      setStudents([]); // Clear students on unmount/logout
+      setLoading(true); // Reset loading state
+    };
+  }, [user, userProfile, authLoading]);
   
-  const addStudent = async (newStudentData: Omit<Student, 'id'>) => {
+  const addStudent = async (newStudentData: Omit<Student, 'id' | 'avatarUrl'>) => {
     if (!user) {
       console.error("No user logged in to add student.");
       return;
@@ -80,8 +88,8 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
     const studentId = `student-${Date.now()}`;
     const newStudent: Student = {
       id: studentId,
-      avatarUrl: `https://placehold.co/100x100.png?text=${newStudentData.name.charAt(0)}`,
       ...newStudentData,
+      avatarUrl: `https://placehold.co/100x100.png?text=${newStudentData.name.charAt(0)}`,
     };
     try {
       const studentDocRef = doc(db, 'students', studentId);
@@ -130,7 +138,11 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
   
   return (
     <StudentContext.Provider value={{ students, loading, addStudent, updateStudent, deleteStudent, updateHabitScore }}>
-      {children}
+      {loading ? (
+        <div className="flex h-screen items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      ) : children}
     </StudentContext.Provider>
   );
 };

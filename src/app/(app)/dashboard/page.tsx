@@ -1,14 +1,10 @@
 
 import { DashboardClient } from '@/components/dashboard-client';
-import { StudentProvider } from '@/contexts/student-context';
 
-// This is now a Server Component
 export default function DashboardPage() {
   return (
-    <StudentProvider>
       <div className="flex flex-col gap-6">
         <DashboardClient />
       </div>
-    </StudentProvider>
   );
 }
