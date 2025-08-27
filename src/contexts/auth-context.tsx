@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { onAuthStateChanged, User, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { ref, set, get, child } from 'firebase/database';
 import { auth, db } from '@/lib/firebase';
 import type { UserProfile, UserRole } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -30,14 +30,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUser(user);
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-          setUserProfile(userDoc.data() as UserProfile);
+        const userProfileRef = child(ref(db), `users/${user.uid}`);
+        const snapshot = await get(userProfileRef);
+        if (snapshot.exists()) {
+          setUserProfile(snapshot.val() as UserProfile);
         } else {
-          // This case might happen if the user exists in Auth but not in Firestore.
-          // For example, if Firestore document creation failed during signup.
-          // You might want to handle this case, e.g., by creating the document here or logging the user out.
           setUserProfile(null);
         }
       } else {
@@ -54,8 +51,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, pass);
-      // No need to push, onAuthStateChanged will handle the state update
-      // and the AppLayout will handle the redirect.
       router.push('/dashboard');
     } catch (error: any) {
       toast({
@@ -81,10 +76,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         role: role,
       };
 
-      await setDoc(doc(db, 'users', newUser.uid), userProfileData);
-      
-      // The onAuthStateChanged listener will automatically update user and userProfile state.
-      // So, no need to call setUser and setUserProfile here.
+      await set(ref(db, 'users/' + newUser.uid), userProfileData);
       
       router.push('/dashboard');
 
@@ -103,8 +95,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = async () => {
     try {
       await signOut(auth);
-      // After signOut, onAuthStateChanged will trigger, setting user to null.
-      // The AppLayout will then redirect to /login.
       router.push('/');
     } catch (error: any) {
        toast({
