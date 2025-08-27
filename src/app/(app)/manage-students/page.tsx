@@ -14,9 +14,9 @@ import { useStudent } from '@/contexts/student-context';
 import { HABIT_NAMES } from '@/lib/types';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
+import { StudentProvider } from '@/contexts/student-context';
 
-
-export default function ManageStudentsPage() {
+function ManageStudentsClient() {
   const { students, addStudent, updateStudent, deleteStudent } = useStudent();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -65,8 +65,7 @@ export default function ManageStudentsPage() {
         onSave={handleDialogSave}
         student={selectedStudent} 
       />
-      <div className="flex flex-col gap-6">
-        <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between">
           <header>
             <h1 className="text-3xl font-bold tracking-tight">{t.title}</h1>
             <p className="text-muted-foreground">
@@ -136,7 +135,16 @@ export default function ManageStudentsPage() {
             </Table>
           </CardContent>
         </Card>
-      </div>
     </>
   );
+}
+
+export default function ManageStudentsPage() {
+  return (
+    <StudentProvider>
+      <div className="flex flex-col gap-6">
+        <ManageStudentsClient />
+      </div>
+    </StudentProvider>
+  )
 }

@@ -30,7 +30,6 @@ import { Logo } from '@/components/icons/logo';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
 import { useAuth } from '@/contexts/auth-context';
-import { StudentProvider } from '@/contexts/student-context';
 
 export interface NavItem {
   href: string;
@@ -84,7 +83,6 @@ export default function AppLayout({
   }
 
   return (
-    <StudentProvider>
       <SidebarProvider>
         <Sidebar>
           <SidebarHeader>
@@ -144,6 +142,5 @@ export default function AppLayout({
           <main className="flex-1 p-4 sm:p-6">{children}</main>
         </SidebarInset>
       </SidebarProvider>
-    </StudentProvider>
   );
 }
