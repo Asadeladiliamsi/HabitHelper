@@ -81,6 +81,7 @@ export function ManageStudentsClient() {
                 <TableRow>
                   <TableHead>{t.student}</TableHead>
                   <TableHead>NISN</TableHead>
+                  <TableHead>Email</TableHead>
                   <TableHead>{t.class}</TableHead>
                   <TableHead className="text-right">{t.actions}</TableHead>
                 </TableRow>
@@ -99,6 +100,9 @@ export function ManageStudentsClient() {
                     </TableCell>
                     <TableCell>
                         <span className="font-mono text-xs">{student.nisn}</span>
+                    </TableCell>
+                    <TableCell>
+                        <span className="text-muted-foreground">{student.email}</span>
                     </TableCell>
                     <TableCell>
                       <Badge variant="secondary">{student.class}</Badge>

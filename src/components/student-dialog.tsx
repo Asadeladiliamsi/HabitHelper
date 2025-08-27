@@ -30,6 +30,7 @@ const formSchema = z.object({
   name: z.string().min(3, { message: 'Nama harus memiliki setidaknya 3 karakter.' }),
   class: z.string().min(1, { message: 'Kelas harus diisi.' }),
   nisn: z.string().min(1, { message: 'NISN harus diisi.' }),
+  email: z.string().email({ message: 'Email siswa harus diisi.' }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -49,15 +50,16 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student }: Student
       name: '',
       class: '',
       nisn: '',
+      email: '',
     }
   });
 
   useEffect(() => {
     if (isOpen) {
       if (student) {
-        reset({ name: student.name, class: student.class, nisn: student.nisn });
+        reset({ name: student.name, class: student.class, nisn: student.nisn, email: student.email });
       } else {
-        reset({ name: '', class: '', nisn: '' });
+        reset({ name: '', class: '', nisn: '', email: '' });
       }
     }
   }, [isOpen, student, reset]);
@@ -67,6 +69,7 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student }: Student
       name: data.name,
       class: data.class,
       nisn: data.nisn,
+      email: data.email,
     });
     onOpenChange(false);
   };
@@ -102,6 +105,13 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student }: Student
               </Label>
               <Input id="nisn" {...register('nisn')} placeholder="Nomor Induk Siswa Nasional" />
               {errors.nisn && <p className="text-sm text-destructive mt-1">{errors.nisn.message}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">
+                Email Siswa
+              </Label>
+              <Input id="email" type="email" {...register('email')} placeholder="email.siswa@contoh.com" />
+              {errors.email && <p className="text-sm text-destructive mt-1">{errors.email.message}</p>}
             </div>
           </div>
           <DialogFooter>

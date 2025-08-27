@@ -14,7 +14,6 @@ interface AuthContextType {
   login: (email: string, pass: string) => Promise<any>;
   signup: (email: string, pass: string) => Promise<any>;
   validateAndCreateUserProfile: (name: string, email: string, pass: string) => Promise<void>;
-  verifyAndLinkNisn: (uid: string, nisn: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -36,7 +35,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (userDoc.exists()) {
           setUserProfile(userDoc.data() as UserProfile);
         } else {
-          // This case might happen if user is created but profile creation fails.
           setUserProfile(null);
         }
       } else {
@@ -65,12 +63,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return createUserWithEmailAndPassword(auth, email, pass);
   };
 
-  // Pendaftaran hanya untuk siswa, jadi peran di-hardcode.
   const validateAndCreateUserProfile = async (name: string, email: string, pass: string) => {
      const userCredential = await signup(email, pass);
      const userDocRef = doc(db, 'users', userCredential.user.uid);
      
-     const profileData: Omit<UserProfile, 'nisn'> = {
+     const profileData: UserProfile = {
         uid: userCredential.user.uid,
         email: email,
         name: name,
@@ -83,45 +80,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
   };
 
-  const verifyAndLinkNisn = async (uid: string, nisn: string) => {
-    // This function is insecure in its current form if security rules are not strict.
-    // It should ideally be a cloud function.
-    // For this prototype, we'll perform the checks on the client.
-
-    // 1. Check if a student with this NISN exists
-    const studentsQuery = query(collection(db, 'students'), where('nisn', '==', nisn));
-    const studentSnapshot = await getDocs(studentsQuery);
-
-    if (studentSnapshot.empty) {
-      throw new Error('NISN tidak ditemukan. Pastikan NISN Anda sudah didaftarkan oleh guru.');
-    }
-    
-    // 2. Check if this NISN is already linked to another user account
-    const usersQuery = query(collection(db, 'users'), where('nisn', '==', nisn));
-    const userSnapshot = await getDocs(usersQuery);
-    
-    if (!userSnapshot.empty) {
-        throw new Error('NISN ini sudah ditautkan ke akun lain.');
-    }
-
-    // 3. Link NISN to the current user's profile
-    const userDocRef = doc(db, 'users', uid);
-    await updateDoc(userDocRef, { nisn: nisn });
-
-    // Refresh user profile state
-    const updatedUserDoc = await getDoc(userDocRef);
-    if(updatedUserDoc.exists()) {
-        setUserProfile(updatedUserDoc.data() as UserProfile);
-    }
-  };
-
   const logout = async () => {
     setUserProfile(null);
     await signOut(auth);
     router.push('/login');
   };
 
-  const value = { user, userProfile, loading, login, signup, validateAndCreateUserProfile, verifyAndLinkNisn, logout };
+  const value = { user, userProfile, loading, login, signup, validateAndCreateUserProfile, logout };
 
   return (
     <AuthContext.Provider value={value}>

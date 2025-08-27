@@ -10,6 +10,7 @@ export interface Student {
   id: string;
   name: string;
   nisn: string;
+  email: string;
   avatarUrl: string;
   class: string;
   habits: Habit[];
@@ -32,7 +33,6 @@ export interface UserProfile {
   email: string | null;
   name: string;
   role: UserRole;
-  nisn?: string; // NISN is optional and only for students
 }
 
 export interface HabitEntry {
