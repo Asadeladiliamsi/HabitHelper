@@ -51,16 +51,6 @@ export default function AppLayout({
     { href: '/reports', icon: FileText, label: t.sidebar.reports },
   ];
 
-  const getRoleTitle = () => {
-    if (pathname.startsWith('/siswa')) {
-      return 'Dasbor Siswa';
-    }
-    if (pathname.startsWith('/orangtua')) {
-      return 'Dasbor Orang Tua';
-    }
-    return t.sidebar.teacherDashboard;
-  };
-
   return (
       <SidebarProvider>
         <Sidebar>
@@ -109,7 +99,7 @@ export default function AppLayout({
           <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-card px-4 sm:px-6">
             <SidebarTrigger className="md:hidden" />
             <div className="flex-1">
-                <span className="text-sm font-semibold capitalize">{getRoleTitle()}</span>
+                <span className="text-sm font-semibold capitalize">{t.sidebar.teacherDashboard}</span>
             </div>
           </header>
           <main className="flex-1 p-4 sm:p-6">{children}</main>

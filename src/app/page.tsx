@@ -113,7 +113,7 @@ export default function LandingPage() {
             <div className="mt-10 flex justify-center gap-4">
                <Link href="/dashboard">
                   <Button size="lg">
-                    {t.viewDemo}
+                    {t.openDashboard}
                   </Button>
                 </Link>
             </div>

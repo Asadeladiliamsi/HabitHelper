@@ -2,6 +2,7 @@
 
 import { ThemeProvider } from '@/contexts/theme-provider';
 import { LanguageProvider } from '@/contexts/language-provider';
+import { StudentProvider } from '@/contexts/student-context';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -11,7 +12,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
       enableSystem
     >
       <LanguageProvider>
-        {children}
+        <StudentProvider>
+          {children}
+        </StudentProvider>
       </LanguageProvider>
     </ThemeProvider>
   );

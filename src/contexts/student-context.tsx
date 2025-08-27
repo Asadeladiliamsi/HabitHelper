@@ -52,7 +52,8 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
                 console.log('Mock data seeded successfully.');
             } catch(error) {
                 console.error("Error seeding data:", error);
-                setLoading(false);
+            } finally {
+              setLoading(false);
             }
         } else {
             const studentsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
@@ -67,8 +68,6 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
 
     return () => {
       unsubscribe();
-      setStudents([]);
-      setLoading(true);
     };
   }, []);
   
