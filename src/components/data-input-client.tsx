@@ -7,13 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Combobox } from '@/components/ui/combobox';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,6 +20,13 @@ import { useToast } from '@/hooks/use-toast';
 import { useStudent } from '@/contexts/student-context';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const formSchema = z.object({
   studentId: z.string().min(1, 'Siswa harus dipilih.'),
@@ -49,6 +50,11 @@ export function DataInputClient() {
   const t = translations[language]?.dataInputClient || translations.en.dataInputClient;
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
   const locale = language === 'id' ? id : enUS;
+
+  const studentOptions = students.map(student => ({
+    value: student.id,
+    label: student.name,
+  }));
 
   const habitTranslationMapping: Record<string, string> = {
     'Bangun Pagi': tHabits.bangunPagi.name,
@@ -119,23 +125,18 @@ export function DataInputClient() {
           <div className="space-y-2">
             <Label htmlFor="studentId">{t.selectStudent}</Label>
             <Controller
-              control={form.control}
-              name="studentId"
-              render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t.selectStudentPlaceholder} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {students.map((student) => (
-                      <SelectItem key={student.id} value={student.id}>
-                        {student.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
+                control={form.control}
+                name="studentId"
+                render={({ field }) => (
+                  <Combobox
+                    options={studentOptions}
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder={t.selectStudentPlaceholder}
+                    searchPlaceholder="Cari siswa..."
+                  />
+                )}
+              />
             {form.formState.errors.studentId && (
               <p className="text-sm text-destructive mt-1">
                 {form.formState.errors.studentId.message}

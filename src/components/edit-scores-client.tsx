@@ -15,6 +15,7 @@ import type { Habit } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
+import { Combobox } from '@/components/ui/combobox';
 
 const formSchema = z.object({
   studentId: z.string().min(1, 'Siswa harus dipilih.'),
@@ -32,6 +33,11 @@ export function EditScoresClient() {
   const { language } = useLanguage();
   const t = translations[language]?.editScoresPage || translations.en.editScoresPage;
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
+
+  const studentOptions = students.map(student => ({
+    value: student.id,
+    label: student.name,
+  }));
 
   const habitTranslationMapping: Record<string, string> = {
     'Bangun Pagi': tHabits.bangunPagi.name,
@@ -123,18 +129,16 @@ export function EditScoresClient() {
                 control={form.control}
                 name="studentId"
                 render={({ field }) => (
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={t.selectStudentPlaceholder} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {students.map((student) => (
-                        <SelectItem key={student.id} value={student.id}>
-                          {student.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                   <Combobox
+                    options={studentOptions}
+                    value={field.value}
+                    onChange={(value) => {
+                      field.onChange(value);
+                      form.setValue('habitId', '');
+                    }}
+                    placeholder={t.selectStudentPlaceholder}
+                    searchPlaceholder="Cari siswa..."
+                  />
                 )}
               />
               {form.formState.errors.studentId && (
