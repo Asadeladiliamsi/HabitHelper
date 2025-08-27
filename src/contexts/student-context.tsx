@@ -19,23 +19,6 @@ interface StudentContextType {
 
 const StudentContext = createContext<StudentContextType | undefined>(undefined);
 
-const seedInitialData = async () => {
-  const studentsCollection = collection(db, 'students');
-  const snapshot = await getDocs(studentsCollection);
-  if (snapshot.empty) {
-    console.log('No students found, seeding initial data...');
-    const batch = writeBatch(db);
-    mockStudents.forEach((student) => {
-      const docRef = doc(db, 'students', student.id);
-      batch.set(docRef, student);
-    });
-    await batch.commit();
-    console.log('Initial data seeded.');
-  } else {
-    console.log('Students collection is not empty, skipping seed.');
-  }
-};
-
 export const StudentProvider = ({ children }: { children: ReactNode }) => {
   const { user, loading: authLoading } = useAuth();
   const [students, setStudents] = useState<Student[]>([]);
@@ -43,24 +26,33 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (authLoading) {
-      // Tunggu hingga status autentikasi selesai dimuat
       setLoading(true);
       return;
     }
 
     if (!user) {
-      // Jika tidak ada pengguna, reset state dan hentikan
       setStudents([]);
       setLoading(false);
       return;
     }
-    
-    // Seed data on initial load if necessary
-    seedInitialData();
 
-    const unsubscribe = onSnapshot(collection(db, 'students'), (snapshot) => {
-      const studentsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
-      setStudents(studentsData);
+    const studentsCollection = collection(db, 'students');
+    const unsubscribe = onSnapshot(studentsCollection, async (snapshot) => {
+      // Seeding logic is now inside onSnapshot
+      if (snapshot.empty) {
+        console.log('No students found, seeding initial data...');
+        const batch = writeBatch(db);
+        mockStudents.forEach((student) => {
+          const docRef = doc(db, 'students', student.id);
+          batch.set(docRef, student);
+        });
+        await batch.commit();
+        console.log('Initial data seeded.');
+        // The snapshot will update automatically after seeding, so we just wait for the next snapshot
+      } else {
+         const studentsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
+         setStudents(studentsData);
+      }
       setLoading(false);
     }, (error) => {
       console.error("Error fetching students from Firestore:", error);
