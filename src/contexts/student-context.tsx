@@ -1,16 +1,6 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { db } from '@/lib/firebase';
-import {
-  collection,
-  onSnapshot,
-  doc,
-  updateDoc,
-  deleteDoc,
-  writeBatch,
-  setDoc,
-} from 'firebase/firestore';
 import { mockStudents } from '@/lib/mock-data';
 import type { Student } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
@@ -30,93 +20,49 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Menggunakan data mock secara langsung untuk menghindari koneksi ke Firestore
   useEffect(() => {
     setLoading(true);
-    const studentsCollectionRef = collection(db, 'students');
-
-    const unsubscribe = onSnapshot(studentsCollectionRef, async (snapshot) => {
-        if (snapshot.empty) {
-            console.log('No students found. Seeding initial mock data...');
-            setLoading(true);
-            try {
-                const batch = writeBatch(db);
-                mockStudents.forEach((student) => {
-                    const studentWithPlaceholderAvatar = {
-                      ...student,
-                      avatarUrl: `https://placehold.co/100x100.png?text=${student.name.charAt(0)}`
-                    };
-                    const docRef = doc(db, 'students', student.id);
-                    batch.set(docRef, studentWithPlaceholderAvatar);
-                });
-                await batch.commit();
-                console.log('Mock data seeded successfully.');
-            } catch(error) {
-                console.error("Error seeding data:", error);
-            } finally {
-              setLoading(false);
-            }
-        } else {
-            const studentsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
-            setStudents(studentsList);
-            setLoading(false);
-        }
-    }, (error) => {
-        console.error("Error fetching students:", error);
-        setStudents([]);
-        setLoading(false);
-    });
-
-    return () => {
-      unsubscribe();
-    };
+    // Menambahkan avatar placeholder ke mock data
+    const studentsWithAvatars = mockStudents.map(student => ({
+      ...student,
+      avatarUrl: `https://placehold.co/100x100.png?text=${student.name.charAt(0)}`
+    }));
+    setStudents(studentsWithAvatars);
+    setLoading(false);
   }, []);
   
+  // Fungsi-fungsi berikut akan memanipulasi state lokal saja untuk sementara
   const addStudent = async (newStudentData: Omit<Student, 'id' | 'avatarUrl'>) => {
-    const studentId = `student-${Date.now()}`;
-    const newStudent: Omit<Student, 'id'> = {
+    const newStudent: Student = {
       ...newStudentData,
+      id: `student-${Date.now()}`,
       avatarUrl: `https://placehold.co/100x100.png?text=${newStudentData.name.charAt(0)}`,
+      habits: [], // Habits akan kosong untuk student baru di mode mock
     };
-    try {
-      const studentDocRef = doc(db, 'students', studentId);
-      await setDoc(studentDocRef, newStudent);
-    } catch (error) {
-      console.error("Error adding student: ", error);
-    }
+    setStudents(prev => [...prev, newStudent]);
   };
 
   const updateStudent = async (studentId: string, updatedData: Partial<Omit<Student, 'id' | 'habits' | 'avatarUrl'>>) => {
-     try {
-      const studentDocRef = doc(db, 'students', studentId);
-      await updateDoc(studentDocRef, updatedData);
-    } catch (error) {
-      console.error("Error updating student: ", error);
-    }
+     setStudents(prev => 
+      prev.map(s => s.id === studentId ? { ...s, ...updatedData } : s)
+     );
   };
 
   const deleteStudent = async (studentId: string) => {
-    try {
-      const studentDocRef = doc(db, 'students', studentId);
-      await deleteDoc(studentDocRef);
-    } catch (error) {
-      console.error("Error deleting student: ", error);
-    }
+    setStudents(prev => prev.filter(s => s.id !== studentId));
   };
   
   const updateHabitScore = async (studentId: string, habitId: string, newScore: number) => {
-    const studentToUpdate = students.find(s => s.id === studentId);
-    if (!studentToUpdate) return;
-    
-    const updatedHabits = studentToUpdate.habits.map(habit => 
-      habit.id === habitId ? { ...habit, score: newScore } : habit
-    );
-    
-    try {
-        const studentDocRef = doc(db, 'students', studentId);
-        await updateDoc(studentDocRef, { habits: updatedHabits });
-    } catch (error) {
-        console.error("Error updating habit score: ", error);
-    }
+    setStudents(prev => prev.map(student => {
+      if (student.id === studentId) {
+        const updatedHabits = student.habits.map(habit => 
+          habit.id === habitId ? { ...habit, score: newScore } : habit
+        );
+        return { ...student, habits: updatedHabits };
+      }
+      return student;
+    }));
   };
   
   const contextValue = { students, loading, addStudent, updateStudent, deleteStudent, updateHabitScore };
