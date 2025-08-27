@@ -19,6 +19,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CalendarIcon, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { id, enUS } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { HABIT_NAMES } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -48,6 +49,7 @@ export function DataInputClient() {
   const { language } = useLanguage();
   const t = translations[language]?.dataInputClient || translations.en.dataInputClient;
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
+  const locale = language === 'id' ? id : enUS;
 
   const habitTranslationMapping: Record<string, string> = {
     'Bangun Pagi': tHabits.bangunPagi.name,
@@ -186,7 +188,7 @@ export function DataInputClient() {
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {field.value ? format(field.value, 'PPP', { locale: language === 'id' ? require('date-fns/locale/id') : require('date-fns/locale/en-US') }) : <span>{t.datePlaceholder}</span>}
+                      {field.value ? format(field.value, 'PPP', { locale }) : <span>{t.datePlaceholder}</span>}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -195,6 +197,7 @@ export function DataInputClient() {
                       selected={field.value}
                       onSelect={field.onChange}
                       initialFocus
+                      locale={locale}
                     />
                   </PopoverContent>
                 </Popover>
