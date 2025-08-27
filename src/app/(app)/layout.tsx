@@ -56,8 +56,7 @@ export default function AppLayout({
     }
   }, [loading, user, router]);
 
-
-  const navItems: NavItem[] = [
+  const guruNavItems: NavItem[] = [
     { href: '/dashboard', icon: LayoutDashboard, label: t.sidebar.dashboard },
     { href: '/data-input', icon: FilePlus2, label: t.sidebar.dataInput },
     { href: '/manage-students', icon: Users, label: t.sidebar.manageStudents },
@@ -65,6 +64,13 @@ export default function AppLayout({
     { href: '/notifications', icon: Bell, label: t.sidebar.notifications },
     { href: '/reports', icon: FileText, label: t.sidebar.reports },
   ];
+
+  const siswaNavItems: NavItem[] = [
+    { href: '/dashboard', icon: LayoutDashboard, label: t.sidebar.dashboard },
+    { href: '/reports', icon: FileText, label: t.sidebar.reports },
+  ];
+  
+  const navItems = userProfile?.role === 'siswa' ? siswaNavItems : guruNavItems;
 
   if (loading || !user) {
      return (
