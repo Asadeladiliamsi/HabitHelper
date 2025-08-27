@@ -9,6 +9,7 @@ export interface Habit {
 export interface Student {
   id: string;
   name: string;
+  nisn: string;
   avatarUrl: string;
   class: string;
   habits: Habit[];
@@ -31,6 +32,7 @@ export interface UserProfile {
   email: string | null;
   name: string;
   role: UserRole;
+  nisn?: string;
 }
 
 export interface HabitEntry {

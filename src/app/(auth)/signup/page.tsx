@@ -15,6 +15,8 @@ import { AlertTriangle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import type { UserRole } from '@/lib/types';
+import { cn } from '@/lib/utils';
+
 
 const formSchema = z.object({
   name: z.string().min(3, { message: 'Nama minimal 3 karakter.' }),
@@ -23,6 +25,16 @@ const formSchema = z.object({
   role: z.enum(['guru', 'siswa', 'orangtua'], {
     required_error: 'Anda harus memilih peran.',
   }),
+  nisn: z.string().optional(),
+}).refine(data => {
+    // Make NISN required only if the role is 'siswa'
+    if (data.role === 'siswa') {
+      return !!data.nisn && data.nisn.length > 0;
+    }
+    return true;
+}, {
+    message: 'NISN harus diisi untuk siswa.',
+    path: ['nisn'],
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -40,15 +52,18 @@ export default function SignupPage() {
       email: '',
       password: '',
       role: 'siswa',
+      nisn: '',
     },
   });
+
+  const selectedRole = form.watch('role');
 
   const onSubmit = async (data: FormValues) => {
     setError(null);
     setIsLoading(true);
     try {
       const userCredential = await signup(data.email, data.password);
-      await createUserProfile(userCredential.user, data.name, data.role);
+      await createUserProfile(userCredential.user, data.name, data.role, data.nisn);
       router.push('/dashboard');
     } catch (err: any) {
       if (err.code === 'auth/email-already-in-use') {
@@ -126,6 +141,12 @@ export default function SignupPage() {
               )}
             />
             {form.formState.errors.role && <p className="text-sm text-destructive mt-2">{form.formState.errors.role.message}</p>}
+          </div>
+
+          <div className={cn("space-y-2 transition-all duration-300", selectedRole === 'siswa' ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0 overflow-hidden')}>
+              <Label htmlFor="nisn">NISN (Nomor Induk Siswa Nasional)</Label>
+              <Input id="nisn" type="text" placeholder="Masukkan NISN Anda" {...form.register('nisn')} />
+              {form.formState.errors.nisn && <p className="text-sm text-destructive">{form.formState.errors.nisn.message}</p>}
           </div>
 
 

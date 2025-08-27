@@ -42,7 +42,7 @@ export function ManageStudentsClient() {
         habits: HABIT_NAMES.map((name, index) => ({
           id: `habit-${index + 1}`,
           name: name,
-          score: 8, // Default score
+          score: 4, // Default score
         })),
         avatarUrl: `https://placehold.co/100x100.png?text=${studentData.name.charAt(0)}`,
         ...studentData,
@@ -80,6 +80,7 @@ export function ManageStudentsClient() {
               <TableHeader>
                 <TableRow>
                   <TableHead>{t.student}</TableHead>
+                  <TableHead>NISN</TableHead>
                   <TableHead>{t.class}</TableHead>
                   <TableHead className="text-right">{t.actions}</TableHead>
                 </TableRow>
@@ -95,6 +96,9 @@ export function ManageStudentsClient() {
                         </Avatar>
                         <span className="font-medium">{student.name}</span>
                       </div>
+                    </TableCell>
+                    <TableCell>
+                        <span className="font-mono text-xs">{student.nisn}</span>
                     </TableCell>
                     <TableCell>
                       <Badge variant="secondary">{student.class}</Badge>

@@ -29,6 +29,7 @@ interface StudentDialogProps {
 const formSchema = z.object({
   name: z.string().min(3, { message: 'Nama harus memiliki setidaknya 3 karakter.' }),
   class: z.string().min(1, { message: 'Kelas harus diisi.' }),
+  nisn: z.string().min(1, { message: 'NISN harus diisi.' }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -47,15 +48,16 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student }: Student
     defaultValues: {
       name: '',
       class: '',
+      nisn: '',
     }
   });
 
   useEffect(() => {
     if (isOpen) {
       if (student) {
-        reset({ name: student.name, class: student.class });
+        reset({ name: student.name, class: student.class, nisn: student.nisn });
       } else {
-        reset({ name: '', class: '' });
+        reset({ name: '', class: '', nisn: '' });
       }
     }
   }, [isOpen, student, reset]);
@@ -64,6 +66,7 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student }: Student
     onSave({
       name: data.name,
       class: data.class,
+      nisn: data.nisn,
     });
     onOpenChange(false);
   };
@@ -92,6 +95,13 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student }: Student
               </Label>
               <Input id="class" {...register('class')} />
               {errors.class && <p className="text-sm text-destructive mt-1">{errors.class.message}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="nisn">
+                NISN
+              </Label>
+              <Input id="nisn" {...register('nisn')} placeholder="Nomor Induk Siswa Nasional" />
+              {errors.nisn && <p className="text-sm text-destructive mt-1">{errors.nisn.message}</p>}
             </div>
           </div>
           <DialogFooter>

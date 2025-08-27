@@ -31,7 +31,7 @@ const habitIcons: { [key: string]: React.ReactNode } = {
 
 
 export function SiswaDashboardClient() {
-  const { user, userProfile } = useAuth();
+  const { userProfile } = useAuth();
   const { students, loading: studentsLoading } = useStudent();
   const { language } = useLanguage();
   const t = translations[language]?.dashboardPage || translations.en.dashboardPage;
@@ -55,8 +55,8 @@ export function SiswaDashboardClient() {
     );
   }
 
-  // Find the student data that matches the logged-in user's email
-  const studentData = students.find(s => s.name === userProfile?.name);
+  // Find the student data that matches the logged-in user's NISN
+  const studentData = students.find(s => s.nisn === userProfile?.nisn);
 
   if (!studentData) {
     return (
@@ -65,7 +65,7 @@ export function SiswaDashboardClient() {
           <CardTitle>Data Siswa Tidak Ditemukan</CardTitle>
         </CardHeader>
         <CardContent>
-          <p>Data untuk siswa dengan nama &quot;{userProfile?.name}&quot; tidak dapat ditemukan. Mohon hubungi guru Anda.</p>
+          <p>Data untuk siswa dengan NISN &quot;{userProfile?.nisn}&quot; tidak dapat ditemukan. Pastikan NISN Anda benar dan sudah didaftarkan oleh guru.</p>
         </CardContent>
       </Card>
     );
