@@ -41,7 +41,8 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       return;
     }
 
-    if (userProfile.role !== 'admin') {
+    // Allow both admin and guru to fetch the user list
+    if (userProfile.role !== 'admin' && userProfile.role !== 'guru') {
       setLoading(false);
       setUsers([]);
       return;
