@@ -6,10 +6,10 @@ import {
   collection,
   onSnapshot,
   doc,
-  setDoc,
   updateDoc,
   deleteDoc,
   writeBatch,
+  getDocs,
 } from 'firebase/firestore';
 import { mockStudents } from '@/lib/mock-data';
 import type { Student } from '@/lib/types';
@@ -45,27 +45,34 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const studentsCollectionRef = collection(db, 'students');
-    const unsubscribe = onSnapshot(studentsCollectionRef, async (snapshot) => {
-      if (snapshot.empty) {
-        console.log('No students found. Seeding initial mock data...');
-        const batch = writeBatch(db);
-        mockStudents.forEach((student) => {
-          const docRef = doc(db, 'students', student.id);
-          batch.set(docRef, student);
-        });
-        await batch.commit();
-        setLoading(false);
-        // The onSnapshot will be triggered again by the write, which will then populate the state.
-      } else {
+
+    // Listener for real-time updates
+    const unsubscribe = onSnapshot(studentsCollectionRef, (snapshot) => {
         const studentsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
         setStudents(studentsList);
-        setLoading(false);
-      }
+        setLoading(false); // Set loading to false once we get data
     }, (error) => {
-      console.error("Error fetching students:", error);
-      setStudents([]);
-      setLoading(false);
+        console.error("Error fetching students:", error);
+        setStudents([]);
+        setLoading(false);
     });
+
+    // Check for initial data and seed if necessary
+    const checkForInitialData = async () => {
+        const snapshot = await getDocs(studentsCollectionRef);
+        if (snapshot.empty) {
+            console.log('No students found. Seeding initial mock data...');
+            const batch = writeBatch(db);
+            mockStudents.forEach((student) => {
+                const docRef = doc(db, 'students', student.id);
+                batch.set(docRef, student);
+            });
+            await batch.commit();
+            // The onSnapshot listener will automatically pick up the newly seeded data.
+        }
+    };
+
+    checkForInitialData();
 
     return () => unsubscribe();
   }, [user, authLoading]);
@@ -87,7 +94,10 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
     };
     try {
       const studentDocRef = doc(db, 'students', studentId);
-      await setDoc(studentDocRef, newStudent);
+      const batch = writeBatch(db);
+      batch.set(studentDocRef, newStudent);
+      await batch.commit();
+
     } catch (error) {
       console.error("Error adding student: ", error);
     }
