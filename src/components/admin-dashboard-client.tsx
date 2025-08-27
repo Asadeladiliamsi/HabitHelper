@@ -30,6 +30,8 @@ import type { UserProfile, UserRole } from '@/lib/types';
 import { useState } from 'react';
 import { UserEditDialog } from './user-edit-dialog';
 import { UserDeleteDialog } from './user-delete-dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { ManageStudentsClient } from './manage-students-client';
 
 export function AdminDashboardClient() {
   const { users, loading, updateUserRole, updateUserName, deleteUser } =
@@ -74,6 +76,8 @@ export function AdminDashboardClient() {
     );
   }
 
+  const parentUsers = users.filter(u => u.role === 'orangtua');
+
   return (
     <>
       {editingUser && (
@@ -95,94 +99,106 @@ export function AdminDashboardClient() {
       <div className="flex flex-col gap-6">
         <header>
           <h1 className="text-3xl font-bold tracking-tight">
-            Manajemen Pengguna
+            Dasbor Admin
           </h1>
           <p className="text-muted-foreground">
-            Kelola peran dan akses pengguna di seluruh sistem.
+            Kelola pengguna dan data siswa dari satu tempat.
           </p>
         </header>
-        <Card>
-          <CardHeader>
-            <CardTitle>Daftar Pengguna</CardTitle>
-            <CardDescription>
-              Total {users.length} pengguna terdaftar di dalam sistem.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nama</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Peran</TableHead>
-                  <TableHead className="text-right">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.map(user => (
-                  <TableRow key={user.uid}>
-                    <TableCell className="font-medium">{user.name}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {user.email}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={getRoleBadgeVariant(user.role)}>
-                        {user.role}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Menu</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setEditingUser(user)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Ubah Nama
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => handleRoleChange(user.uid, 'admin')}
-                          >
-                            Jadikan Admin
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleRoleChange(user.uid, 'guru')}
-                          >
-                            Jadikan Guru
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleRoleChange(user.uid, 'siswa')}
-                          >
-                            Jadikan Siswa
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              handleRoleChange(user.uid, 'orangtua')
-                            }
-                          >
-                            Jadikan Orang Tua
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-destructive focus:text-destructive"
-                            onClick={() => setDeletingUser(user)}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Hapus Pengguna
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+
+         <Tabs defaultValue="manage-users">
+            <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="manage-users">Manajemen Pengguna</TabsTrigger>
+                <TabsTrigger value="manage-students">Manajemen Siswa</TabsTrigger>
+            </TabsList>
+            <TabsContent value="manage-users" className="mt-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Daftar Pengguna</CardTitle>
+                    <CardDescription>
+                      Total {users.length} pengguna terdaftar di dalam sistem.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nama</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Peran</TableHead>
+                          <TableHead className="text-right">Aksi</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {users.map(user => (
+                          <TableRow key={user.uid}>
+                            <TableCell className="font-medium">{user.name}</TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {user.email}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={getRoleBadgeVariant(user.role)}>
+                                {user.role}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                    <span className="sr-only">Menu</span>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => setEditingUser(user)}>
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    Ubah Nama
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => handleRoleChange(user.uid, 'admin')}
+                                  >
+                                    Jadikan Admin
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleRoleChange(user.uid, 'guru')}
+                                  >
+                                    Jadikan Guru
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleRoleChange(user.uid, 'siswa')}
+                                  >
+                                    Jadikan Siswa
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      handleRoleChange(user.uid, 'orangtua')
+                                    }
+                                  >
+                                    Jadikan Orang Tua
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    className="text-destructive focus:text-destructive"
+                                    onClick={() => setDeletingUser(user)}
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Hapus Pengguna
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+            </TabsContent>
+             <TabsContent value="manage-students" className="mt-6">
+                <ManageStudentsClient parentUsers={parentUsers} />
+            </TabsContent>
+        </Tabs>
       </div>
     </>
   );

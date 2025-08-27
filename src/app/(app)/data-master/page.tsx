@@ -7,18 +7,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/auth-context';
 import { useLanguage } from '@/contexts/language-provider';
 import { StudentProvider } from '@/contexts/student-context';
-import { UserProvider, useUser } from '@/contexts/user-context';
 import { translations } from '@/lib/translations';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 function DataMasterTabs() {
   const { language } = useLanguage();
-  const { users } = useUser();
   const t = translations[language] || translations.en;
   
-  const parentUsers = users.filter(u => u.role === 'orangtua');
-
   return (
     <Tabs defaultValue="manage-students">
       <TabsList className="grid w-full grid-cols-3">
@@ -36,7 +32,8 @@ function DataMasterTabs() {
         <DataInputClient />
       </TabsContent>
       <TabsContent value="manage-students" className="mt-6">
-        <ManageStudentsClient parentUsers={parentUsers} />
+        {/* Guru only sees student management without parent linking */}
+        <ManageStudentsClient parentUsers={[]} />
       </TabsContent>
       <TabsContent value="edit-scores" className="mt-6">
         <EditScoresClient />
@@ -52,18 +49,17 @@ export default function DataMasterPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (userProfile && userProfile.role === 'orangtua') {
+    if (userProfile && (userProfile.role === 'orangtua' || userProfile.role === 'siswa')) {
       router.replace('/dashboard');
     }
   }, [userProfile, router]);
 
-  if (userProfile?.role === 'orangtua') {
+  if (userProfile?.role === 'orangtua' || userProfile?.role === 'siswa') {
     return null; 
   }
 
   return (
     <StudentProvider>
-      <UserProvider>
         <div className="flex flex-col gap-6">
           <header>
             <h1 className="text-3xl font-bold tracking-tight">
@@ -75,7 +71,6 @@ export default function DataMasterPage() {
           </header>
           <DataMasterTabs />
         </div>
-      </UserProvider>
     </StudentProvider>
   );
 }

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { UserProvider } from '@/contexts/user-context';
+import { StudentProvider } from '@/contexts/student-context';
 
 
 export default function AdminDashboardPage() {
@@ -28,7 +29,9 @@ export default function AdminDashboardPage() {
     
   return (
     <UserProvider>
-      <AdminDashboardClient />
+      <StudentProvider>
+        <AdminDashboardClient />
+      </StudentProvider>
     </UserProvider>
   );
 }
