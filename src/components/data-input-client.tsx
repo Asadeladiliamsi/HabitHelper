@@ -5,7 +5,6 @@ import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -26,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { StudentSearchDialog } from './student-search-dialog';
 
 const formSchema = z.object({
   studentId: z.string().min(1, 'Siswa harus dipilih.'),
@@ -105,6 +105,9 @@ export function DataInputClient() {
       setIsLoading(false);
     }
   };
+  
+  const selectedStudentName = students.find(s => s.id === form.watch('studentId'))?.name || '';
+
 
   return (
     <Card className="mx-auto w-full max-w-2xl">
@@ -118,24 +121,19 @@ export function DataInputClient() {
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="studentId">{t.selectStudent}</Label>
-            <Controller
-                control={form.control}
-                name="studentId"
-                render={({ field }) => (
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <SelectTrigger id="studentId">
-                      <SelectValue placeholder={t.selectStudentPlaceholder} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {students.map((student) => (
-                        <SelectItem key={student.id} value={student.id}>
-                          {student.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
+             <Controller
+              control={form.control}
+              name="studentId"
+              render={({ field }) => (
+                <StudentSearchDialog
+                  students={students}
+                  selectedStudentId={field.value}
+                  onStudentSelect={(studentId) => field.onChange(studentId)}
+                  placeholder={t.selectStudentPlaceholder}
+                  selectedStudentName={selectedStudentName}
+                />
+              )}
+            />
             {form.formState.errors.studentId && (
               <p className="text-sm text-destructive mt-1">
                 {form.formState.errors.studentId.message}
@@ -146,7 +144,7 @@ export function DataInputClient() {
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="habitName">{t.selectHabit}</Label>
-              <Controller
+               <Controller
                 control={form.control}
                 name="habitName"
                 render={({ field }) => (
@@ -170,15 +168,26 @@ export function DataInputClient() {
                 </p>
               )}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="score">{t.score}</Label>
-              <Input
-                id="score"
-                type="number"
-                min="1"
-                max="4"
-                {...form.register('score')}
-              />
+             <div className="space-y-2">
+               <Label htmlFor="score">{t.score}</Label>
+                <Controller
+                    control={form.control}
+                    name="score"
+                    render={({ field }) => (
+                        <Select onValueChange={(value) => field.onChange(Number(value))} value={String(field.value)}>
+                            <SelectTrigger id="score">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {[4, 3, 2, 1].map((score) => (
+                                    <SelectItem key={score} value={String(score)}>
+                                        {score}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    )}
+                />
               {form.formState.errors.score && (
                 <p className="text-sm text-destructive mt-1">
                   {form.formState.errors.score.message}

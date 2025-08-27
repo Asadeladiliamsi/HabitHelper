@@ -11,10 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { useToast } from '@/hooks/use-toast';
-import type { Habit } from '@/lib/types';
+import type { Habit, Student } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
+import { StudentSearchDialog } from './student-search-dialog';
+
 
 const formSchema = z.object({
   studentId: z.string().min(1, 'Siswa harus dipilih.'),
@@ -106,6 +108,8 @@ export function EditScoresClient() {
     if (score <= 3) return 'text-yellow-600';
     return 'text-green-600';
   };
+  
+  const selectedStudentName = students.find(s => s.id === form.watch('studentId'))?.name || '';
 
   return (
       <Card className="mx-auto w-full max-w-2xl">
@@ -123,24 +127,16 @@ export function EditScoresClient() {
                 control={form.control}
                 name="studentId"
                 render={({ field }) => (
-                   <Select
-                    onValueChange={(value) => {
-                      field.onChange(value);
-                      form.setValue('habitId', ''); // Reset habit when student changes
-                    }}
-                    value={field.value}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={t.selectStudentPlaceholder} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {students.map((student) => (
-                        <SelectItem key={student.id} value={student.id}>
-                          {student.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    <StudentSearchDialog
+                      students={students}
+                      selectedStudentId={field.value}
+                      onStudentSelect={(studentId) => {
+                        field.onChange(studentId);
+                        form.setValue('habitId', '');
+                      }}
+                      placeholder={t.selectStudentPlaceholder}
+                      selectedStudentName={selectedStudentName}
+                    />
                 )}
               />
               {form.formState.errors.studentId && (

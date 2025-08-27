@@ -17,6 +17,8 @@ import { HABIT_NAMES } from '@/lib/types';
 import type { HabitDeclineNotificationOutput } from '@/ai/flows/habit-decline-notification';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
+import { StudentSearchDialog } from './student-search-dialog';
+
 
 const formSchema = z.object({
   studentId: z.string().min(1, 'Siswa harus dipilih.'),
@@ -57,6 +59,9 @@ export function NotificationsClient() {
       score3: 2,
     },
   });
+  
+  const selectedStudentName = students.find(s => s.id === form.watch('studentId'))?.name || '';
+
 
   const onSubmit = async (data: FormValues) => {
     setIsLoading(true);
@@ -83,22 +88,17 @@ export function NotificationsClient() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="studentId">{t.student}</Label>
-            <Controller
+             <Controller
               control={form.control}
               name="studentId"
               render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <SelectTrigger id="studentId">
-                    <SelectValue placeholder={t.selectStudentPlaceholder} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {students.map((student) => (
-                      <SelectItem key={student.id} value={student.id}>
-                        {student.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <StudentSearchDialog
+                  students={students}
+                  selectedStudentId={field.value}
+                  onStudentSelect={(studentId) => field.onChange(studentId)}
+                  placeholder={t.selectStudentPlaceholder}
+                  selectedStudentName={selectedStudentName}
+                />
               )}
             />
              {form.formState.errors.studentId && <p className="text-sm text-destructive mt-1">{form.formState.errors.studentId.message}</p>}
