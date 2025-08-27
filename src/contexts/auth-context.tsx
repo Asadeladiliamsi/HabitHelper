@@ -15,7 +15,7 @@ interface AuthContextType {
   login: (email: string, pass: string) => Promise<any>;
   signup: (email: string, pass: string) => Promise<any>;
   logout: () => Promise<any>;
-  createUserProfile: (user: User, name: string) => Promise<void>;
+  createUserProfile: (user: User, name: string, role: UserRole) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -56,13 +56,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return createUserWithEmailAndPassword(auth, email, pass);
   };
 
-  const createUserProfile = async (user: User, name: string) => {
+  const createUserProfile = async (user: User, name: string, role: UserRole) => {
      const userDocRef = doc(db, 'users', user.uid);
      await setDoc(userDocRef, {
         uid: user.uid,
         email: user.email,
         name: name,
-        role: 'siswa', // Default role is 'siswa'
+        role: role,
         createdAt: serverTimestamp(),
       });
   }
