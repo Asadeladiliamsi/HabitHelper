@@ -122,8 +122,8 @@ export function NotificationsClient() {
                         {students.map((student) => (
                           <CommandItem
                             key={student.id}
-                            value={`${student.name} ${student.nisn}`}
-                            onSelect={() => {
+                            value={`${student.name.toLowerCase()} ${student.nisn}`}
+                            onSelect={(currentValue) => {
                               form.setValue('studentId', student.id);
                               setOpenStudentCombobox(false);
                             }}
