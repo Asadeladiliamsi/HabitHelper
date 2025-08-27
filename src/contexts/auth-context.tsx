@@ -3,10 +3,11 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { onAuthStateChanged, User, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
-import { ref, set, get, child } from 'firebase/database';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import type { UserProfile, UserRole } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+
 
 interface AuthContextType {
   user: User | null;
@@ -30,10 +31,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUser(user);
-        const userProfileRef = child(ref(db), `users/${user.uid}`);
-        const snapshot = await get(userProfileRef);
-        if (snapshot.exists()) {
-          setUserProfile(snapshot.val() as UserProfile);
+        const userDocRef = doc(db, 'users', user.uid);
+        const docSnap = await getDoc(userDocRef);
+        if (docSnap.exists()) {
+          setUserProfile(docSnap.data() as UserProfile);
         } else {
           setUserProfile(null);
         }
@@ -76,7 +77,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         role: role,
       };
 
-      await set(ref(db, 'users/' + newUser.uid), userProfileData);
+      await setDoc(doc(db, 'users', newUser.uid), userProfileData);
       
       router.push('/dashboard');
 
@@ -97,7 +98,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await signOut(auth);
       router.push('/');
     } catch (error: any) {
-       toast({
+      toast({
         title: 'Logout Gagal',
         description: error.message,
         variant: 'destructive',

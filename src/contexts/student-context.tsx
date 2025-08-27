@@ -2,7 +2,15 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { ref, onValue, set, update, remove } from 'firebase/database';
+import {
+  collection,
+  onSnapshot,
+  doc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  writeBatch,
+} from 'firebase/firestore';
 import { mockStudents } from '@/lib/mock-data';
 import type { Student } from '@/lib/types';
 import { HABIT_NAMES } from '@/lib/types';
@@ -36,34 +44,26 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    const studentsRef = ref(db, 'students');
-    const unsubscribe = onValue(studentsRef, async (snapshot) => {
-      if (snapshot.exists()) {
-        const studentsData = snapshot.val();
-        const studentsList = Object.keys(studentsData).map(key => ({
-          id: key,
-          ...studentsData[key],
-        }));
-        setStudents(studentsList);
+    const studentsCollectionRef = collection(db, 'students');
+    const unsubscribe = onSnapshot(studentsCollectionRef, async (snapshot) => {
+      if (snapshot.empty) {
+        console.log('No students found. Seeding initial mock data...');
+        const batch = writeBatch(db);
+        mockStudents.forEach((student) => {
+          const docRef = doc(db, 'students', student.id);
+          batch.set(docRef, student);
+        });
+        await batch.commit();
+        setLoading(false);
+        // The onSnapshot will be triggered again by the write, which will then populate the state.
       } else {
-        console.log('No students found in Realtime Database. Seeding initial mock data...');
-        const initialData = mockStudents.reduce((acc, student) => {
-          acc[student.id] = student;
-          return acc;
-        }, {} as Record<string, Student>);
-
-        try {
-          await set(studentsRef, initialData);
-          // onValue will be triggered again by the set operation, which will then populate the state
-        } catch (error) {
-          console.error("Error seeding initial data:", error);
-          setStudents([]); // Set to empty if seeding fails
-        }
+        const studentsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
+        setStudents(studentsList);
+        setLoading(false);
       }
-      setLoading(false);
     }, (error) => {
-      console.error("Error fetching students from Realtime Database:", error);
-      setStudents([]); // Fallback to empty data on error
+      console.error("Error fetching students:", error);
+      setStudents([]);
       setLoading(false);
     });
 
@@ -86,8 +86,8 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
       ...newStudentData,
     };
     try {
-      const studentRef = ref(db, `students/${studentId}`);
-      await set(studentRef, newStudent);
+      const studentDocRef = doc(db, 'students', studentId);
+      await setDoc(studentDocRef, newStudent);
     } catch (error) {
       console.error("Error adding student: ", error);
     }
@@ -96,8 +96,8 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
   const updateStudent = async (studentId: string, updatedData: Partial<Omit<Student, 'id' | 'habits'>>) => {
      if (!user) return;
      try {
-      const studentRef = ref(db, `students/${studentId}`);
-      await update(studentRef, updatedData);
+      const studentDocRef = doc(db, 'students', studentId);
+      await updateDoc(studentDocRef, updatedData);
     } catch (error) {
       console.error("Error updating student: ", error);
     }
@@ -106,8 +106,8 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
   const deleteStudent = async (studentId: string) => {
     if (!user) return;
     try {
-      const studentRef = ref(db, `students/${studentId}`);
-      await remove(studentRef);
+      const studentDocRef = doc(db, 'students', studentId);
+      await deleteDoc(studentDocRef);
     } catch (error) {
       console.error("Error deleting student: ", error);
     }
@@ -117,13 +117,14 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
     if (!user) return;
     const studentToUpdate = students.find(s => s.id === studentId);
     if (!studentToUpdate) return;
-
-    const habitIndex = studentToUpdate.habits.findIndex(habit => habit.id === habitId);
-    if (habitIndex === -1) return;
+    
+    const updatedHabits = studentToUpdate.habits.map(habit => 
+      habit.id === habitId ? { ...habit, score: newScore } : habit
+    );
     
     try {
-        const habitScoreRef = ref(db, `students/${studentId}/habits/${habitIndex}/score`);
-        await set(habitScoreRef, newScore);
+        const studentDocRef = doc(db, 'students', studentId);
+        await updateDoc(studentDocRef, { habits: updatedHabits });
     } catch (error) {
         console.error("Error updating habit score: ", error);
     }
