@@ -50,7 +50,8 @@ export default function AppLayout({
   }, [loading, user, router]);
 
   const getDashboardTitle = () => {
-    switch (userProfile?.role) {
+    if (!userProfile) return 'Dasbor';
+    switch (userProfile.role) {
       case 'guru':
         return t.sidebar.teacherDashboard;
       case 'siswa':
