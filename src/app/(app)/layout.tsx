@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect } from 'react';
@@ -49,40 +50,12 @@ export default function AppLayout({
     }
   }, [loading, user, router]);
 
-  const guruNavItems = [
+  const navItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: t.sidebar.dashboard },
     { href: '/data-master', icon: Database, label: t.sidebar.dataMaster },
     { href: '/notifications', icon: Bell, label: t.sidebar.notifications },
     { href: '/reports', icon: FileText, label: t.sidebar.reports },
   ];
-
-  const siswaNavItems = [
-    { href: '/dashboard', icon: LayoutDashboard, label: t.sidebar.dashboard },
-    { href: '/reports', icon: FileText, label: t.sidebar.reports },
-  ];
-  
-  const adminNavItems = [
-    { href: '/admin/dashboard', icon: Shield, label: 'Dasbor Admin' },
-  ];
-
-  const orangtuaNavItems = [
-    { href: '/orangtua/dashboard', icon: Heart, label: 'Dasbor Orang Tua' },
-  ];
-
-  const getNavItems = () => {
-    switch (userProfile?.role) {
-      case 'siswa':
-        return siswaNavItems;
-      case 'guru':
-        return guruNavItems;
-      case 'admin':
-        return adminNavItems;
-      case 'orangtua':
-        return orangtuaNavItems;
-      default:
-        return [];
-    }
-  }
 
   const getDashboardTitle = () => {
     switch (userProfile?.role) {
@@ -106,8 +79,7 @@ export default function AppLayout({
       </div>
     );
   }
-
-  const navItems = getNavItems();
+  
   const dashboardTitle = getDashboardTitle();
 
   return (
