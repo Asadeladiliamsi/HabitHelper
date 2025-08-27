@@ -5,14 +5,6 @@ import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -25,7 +17,7 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { CalendarIcon, Check, ChevronsUpDown, Loader2 } from 'lucide-react';
+import { CalendarIcon, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { id, enUS } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -57,8 +49,6 @@ export function DataInputClient() {
   const t = translations[language]?.dataInputClient || translations.en.dataInputClient;
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
   const locale = language === 'id' ? id : enUS;
-
-  const [openStudentCombobox, setOpenStudentCombobox] = useState(false);
 
   const habitTranslationMapping: Record<string, string> = {
     'Bangun Pagi': tHabits.bangunPagi.name,
@@ -115,8 +105,6 @@ export function DataInputClient() {
       setIsLoading(false);
     }
   };
-  
-  const studentValue = form.watch('studentId');
 
   return (
     <Card className="mx-auto w-full max-w-2xl">
@@ -130,63 +118,24 @@ export function DataInputClient() {
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="studentId">{t.selectStudent}</Label>
-              <Controller
-                control={form.control}
-                name="studentId"
-                render={({ field }) => (
-                  <Popover open={openStudentCombobox} onOpenChange={setOpenStudentCombobox}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={openStudentCombobox}
-                        className="w-full justify-between"
-                      >
-                        {field.value
-                          ? students.find((s) => s.id === field.value)?.name
-                          : t.selectStudentPlaceholder}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                       <Command
-                        filter={(value, search) => {
-                            const student = students.find(s => s.id === value);
-                            if (student) {
-                                return student.name.toLowerCase().includes(search.toLowerCase()) ? 1 : 0;
-                            }
-                            return 0;
-                        }}
-                       >
-                        <CommandInput placeholder={t.selectStudentPlaceholder} />
-                        <CommandList>
-                          <CommandEmpty>Siswa tidak ditemukan.</CommandEmpty>
-                          <CommandGroup>
-                            {students.map((student) => (
-                              <CommandItem
-                                key={student.id}
-                                value={student.id}
-                                onSelect={(currentValue) => {
-                                  field.onChange(currentValue === field.value ? '' : currentValue);
-                                  setOpenStudentCombobox(false);
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    'mr-2 h-4 w-4',
-                                    field.value === student.id ? 'opacity-100' : 'opacity-0'
-                                  )}
-                                />
-                                {student.name}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                )}
-              />
+            <Controller
+              control={form.control}
+              name="studentId"
+              render={({ field }) => (
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t.selectStudentPlaceholder} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {students.map((student) => (
+                      <SelectItem key={student.id} value={student.id}>
+                        {student.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
             {form.formState.errors.studentId && (
               <p className="text-sm text-destructive mt-1">
                 {form.formState.errors.studentId.message}
@@ -271,7 +220,6 @@ export function DataInputClient() {
             />
             {form.formState.errors.date && <p className="text-sm text-destructive mt-1">{form.formState.errors.date.message}</p>}
           </div>
-
 
           <Button type="submit" disabled={isLoading || !form.formState.isValid} className="w-full">
             {isLoading ? (

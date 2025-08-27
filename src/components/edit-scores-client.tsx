@@ -8,15 +8,6 @@ import { useStudent } from '@/contexts/student-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { useToast } from '@/hooks/use-toast';
@@ -24,7 +15,6 @@ import type { Habit } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
-import { Check, ChevronsUpDown } from 'lucide-react';
 
 const formSchema = z.object({
   studentId: z.string().min(1, 'Siswa harus dipilih.'),
@@ -42,9 +32,6 @@ export function EditScoresClient() {
   const { language } = useLanguage();
   const t = translations[language]?.editScoresPage || translations.en.editScoresPage;
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
-
-  const [openStudentCombobox, setOpenStudentCombobox] = useState(false);
-
 
   const habitTranslationMapping: Record<string, string> = {
     'Bangun Pagi': tHabits.bangunPagi.name,
@@ -132,61 +119,22 @@ export function EditScoresClient() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-2">
               <Label>{t.selectStudent}</Label>
-               <Controller
+              <Controller
                 control={form.control}
                 name="studentId"
                 render={({ field }) => (
-                  <Popover open={openStudentCombobox} onOpenChange={setOpenStudentCombobox}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={openStudentCombobox}
-                        className="w-full justify-between"
-                      >
-                        {field.value
-                          ? students.find((s) => s.id === field.value)?.name
-                          : t.selectStudentPlaceholder}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                       <Command
-                        filter={(value, search) => {
-                            const student = students.find(s => s.id === value);
-                            if (student) {
-                                return student.name.toLowerCase().includes(search.toLowerCase()) ? 1 : 0;
-                            }
-                            return 0;
-                        }}
-                       >
-                        <CommandInput placeholder={t.selectStudentPlaceholder} />
-                        <CommandList>
-                          <CommandEmpty>Siswa tidak ditemukan.</CommandEmpty>
-                          <CommandGroup>
-                            {students.map((student) => (
-                              <CommandItem
-                                key={student.id}
-                                value={student.id}
-                                onSelect={(currentValue) => {
-                                  field.onChange(currentValue === field.value ? '' : currentValue);
-                                  setOpenStudentCombobox(false);
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    'mr-2 h-4 w-4',
-                                    field.value === student.id ? 'opacity-100' : 'opacity-0'
-                                  )}
-                                />
-                                 {student.name}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={t.selectStudentPlaceholder} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {students.map((student) => (
+                        <SelectItem key={student.id} value={student.id}>
+                          {student.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
               />
               {form.formState.errors.studentId && (

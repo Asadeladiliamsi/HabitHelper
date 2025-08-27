@@ -8,26 +8,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Lightbulb, AlertTriangle, Loader2, Check, ChevronsUpDown } from 'lucide-react';
+import { Lightbulb, AlertTriangle, Loader2 } from 'lucide-react';
 import { checkHabitDecline } from '@/app/actions';
 import { useStudent } from '@/contexts/student-context';
 import { HABIT_NAMES } from '@/lib/types';
 import type { HabitDeclineNotificationOutput } from '@/ai/flows/habit-decline-notification';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
-import { cn } from '@/lib/utils';
-
 
 const formSchema = z.object({
   studentId: z.string().min(1, 'Siswa harus dipilih.'),
@@ -47,9 +36,6 @@ export function NotificationsClient() {
   const { language } = useLanguage();
   const t = translations[language]?.notificationsClient || translations.en.notificationsClient;
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
-
-  const [openStudentCombobox, setOpenStudentCombobox] = useState(false);
-
 
   const habitTranslationMapping: Record<string, string> = {
     'Bangun Pagi': tHabits.bangunPagi.name,
@@ -97,63 +83,24 @@ export function NotificationsClient() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="studentId">{t.student}</Label>
-              <Controller
-                control={form.control}
-                name="studentId"
-                render={({ field }) => (
-                  <Popover open={openStudentCombobox} onOpenChange={setOpenStudentCombobox}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={openStudentCombobox}
-                        className="w-full justify-between"
-                      >
-                        {field.value
-                          ? students.find((s) => s.id === field.value)?.name
-                          : t.selectStudentPlaceholder}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                       <Command
-                        filter={(value, search) => {
-                            const student = students.find(s => s.id === value);
-                            if (student) {
-                                return student.name.toLowerCase().includes(search.toLowerCase()) ? 1 : 0;
-                            }
-                            return 0;
-                        }}
-                       >
-                        <CommandInput placeholder={t.selectStudentPlaceholder} />
-                        <CommandList>
-                          <CommandEmpty>Siswa tidak ditemukan.</CommandEmpty>
-                          <CommandGroup>
-                            {students.map((student) => (
-                              <CommandItem
-                                key={student.id}
-                                value={student.id}
-                                onSelect={(currentValue) => {
-                                  field.onChange(currentValue === field.value ? '' : currentValue);
-                                  setOpenStudentCombobox(false);
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    'mr-2 h-4 w-4',
-                                    field.value === student.id ? 'opacity-100' : 'opacity-0'
-                                  )}
-                                />
-                                 {student.name}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                )}
-              />
+            <Controller
+              control={form.control}
+              name="studentId"
+              render={({ field }) => (
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t.selectStudentPlaceholder} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {students.map((student) => (
+                      <SelectItem key={student.id} value={student.id}>
+                        {student.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
              {form.formState.errors.studentId && <p className="text-sm text-destructive mt-1">{form.formState.errors.studentId.message}</p>}
           </div>
           <div>
