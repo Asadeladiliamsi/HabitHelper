@@ -142,14 +142,24 @@ export function DataInputClient() {
                         aria-expanded={openStudentCombobox}
                         className="w-full justify-between"
                       >
-                        {studentValue
-                          ? students.find((s) => s.id === studentValue)?.name
+                        {field.value
+                          ? students.find((s) => s.id === field.value)?.name
                           : t.selectStudentPlaceholder}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                       <Command>
+                       <Command
+                        filter={(value, search) => {
+                            const student = students.find(s => s.id === value);
+                            if (student) {
+                                const nameMatch = student.name.toLowerCase().includes(search.toLowerCase());
+                                const nisnMatch = student.nisn.includes(search);
+                                return nameMatch || nisnMatch ? 1 : 0;
+                            }
+                            return 0;
+                        }}
+                       >
                         <CommandInput placeholder={t.selectStudentPlaceholder} />
                         <CommandList>
                           <CommandEmpty>Siswa tidak ditemukan.</CommandEmpty>
@@ -157,16 +167,16 @@ export function DataInputClient() {
                             {students.map((student) => (
                               <CommandItem
                                 key={student.id}
-                                value={`${student.name.toLowerCase()} ${student.nisn}`}
+                                value={student.id}
                                 onSelect={(currentValue) => {
-                                  form.setValue('studentId', student.id);
+                                  field.onChange(currentValue === field.value ? '' : currentValue);
                                   setOpenStudentCombobox(false);
                                 }}
                               >
                                 <Check
                                   className={cn(
                                     'mr-2 h-4 w-4',
-                                    studentValue === student.id ? 'opacity-100' : 'opacity-0'
+                                    field.value === student.id ? 'opacity-100' : 'opacity-0'
                                   )}
                                 />
                                 <div>

@@ -71,8 +71,6 @@ export function NotificationsClient() {
       score3: 2,
     },
   });
-  
-  const studentValue = form.watch('studentId');
 
   const onSubmit = async (data: FormValues) => {
     setIsLoading(true);
@@ -99,52 +97,68 @@ export function NotificationsClient() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="studentId">{t.student}</Label>
-              <Popover open={openStudentCombobox} onOpenChange={setOpenStudentCombobox}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={openStudentCombobox}
-                    className="w-full justify-between"
-                  >
-                    {studentValue
-                      ? students.find((s) => s.id === studentValue)?.name
-                      : t.selectStudentPlaceholder}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                   <Command>
-                    <CommandInput placeholder={t.selectStudentPlaceholder} />
-                    <CommandList>
-                      <CommandEmpty>Siswa tidak ditemukan.</CommandEmpty>
-                      <CommandGroup>
-                        {students.map((student) => (
-                          <CommandItem
-                            key={student.id}
-                            value={`${student.name.toLowerCase()} ${student.nisn}`}
-                            onSelect={(currentValue) => {
-                              form.setValue('studentId', student.id);
-                              setOpenStudentCombobox(false);
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                'mr-2 h-4 w-4',
-                                studentValue === student.id ? 'opacity-100' : 'opacity-0'
-                              )}
-                            />
-                             <div>
-                              <p>{student.name}</p>
-                              <p className="text-xs text-muted-foreground">{student.nisn}</p>
-                            </div>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+              <Controller
+                control={form.control}
+                name="studentId"
+                render={({ field }) => (
+                  <Popover open={openStudentCombobox} onOpenChange={setOpenStudentCombobox}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openStudentCombobox}
+                        className="w-full justify-between"
+                      >
+                        {field.value
+                          ? students.find((s) => s.id === field.value)?.name
+                          : t.selectStudentPlaceholder}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                       <Command
+                        filter={(value, search) => {
+                            const student = students.find(s => s.id === value);
+                            if (student) {
+                                const nameMatch = student.name.toLowerCase().includes(search.toLowerCase());
+                                const nisnMatch = student.nisn.includes(search);
+                                return nameMatch || nisnMatch ? 1 : 0;
+                            }
+                            return 0;
+                        }}
+                       >
+                        <CommandInput placeholder={t.selectStudentPlaceholder} />
+                        <CommandList>
+                          <CommandEmpty>Siswa tidak ditemukan.</CommandEmpty>
+                          <CommandGroup>
+                            {students.map((student) => (
+                              <CommandItem
+                                key={student.id}
+                                value={student.id}
+                                onSelect={(currentValue) => {
+                                  field.onChange(currentValue === field.value ? '' : currentValue);
+                                  setOpenStudentCombobox(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    'mr-2 h-4 w-4',
+                                    field.value === student.id ? 'opacity-100' : 'opacity-0'
+                                  )}
+                                />
+                                 <div>
+                                  <p>{student.name}</p>
+                                  <p className="text-xs text-muted-foreground">{student.nisn}</p>
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                )}
+              />
              {form.formState.errors.studentId && <p className="text-sm text-destructive mt-1">{form.formState.errors.studentId.message}</p>}
           </div>
           <div>
