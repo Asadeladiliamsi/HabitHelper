@@ -21,12 +21,21 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (authLoading || !user || userProfile?.role !== 'admin') {
+    // We must wait for auth to finish loading and ensure a userProfile exists with the admin role.
+    if (authLoading || !userProfile) {
+      // If auth is loading or there's no profile yet, we are in a loading state.
+      setLoading(true);
+      return;
+    }
+    
+    // If the user is not an admin, we are not loading and there are no users to show.
+    if (userProfile.role !== 'admin') {
       setLoading(false);
       setUsers([]);
       return;
     }
 
+    // At this point, we are an admin, let's fetch the users.
     setLoading(true);
     const q = query(collection(db, 'users'));
 
@@ -43,10 +52,10 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     return () => unsubscribe();
-  }, [user, userProfile, authLoading]);
+  }, [userProfile, authLoading]);
 
   const updateUserRole = async (uid: string, newRole: UserRole) => {
-    if (!user || userProfile?.role !== 'admin') {
+    if (!userProfile || userProfile.role !== 'admin') {
         throw new Error("Authentication required or insufficient permissions");
     }
     const userDocRef = doc(db, 'users', uid);
