@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, doc, onSnapshot, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, doc, onSnapshot, writeBatch } from 'firebase/firestore';
 import { mockStudents } from '@/lib/mock-data';
 import type { Student } from '@/lib/types';
 import { HABIT_NAMES } from '@/lib/types';
@@ -21,7 +21,7 @@ const StudentContext = createContext<StudentContextType | undefined>(undefined);
 
 export const StudentProvider = ({ children }: { children: ReactNode }) => {
   const { user, loading: authLoading } = useAuth();
-  const [students, setStudents] = useState<Student[]>(mockStudents);
+  const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -31,7 +31,7 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
     }
 
     if (!user) {
-      setStudents(mockStudents); // Reset to mock data or empty array if preferred
+      setStudents([]); // Clear data when user logs out
       setLoading(false);
       return;
     }
@@ -39,21 +39,27 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
     const studentsCollection = collection(db, 'students');
     const unsubscribe = onSnapshot(studentsCollection, async (snapshot) => {
       if (snapshot.empty) {
-        console.log('No students found in Firestore, using mock data. Seeding initial data...');
+        console.log('No students found in Firestore for this user. Seeding initial mock data...');
         const batch = writeBatch(db);
         mockStudents.forEach((student) => {
           const docRef = doc(db, 'students', student.id);
           batch.set(docRef, student);
         });
-        await batch.commit();
-        // Snapshot will update automatically after seeding
+        try {
+            await batch.commit();
+            // Firestore will trigger a new snapshot after commit, which will then populate the state.
+        } catch (error) {
+            console.error("Error seeding initial data:", error);
+            setLoading(false); // Stop loading even if seeding fails
+        }
       } else {
          const studentsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
          setStudents(studentsData);
+         setLoading(false);
       }
-      setLoading(false);
     }, (error) => {
       console.error("Error fetching students from Firestore:", error);
+      setStudents(mockStudents); // Fallback to mock data on error
       setLoading(false);
     });
 
@@ -76,7 +82,8 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
       ...newStudentData,
     };
     try {
-      await setDoc(doc(db, 'students', studentId), newStudent);
+      const studentDocRef = doc(db, 'students', studentId);
+      await writeBatch(db).set(studentDocRef, newStudent).commit();
     } catch (error) {
       console.error("Error adding student: ", error);
     }
@@ -86,7 +93,7 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
      if (!user) return;
      try {
       const studentDocRef = doc(db, 'students', studentId);
-      await setDoc(studentDocRef, updatedData, { merge: true });
+      await writeBatch(db).set(studentDocRef, updatedData, { merge: true }).commit();
     } catch (error) {
       console.error("Error updating student: ", error);
     }
@@ -95,7 +102,8 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
   const deleteStudent = async (studentId: string) => {
     if (!user) return;
     try {
-      await deleteDoc(doc(db, 'students', studentId));
+      const studentDocRef = doc(db, 'students', studentId);
+      await writeBatch(db).delete(studentDocRef).commit();
     } catch (error) {
       console.error("Error deleting student: ", error);
     }
@@ -112,7 +120,7 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
     
     try {
         const studentDocRef = doc(db, 'students', studentId);
-        await setDoc(studentDocRef, { habits: updatedHabits }, { merge: true });
+        await writeBatch(db).set(studentDocRef, { habits: updatedHabits }, { merge: true }).commit();
     } catch (error) {
         console.error("Error updating habit score: ", error);
     }
