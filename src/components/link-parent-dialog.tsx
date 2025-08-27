@@ -62,7 +62,7 @@ export function LinkParentDialog({
           <DialogDescription>
             Pilih akun orang tua untuk ditautkan ke siswa{' '}
             <span className="font-semibold">{student.name}</span>.
-            {selectedParentId && <div className="font-semibold text-foreground pt-2">Terpilih: {selectedParentName}</div>}
+            {selectedParentId && <span className="block font-semibold text-foreground pt-2">Terpilih: {selectedParentName}</span>}
           </DialogDescription>
         </DialogHeader>
 
