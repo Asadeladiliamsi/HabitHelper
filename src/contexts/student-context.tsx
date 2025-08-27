@@ -22,7 +22,7 @@ interface StudentContextType {
 const StudentContext = createContext<StudentContextType | undefined>(undefined);
 
 export const StudentProvider = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, userProfile, loading: authLoading } = useAuth();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -34,7 +34,20 @@ export const StudentProvider = ({ children }: { children: React.ReactNode }) => 
     }
 
     setLoading(true);
-    const q = query(collection(db, 'students'));
+
+    let q;
+    if (userProfile?.role === 'guru' || userProfile?.role === 'admin') {
+      q = query(collection(db, 'students'));
+    } else if (userProfile?.role === 'orangtua') {
+      q = query(collection(db, 'students'), where('parentId', '==', user.uid));
+    } else if (userProfile?.role === 'siswa' && userProfile.nisn) {
+      q = query(collection(db, 'students'), where('nisn', '==', userProfile.nisn));
+    } else {
+       setLoading(false);
+       setStudents([]);
+       return;
+    }
+
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const studentsData: Student[] = [];
@@ -55,7 +68,7 @@ export const StudentProvider = ({ children }: { children: React.ReactNode }) => 
     });
 
     return () => unsubscribe();
-  }, [user, authLoading]);
+  }, [user, userProfile, authLoading]);
 
   const addStudent = async (newStudentData: Omit<Student, 'id' | 'habits' | 'avatarUrl'>) => {
     if (!user) throw new Error("Authentication required");

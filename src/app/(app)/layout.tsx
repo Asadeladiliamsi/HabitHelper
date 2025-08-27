@@ -70,10 +70,10 @@ export default function AppLayout({
   const dashboardPath = userProfile?.role === 'admin' ? '/admin/dashboard' : '/dashboard';
 
   const navItems = [
-    { href: dashboardPath, icon: LayoutDashboard, label: t.sidebar.dashboard },
-    { href: '/data-master', icon: Database, label: t.sidebar.dataMaster },
-    { href: '/notifications', icon: Bell, label: t.sidebar.notifications },
-    { href: '/reports', icon: FileText, label: t.sidebar.reports },
+    { href: dashboardPath, icon: LayoutDashboard, label: t.sidebar.dashboard, roles: ['guru', 'siswa', 'admin', 'orangtua'] },
+    { href: '/data-master', icon: Database, label: t.sidebar.dataMaster, roles: ['guru', 'admin'] },
+    { href: '/notifications', icon: Bell, label: t.sidebar.notifications, roles: ['guru', 'admin'] },
+    { href: '/reports', icon: FileText, label: t.sidebar.reports, roles: ['guru', 'admin'] },
   ];
 
   if (loading || !user) {
@@ -98,17 +98,19 @@ export default function AppLayout({
           <SidebarContent>
             <SidebarMenu>
               {navItems.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <Link href={item.href}>
-                    <SidebarMenuButton
-                      isActive={pathname.startsWith(item.href)}
-                      tooltip={{ children: item.label }}
-                    >
-                      <item.icon />
-                      <span>{item.label}</span>
-                    </SidebarMenuButton>
-                  </Link>
-                </SidebarMenuItem>
+                userProfile && item.roles.includes(userProfile.role) && (
+                  <SidebarMenuItem key={item.href}>
+                    <Link href={item.href}>
+                      <SidebarMenuButton
+                        isActive={pathname.startsWith(item.href)}
+                        tooltip={{ children: item.label }}
+                      >
+                        <item.icon />
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                    </Link>
+                  </SidebarMenuItem>
+                )
               ))}
             </SidebarMenu>
           </SidebarContent>

@@ -4,10 +4,13 @@ import { DataInputClient } from '@/components/data-input-client';
 import { EditScoresClient } from '@/components/edit-scores-client';
 import { ManageStudentsClient } from '@/components/manage-students-client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useAuth } from '@/contexts/auth-context';
 import { useLanguage } from '@/contexts/language-provider';
 import { StudentProvider } from '@/contexts/student-context';
 import { UserProvider, useUser } from '@/contexts/user-context';
 import { translations } from '@/lib/translations';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 function DataMasterTabs() {
   const { language } = useLanguage();
@@ -45,6 +48,18 @@ function DataMasterTabs() {
 export default function DataMasterPage() {
   const { language } = useLanguage();
   const t = translations[language] || translations.en;
+  const { userProfile } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (userProfile && userProfile.role === 'orangtua') {
+      router.replace('/dashboard');
+    }
+  }, [userProfile, router]);
+
+  if (userProfile?.role === 'orangtua') {
+    return null; 
+  }
 
   return (
     <StudentProvider>
