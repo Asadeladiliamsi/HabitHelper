@@ -32,7 +32,6 @@ export interface UserProfile {
   email: string | null;
   name: string;
   role: UserRole;
-  nisn?: string;
 }
 
 export interface HabitEntry {

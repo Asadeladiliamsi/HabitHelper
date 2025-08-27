@@ -1,7 +1,20 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { collection, onSnapshot, updateDoc, doc, query } from 'firebase/firestore';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from 'react';
+import {
+  collection,
+  onSnapshot,
+  updateDoc,
+  doc,
+  query,
+  deleteDoc,
+} from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { UserProfile, UserRole } from '@/lib/types';
 import { useAuth } from './auth-context';
@@ -11,6 +24,8 @@ interface UserContextType {
   users: UserProfile[];
   loading: boolean;
   updateUserRole: (uid: string, newRole: UserRole) => Promise<void>;
+  updateUserName: (uid: string, newName: string) => Promise<void>;
+  deleteUser: (uid: string) => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -21,65 +36,95 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // We must wait for auth to finish loading and ensure a userProfile exists with the admin role.
     if (authLoading || !userProfile) {
-      // If auth is loading or there's no profile yet, we are in a loading state.
       setLoading(true);
       return;
     }
-    
-    // If the user is not an admin, we are not loading and there are no users to show.
+
     if (userProfile.role !== 'admin') {
       setLoading(false);
       setUsers([]);
       return;
     }
 
-    // At this point, we are an admin, let's fetch the users.
     setLoading(true);
     const q = query(collection(db, 'users'));
 
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const usersData: UserProfile[] = [];
-      querySnapshot.forEach((doc) => {
-        usersData.push(doc.data() as UserProfile);
-      });
-      setUsers(usersData);
-      setLoading(false);
-    }, (error) => {
-      console.error("Error fetching users:", error);
-      setLoading(false);
-    });
+    const unsubscribe = onSnapshot(
+      q,
+      querySnapshot => {
+        const usersData: UserProfile[] = [];
+        querySnapshot.forEach(doc => {
+          usersData.push(doc.data() as UserProfile);
+        });
+        setUsers(usersData);
+        setLoading(false);
+      },
+      error => {
+        console.error('Error fetching users:', error);
+        setLoading(false);
+      }
+    );
 
     return () => unsubscribe();
   }, [userProfile, authLoading]);
 
   const updateUserRole = async (uid: string, newRole: UserRole) => {
     if (!userProfile || userProfile.role !== 'admin') {
-        throw new Error("Authentication required or insufficient permissions");
+      throw new Error('Authentication required or insufficient permissions');
     }
     const userDocRef = doc(db, 'users', uid);
     try {
       await updateDoc(userDocRef, { role: newRole });
     } catch (error) {
-      console.error("Error updating user role:", error);
+      console.error('Error updating user role:', error);
     }
   };
-  
-   if (authLoading) {
-     return (
+
+  const updateUserName = async (uid: string, newName: string) => {
+    if (!userProfile || userProfile.role !== 'admin') {
+      throw new Error('Authentication required or insufficient permissions');
+    }
+    const userDocRef = doc(db, 'users', uid);
+    try {
+      await updateDoc(userDocRef, { name: newName });
+    } catch (error) {
+      console.error('Error updating user name:', error);
+    }
+  };
+
+  const deleteUser = async (uid: string) => {
+    if (!userProfile || userProfile.role !== 'admin') {
+      throw new Error('Authentication required or insufficient permissions');
+    }
+    // Note: This only deletes the Firestore user profile document.
+    // The actual Firebase Auth user is not deleted here, which would require a server-side function.
+    const userDocRef = doc(db, 'users', uid);
+    try {
+      await deleteDoc(userDocRef);
+    } catch (error) {
+      console.error('Error deleting user profile:', error);
+    }
+  };
+
+  if (authLoading) {
+    return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }
 
-  const contextValue = { users, loading, updateUserRole };
+  const contextValue = {
+    users,
+    loading,
+    updateUserRole,
+    updateUserName,
+    deleteUser,
+  };
 
   return (
-    <UserContext.Provider value={contextValue}>
-      {children}
-    </UserContext.Provider>
+    <UserContext.Provider value={contextValue}>{children}</UserContext.Provider>
   );
 };
 
