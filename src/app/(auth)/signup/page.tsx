@@ -23,7 +23,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export default function SignupPage() {
-  const { signup } = useAuth();
+  const { signup, createUserProfile } = useAuth();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -41,13 +41,15 @@ export default function SignupPage() {
     setError(null);
     setIsLoading(true);
     try {
-      await signup(data.email, data.password, data.name);
+      const userCredential = await signup(data.email, data.password);
+      await createUserProfile(userCredential.user, data.name);
       router.push('/dashboard');
     } catch (err: any) {
       if (err.code === 'auth/email-already-in-use') {
         setError('Email ini sudah terdaftar. Silakan gunakan email lain atau masuk.');
       } else {
-        setError('Gagal mendaftar. Terjadi kesalahan yang tidak diketahui.');
+        console.error(err);
+        setError(`Gagal mendaftar: ${err.message}`);
       }
     } finally {
       setIsLoading(false);

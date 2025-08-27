@@ -19,17 +19,20 @@ interface StudentContextType {
 
 const StudentContext = createContext<StudentContextType | undefined>(undefined);
 
-export const StudentProvider = ({ children }: { children: ReactNode }) => {
-  const { user, userProfile, loading: authLoading } = useAuth();
+export const StudentProvider = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading: authLoading } = useAuth();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (authLoading || !user || !userProfile) {
-      setLoading(true);
+    // We should not even attempt to fetch data if auth is not ready or user is not logged in.
+    if (authLoading || !user) {
+      setLoading(false); // No longer loading, as there's nothing to load.
+      setStudents([]); // Clear any previous student data.
       return;
     }
 
+    setLoading(true);
     const q = query(collection(db, 'students'));
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -51,7 +54,7 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => unsubscribe();
-  }, [user, userProfile, authLoading]);
+  }, [user, authLoading]);
 
   const addStudent = async (newStudentData: Omit<Student, 'id' | 'habits' | 'avatarUrl'>) => {
     if (!user) throw new Error("Authentication required");
@@ -107,7 +110,7 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
     }
   };
   
-  if (loading) {
+  if (authLoading) {
     return (
      <div className="flex h-screen items-center justify-center">
        <Loader2 className="h-8 w-8 animate-spin" />

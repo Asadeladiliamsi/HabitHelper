@@ -13,8 +13,9 @@ interface AuthContextType {
   userProfile: UserProfile | null;
   loading: boolean;
   login: (email: string, pass: string) => Promise<any>;
-  signup: (email: string, pass: string, name: string) => Promise<any>;
+  signup: (email: string, pass: string) => Promise<any>;
   logout: () => Promise<any>;
+  createUserProfile: (user: User, name: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -35,7 +36,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (userDoc.exists()) {
           setUserProfile(userDoc.data() as UserProfile);
         } else {
-          // This case might happen if the user document wasn't created properly.
           setUserProfile(null);
         }
       } else {
@@ -52,22 +52,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return signInWithEmailAndPassword(auth, email, pass);
   };
 
-  const signup = async (email: string, pass: string, name: string) => {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
-    const user = userCredential.user;
-    
-    // Create user profile in Firestore
-    const userDocRef = doc(db, 'users', user.uid);
-    await setDoc(userDocRef, {
-      uid: user.uid,
-      email: user.email,
-      name: name,
-      role: 'siswa', // Default role is 'siswa'
-      createdAt: serverTimestamp(),
-    });
-    
-    return userCredential;
+  const signup = async (email: string, pass: string) => {
+    return createUserWithEmailAndPassword(auth, email, pass);
   };
+
+  const createUserProfile = async (user: User, name: string) => {
+     const userDocRef = doc(db, 'users', user.uid);
+     await setDoc(userDocRef, {
+        uid: user.uid,
+        email: user.email,
+        name: name,
+        role: 'siswa', // Default role is 'siswa'
+        createdAt: serverTimestamp(),
+      });
+  }
 
   const logout = async () => {
     setUserProfile(null);
@@ -75,7 +73,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push('/login');
   };
 
-  const value = { user, userProfile, loading, login, signup, logout };
+  const value = { user, userProfile, loading, login, signup, logout, createUserProfile };
 
   return (
     <AuthContext.Provider value={value}>
