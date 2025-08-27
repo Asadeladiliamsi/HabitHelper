@@ -155,9 +155,7 @@ export function EditScoresClient() {
                         filter={(value, search) => {
                             const student = students.find(s => s.id === value);
                             if (student) {
-                                const nameMatch = student.name.toLowerCase().includes(search.toLowerCase());
-                                const nisnMatch = student.nisn ? student.nisn.includes(search) : false;
-                                return nameMatch || nisnMatch ? 1 : 0;
+                                return student.name.toLowerCase().includes(search.toLowerCase()) ? 1 : 0;
                             }
                             return 0;
                         }}
