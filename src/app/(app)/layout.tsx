@@ -50,12 +50,6 @@ export default function AppLayout({
     }
   }, [loading, user, router]);
 
-  const navItems = [
-    { href: '/data-master', icon: Database, label: t.sidebar.dataMaster },
-    { href: '/notifications', icon: Bell, label: t.sidebar.notifications },
-    { href: '/reports', icon: FileText, label: t.sidebar.reports },
-  ];
-
   const getDashboardTitle = () => {
     switch (userProfile?.role) {
       case 'guru':
@@ -70,6 +64,16 @@ export default function AppLayout({
         return 'Dasbor';
     }
   };
+  
+  const dashboardTitle = getDashboardTitle();
+  const dashboardPath = userProfile?.role === 'admin' ? '/admin/dashboard' : '/dashboard';
+
+  const navItems = [
+    { href: dashboardPath, icon: LayoutDashboard, label: t.sidebar.dashboard },
+    { href: '/data-master', icon: Database, label: t.sidebar.dataMaster },
+    { href: '/notifications', icon: Bell, label: t.sidebar.notifications },
+    { href: '/reports', icon: FileText, label: t.sidebar.reports },
+  ];
 
   if (loading || !user) {
      return (
@@ -78,8 +82,6 @@ export default function AppLayout({
       </div>
     );
   }
-  
-  const dashboardTitle = getDashboardTitle();
 
   return (
     <UserProvider>
