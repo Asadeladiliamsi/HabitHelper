@@ -51,7 +51,6 @@ export default function AppLayout({
   }, [loading, user, router]);
 
   const navItems = [
-    { href: '/dashboard', icon: LayoutDashboard, label: t.sidebar.dashboard },
     { href: '/data-master', icon: Database, label: t.sidebar.dataMaster },
     { href: '/notifications', icon: Bell, label: t.sidebar.notifications },
     { href: '/reports', icon: FileText, label: t.sidebar.reports },
