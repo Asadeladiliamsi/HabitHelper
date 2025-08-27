@@ -32,7 +32,7 @@ export default function DashboardPage() {
   }, [loading, userProfile, router]);
 
   // Tampilkan loader saat memeriksa otentikasi atau jika pengguna belum dimuat
-  if (loading || !userProfile || (userProfile.role === 'siswa' && !userProfile.nisn)) {
+  if (loading || !userProfile || userProfile.role === 'admin' || userProfile.role === 'orangtua' || (userProfile.role === 'siswa' && !userProfile.nisn)) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -53,7 +53,6 @@ export default function DashboardPage() {
             <SiswaDashboardClient />
           </div>
        )}
-       {/* Placeholder untuk dasbor lain jika diperlukan */}
     </StudentProvider>
   );
 }
