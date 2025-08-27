@@ -34,6 +34,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
           setUserProfile(userDoc.data() as UserProfile);
+        } else {
+          // This case might happen if the user exists in Auth but not in Firestore.
+          // For example, if Firestore document creation failed during signup.
+          // You might want to handle this case, e.g., by creating the document here or logging the user out.
+          setUserProfile(null);
         }
       } else {
         setUser(null);
@@ -49,6 +54,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, pass);
+      // No need to push, onAuthStateChanged will handle the state update
+      // and the AppLayout will handle the redirect.
       router.push('/dashboard');
     } catch (error: any) {
       toast({
@@ -75,8 +82,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       };
 
       await setDoc(doc(db, 'users', newUser.uid), userProfileData);
-      setUser(newUser);
-      setUserProfile(userProfileData);
+      
+      // The onAuthStateChanged listener will automatically update user and userProfile state.
+      // So, no need to call setUser and setUserProfile here.
+      
       router.push('/dashboard');
 
     } catch (error: any) {
@@ -92,10 +101,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
-    setLoading(true);
     try {
       await signOut(auth);
-      router.push('/login');
+      // After signOut, onAuthStateChanged will trigger, setting user to null.
+      // The AppLayout will then redirect to /login.
+      router.push('/');
     } catch (error: any) {
        toast({
         title: 'Logout Gagal',
@@ -103,8 +113,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         variant: 'destructive',
       });
       console.error("Error signing out:", error);
-    } finally {
-        setLoading(false);
     }
   };
 
