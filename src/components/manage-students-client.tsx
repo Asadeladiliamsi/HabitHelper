@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, PlusCircle, Pencil, Trash2, Search, Link2 } from 'lucide-react';
-import type { Student } from '@/lib/types';
+import type { Student, UserProfile } from '@/lib/types';
 import { StudentDialog } from '@/components/student-dialog';
 import { useStudent } from '@/contexts/student-context';
 import { HABIT_NAMES } from '@/lib/types';
@@ -17,12 +17,13 @@ import { translations } from '@/lib/translations';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { LinkParentDialog } from './link-parent-dialog';
-import { useUser } from '@/contexts/user-context';
 
+interface ManageStudentsClientProps {
+  parentUsers: UserProfile[];
+}
 
-export function ManageStudentsClient() {
+export function ManageStudentsClient({ parentUsers }: ManageStudentsClientProps) {
   const { students, addStudent, updateStudent, deleteStudent, linkParentToStudent } = useStudent();
-  const { users } = useUser();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [linkParentDialogOpen, setLinkParentDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -75,7 +76,7 @@ export function ManageStudentsClient() {
   };
   
   const handleLinkParentSave = async (studentId: string, parentId: string) => {
-    const parent = users.find(u => u.uid === parentId);
+    const parent = parentUsers.find(u => u.uid === parentId);
     if (parent) {
       await linkParentToStudent(studentId, parent.uid, parent.name);
       toast({
@@ -98,8 +99,6 @@ export function ManageStudentsClient() {
       (student.email && student.email.toLowerCase().includes(term))
     );
   });
-
-  const parentUsers = users.filter(u => u.role === 'orangtua');
 
   return (
     <>

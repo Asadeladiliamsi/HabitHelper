@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
+import { UserProvider } from '@/contexts/user-context';
 
 
 export default function AdminDashboardPage() {
@@ -25,5 +26,9 @@ export default function AdminDashboardPage() {
         );
     }
     
-  return <AdminDashboardClient />;
+  return (
+    <UserProvider>
+      <AdminDashboardClient />
+    </UserProvider>
+  );
 }
