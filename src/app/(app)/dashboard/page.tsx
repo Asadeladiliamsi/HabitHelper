@@ -19,6 +19,12 @@ export default function DashboardPage() {
         return;
       }
 
+      // Redirect student to NISN verification if not yet linked
+      if (userProfile.role === 'siswa' && !userProfile.nisn) {
+        router.replace('/verify-nisn');
+        return;
+      }
+
       // Arahkan berdasarkan peran
       if (userProfile.role === 'admin') {
         router.replace('/admin/dashboard');
@@ -29,7 +35,7 @@ export default function DashboardPage() {
   }, [loading, userProfile, router]);
 
   // Tampilkan loader saat memeriksa otentikasi atau jika pengguna belum dimuat
-  if (loading || !userProfile) {
+  if (loading || !userProfile || (userProfile.role === 'siswa' && !userProfile.nisn)) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />

@@ -26,10 +26,9 @@ export const StudentProvider = ({ children }: { children: React.ReactNode }) => 
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // We should not even attempt to fetch data if auth is not ready or user is not logged in.
     if (authLoading || !user) {
-      setLoading(false); // No longer loading, as there's nothing to load.
-      setStudents([]); // Clear any previous student data.
+      setLoading(false); 
+      setStudents([]);
       return;
     }
 
@@ -124,7 +123,7 @@ export const StudentProvider = ({ children }: { children: React.ReactNode }) => 
     }
   };
 
-   if (authLoading) {
+   if (authLoading && loading) {
      return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />

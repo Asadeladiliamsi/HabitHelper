@@ -56,7 +56,6 @@ export function SiswaDashboardClient() {
   }
 
   // Temukan data siswa berdasarkan NISN yang cocok dengan profil pengguna.
-  // Asumsi: Guru telah memasukkan NISN yang benar untuk setiap siswa.
   const studentData = students.find(s => s.nisn === userProfile?.nisn);
 
   if (!studentData) {
