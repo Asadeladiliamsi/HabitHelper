@@ -60,11 +60,12 @@ export function Combobox({
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={option.label} // Filtering is based on label
+                  value={option.label} // Value for searching
                   onSelect={(currentValue) => {
-                     // Find the option that matches the selected label
+                     // Find the option that matches the selected label (case-insensitive)
                     const selected = options.find(opt => opt.label.toLowerCase() === currentValue.toLowerCase());
                     if (selected) {
+                      // Call onChange with the actual value (ID), not the label
                       onChange(selected.value === value ? "" : selected.value)
                     }
                     setOpen(false)
