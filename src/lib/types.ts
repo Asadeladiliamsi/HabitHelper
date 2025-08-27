@@ -1,3 +1,5 @@
+import type { Timestamp } from 'firebase/firestore';
+
 export interface Habit {
   id: string;
   name: string;
@@ -29,4 +31,14 @@ export interface UserProfile {
   email: string | null;
   name: string;
   role: UserRole;
+}
+
+export interface HabitEntry {
+  id: string;
+  studentId: string;
+  habitName: string;
+  score: number;
+  date: Date;
+  recordedBy: string; // UID of the teacher
+  timestamp: Timestamp;
 }

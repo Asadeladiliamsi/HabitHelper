@@ -45,7 +45,7 @@ type FormValues = z.infer<typeof formSchema>;
 export function DataInputClient() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const { students } = useStudent();
+  const { students, addHabitEntry } = useStudent();
   const { language } = useLanguage();
   const t = translations[language]?.dataInputClient || translations.en.dataInputClient;
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
@@ -73,23 +73,37 @@ export function DataInputClient() {
 
   const onSubmit = async (data: FormValues) => {
     setIsLoading(true);
-    console.log('Data yang disubmit:', data);
     const translatedHabitName = habitTranslationMapping[data.habitName] || data.habitName;
 
-    // Simulasi pemanggilan API
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      await addHabitEntry({
+        studentId: data.studentId,
+        habitName: data.habitName,
+        score: data.score,
+        date: data.date,
+      });
 
-    setIsLoading(false);
-    toast({
-      title: t.toast.title,
-      description: `${t.toast.description1} ${translatedHabitName} ${t.toast.description2}`,
-    });
-    form.reset({
-      studentId: data.studentId,
-      habitName: '',
-      score: 4,
-      date: data.date,
-    });
+      toast({
+        title: t.toast.title,
+        description: `${t.toast.description1} ${translatedHabitName} ${t.toast.description2}`,
+      });
+      
+      form.reset({
+        ...form.getValues(),
+        habitName: '',
+        score: 4,
+      });
+
+    } catch (error) {
+      console.error("Failed to save habit entry:", error);
+      toast({
+        variant: "destructive",
+        title: "Gagal Menyimpan",
+        description: "Terjadi kesalahan saat menyimpan data. Silakan coba lagi.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -108,7 +122,7 @@ export function DataInputClient() {
               control={form.control}
               name="studentId"
               render={({ field }) => (
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <SelectTrigger id="studentId">
                     <SelectValue placeholder={t.selectStudentPlaceholder} />
                   </SelectTrigger>
@@ -167,7 +181,7 @@ export function DataInputClient() {
               />
               {form.formState.errors.score && (
                 <p className="text-sm text-destructive mt-1">
-                  {form.form.formState.errors.score.message}
+                  {form.formState.errors.score.message}
                 </p>
               )}
             </div>
@@ -208,7 +222,7 @@ export function DataInputClient() {
           </div>
 
 
-          <Button type="submit" disabled={isLoading} className="w-full">
+          <Button type="submit" disabled={isLoading || !form.formState.isValid} className="w-full">
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t.saving}

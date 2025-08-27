@@ -1,9 +1,9 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Student } from '@/lib/types';
+import type { Student, HabitEntry } from '@/lib/types';
 import { useAuth } from './auth-context';
 import { HABIT_NAMES } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
@@ -15,12 +15,13 @@ interface StudentContextType {
   updateStudent: (studentId: string, updatedData: Partial<Omit<Student, 'id' | 'habits' | 'avatarUrl'>>) => Promise<void>;
   deleteStudent: (studentId: string) => Promise<void>;
   updateHabitScore: (studentId: string, habitId: string, newScore: number) => Promise<void>;
+  addHabitEntry: (data: Omit<HabitEntry, 'id' | 'timestamp' | 'recordedBy'>) => Promise<void>;
 }
 
 const StudentContext = createContext<StudentContextType | undefined>(undefined);
 
 export const StudentProvider = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, userProfile, loading: authLoading } = useAuth();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -110,15 +111,28 @@ export const StudentProvider = ({ children }: { children: React.ReactNode }) => 
     }
   };
   
-  if (authLoading) {
-    return (
-     <div className="flex h-screen items-center justify-center">
-       <Loader2 className="h-8 w-8 animate-spin" />
-     </div>
-   );
- }
+  const addHabitEntry = async (data: Omit<HabitEntry, 'id' | 'timestamp' | 'recordedBy'>) => {
+    if (!user) throw new Error("Authentication required");
+    try {
+      await addDoc(collection(db, 'habit_entries'), {
+        ...data,
+        recordedBy: user.uid,
+        timestamp: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error("Error adding habit entry:", error);
+    }
+  };
 
-  const contextValue = { students, loading, addStudent, updateStudent, deleteStudent, updateHabitScore };
+   if (authLoading) {
+     return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  const contextValue = { students, loading, addStudent, updateStudent, deleteStudent, updateHabitScore, addHabitEntry };
 
   return (
     <StudentContext.Provider value={contextValue}>
