@@ -5,6 +5,7 @@ type Translation = {
     dataInput: string;
     manageStudents: string;
     editScores: string;
+    dataMaster: string;
     notifications: string;
     reports: string;
     settings: string;
@@ -41,8 +42,7 @@ type Translation = {
     class: string;
     average: string;
   };
-  dataInputPage: {
-    title: string;
+  dataMasterPage: {
     description: string;
   };
   dataInputClient: {
@@ -170,6 +170,7 @@ export const translations: Record<string, Translation> = {
       dataInput: 'Input Data',
       manageStudents: 'Manajemen Siswa',
       editScores: 'Edit Nilai',
+      dataMaster: 'Data Master',
       notifications: 'Notifikasi',
       reports: 'Laporan',
       settings: 'Pengaturan',
@@ -206,9 +207,8 @@ export const translations: Record<string, Translation> = {
         class: 'Kelas',
         average: 'Rata-rata',
     },
-    dataInputPage: {
-        title: 'Input Data Harian',
-        description: 'Catat perkembangan kebiasaan siswa di sini secara rutin.',
+    dataMasterPage: {
+        description: 'Kelola semua data master terkait siswa dan nilai dari satu tempat.',
     },
     dataInputClient: {
       formTitle: 'Form Input Harian',
@@ -333,6 +333,7 @@ export const translations: Record<string, Translation> = {
       dataInput: 'Data Input',
       manageStudents: 'Manage Students',
       editScores: 'Edit Scores',
+      dataMaster: 'Data Master',
       notifications: 'Notifications',
       reports: 'Reports',
       settings: 'Settings',
@@ -369,9 +370,8 @@ export const translations: Record<string, Translation> = {
       class: 'Class',
       average: 'Average',
     },
-    dataInputPage: {
-      title: 'Daily Data Input',
-      description: 'Record student habit progress here regularly.',
+    dataMasterPage: {
+        description: 'Manage all master data related to students and scores from one place.',
     },
     dataInputClient: {
       formTitle: 'Daily Input Form',
@@ -496,6 +496,7 @@ export const translations: Record<string, Translation> = {
         dataInput: 'Entrada de Datos',
         manageStudents: 'Gestionar Estudiantes',
         editScores: 'Editar Puntuaciones',
+        dataMaster: 'Datos Maestros',
         notifications: 'Notificaciones',
         reports: 'Informes',
         settings: 'Configuración',
@@ -532,9 +533,8 @@ export const translations: Record<string, Translation> = {
       class: 'Clase',
       average: 'Promedio',
     },
-    dataInputPage: {
-      title: 'Entrada de Datos Diaria',
-      description: 'Registre el progreso de los hábitos de los estudiantes aquí regularmente.',
+    dataMasterPage: {
+        description: 'Gestione todos los datos maestros relacionados con estudiantes y puntuaciones desde un solo lugar.',
     },
     dataInputClient: {
       formTitle: 'Formulario de Entrada Diaria',
@@ -659,6 +659,7 @@ export const translations: Record<string, Translation> = {
         dataInput: 'Saisie de Données',
         manageStudents: 'Gérer les Étudiants',
         editScores: 'Modifier les Scores',
+        dataMaster: 'Données Maîtres',
         notifications: 'Notifications',
         reports: 'Rapports',
         settings: 'Paramètres',
@@ -695,9 +696,8 @@ export const translations: Record<string, Translation> = {
       class: 'Classe',
       average: 'Moyenne',
     },
-    dataInputPage: {
-      title: 'Saisie Quotidienne des Données',
-      description: 'Enregistrez régulièrement les progrès des habitudes des étudiants ici.',
+    dataMasterPage: {
+        description: 'Gérez toutes les données maîtres relatives aux étudiants et aux scores à partir d\'un seul endroit.',
     },
     dataInputClient: {
       formTitle: 'Formulaire de Saisie Quotidienne',
@@ -822,6 +822,7 @@ export const translations: Record<string, Translation> = {
         dataInput: 'Dateneingabe',
         manageStudents: 'Schüler Verwalten',
         editScores: 'Noten Bearbeiten',
+        dataMaster: 'Stammdaten',
         notifications: 'Benachrichtigungen',
         reports: 'Berichte',
         settings: 'Einstellungen',
@@ -858,9 +859,8 @@ export const translations: Record<string, Translation> = {
       class: 'Klasse',
       average: 'Durchschnitt',
     },
-    dataInputPage: {
-      title: 'Tägliche Dateneingabe',
-      description: 'Erfassen Sie hier regelmäßig den Gewohnheitsfortschritt der Schüler.',
+    dataMasterPage: {
+        description: 'Verwalten Sie alle Stammdaten zu Schülern und Noten von einem Ort aus.',
     },
     dataInputClient: {
       formTitle: 'Tägliches Eingabeformular',
@@ -985,6 +985,7 @@ export const translations: Record<string, Translation> = {
         dataInput: 'データ入力',
         manageStudents: '学生管理',
         editScores: 'スコア編集',
+        dataMaster: 'マスターデータ',
         notifications: '通知',
         reports: 'レポート',
         settings: '設定',
@@ -1021,9 +1022,8 @@ export const translations: Record<string, Translation> = {
       class: 'クラス',
       average: '平均',
     },
-    dataInputPage: {
-      title: '日次データ入力',
-      description: '生徒の習慣の進捗を定期的にここに記録します。',
+    dataMasterPage: {
+        description: '学生とスコアに関連するすべてのマスターデータを1か所で管理します。',
     },
     dataInputClient: {
       formTitle: '日次入力フォーム',
@@ -1148,6 +1148,7 @@ export const translations: Record<string, Translation> = {
         dataInput: 'Entrada de Dados',
         manageStudents: 'Gerenciar Alunos',
         editScores: 'Editar Pontuações',
+        dataMaster: 'Dados Mestres',
         notifications: 'Notificações',
         reports: 'Relatórios',
         settings: 'Configurações',
@@ -1184,9 +1185,8 @@ export const translations: Record<string, Translation> = {
         class: 'Turma',
         average: 'Média',
       },
-      dataInputPage: {
-        title: 'Entrada de Dados Diária',
-        description: 'Registre o progresso dos hábitos dos alunos aqui regularmente.',
+      dataMasterPage: {
+        description: 'Gerencie todos os dados mestres relacionados a alunos e pontuações de um só lugar.',
       },
       dataInputClient: {
         formTitle: 'Formulário de Entrada Diária',
@@ -1311,6 +1311,7 @@ export const translations: Record<string, Translation> = {
         dataInput: 'Ввод данных',
         manageStudents: 'Управление студентами',
         editScores: 'Редактировать оценки',
+        dataMaster: 'Основные данные',
         notifications: 'Уведомления',
         reports: 'Отчеты',
         settings: 'Настройки',
@@ -1347,9 +1348,8 @@ export const translations: Record<string, Translation> = {
         class: 'Класс',
         average: 'Средний',
       },
-      dataInputPage: {
-        title: 'Ежедневный ввод данных',
-        description: 'Регулярно записывайте прогресс привычек студентов здесь.',
+      dataMasterPage: {
+        description: 'Управляйте всеми основными данными, связанными со студентами и оценками, из одного места.',
       },
       dataInputClient: {
         formTitle: 'Форма ежедневного ввода',
@@ -1474,6 +1474,7 @@ export const translations: Record<string, Translation> = {
         dataInput: '数据输入',
         manageStudents: '管理学生',
         editScores: '编辑分数',
+        dataMaster: '主数据',
         notifications: '通知',
         reports: '报告',
         settings: '设置',
@@ -1510,9 +1511,8 @@ export const translations: Record<string, Translation> = {
         class: '班级',
         average: '平均',
       },
-      dataInputPage: {
-        title: '每日数据输入',
-        description: '在这里定期记录学生的习惯进度。',
+      dataMasterPage: {
+        description: '从一个地方管理与学生和分数相关的所有主数据。',
       },
       dataInputClient: {
         formTitle: '每日输入表',
@@ -1637,6 +1637,7 @@ export const translations: Record<string, Translation> = {
         dataInput: 'डेटा इनपुट',
         manageStudents: 'छात्रों का प्रबंधन करें',
         editScores: 'स्कोर संपादित करें',
+        dataMaster: 'मास्टर डेटा',
         notifications: 'सूचनाएं',
         reports: 'रिपोर्ट',
         settings: 'सेटिंग्स',
@@ -1673,9 +1674,8 @@ export const translations: Record<string, Translation> = {
         class: 'कक्षा',
         average: 'औसत',
       },
-      dataInputPage: {
-        title: 'दैनिक डेटा इनपुट',
-        description: 'यहां नियमित रूप से छात्र आदत प्रगति दर्ज करें।',
+      dataMasterPage: {
+        description: 'एक ही स्थान से छात्रों और स्कोर से संबंधित सभी मास्टर डेटा प्रबंधित करें।',
       },
       dataInputClient: {
         formTitle: 'दैनिक इनपुट फॉर्म',
@@ -1800,6 +1800,7 @@ export const translations: Record<string, Translation> = {
         dataInput: 'إدخال البيانات',
         manageStudents: 'إدارة الطلاب',
         editScores: 'تعديل الدرجات',
+        dataMaster: 'البيانات الرئيسية',
         notifications: 'الإشعارات',
         reports: 'التقارير',
         settings: 'الإعدادات',
@@ -1836,9 +1837,8 @@ export const translations: Record<string, Translation> = {
         class: 'الفصل',
         average: 'المتوسط',
       },
-      dataInputPage: {
-        title: 'إدخال البيانات اليومي',
-        description: 'سجل تقدم عادات الطلاب هنا بانتظام.',
+      dataMasterPage: {
+        description: 'إدارة جميع البيانات الرئيسية المتعلقة بالطلاب والدرجات من مكان واحد.',
       },
       dataInputClient: {
         formTitle: 'نموذج الإدخال اليومي',
@@ -1963,6 +1963,7 @@ export const translations: Record<string, Translation> = {
         dataInput: '데이터 입력',
         manageStudents: '학생 관리',
         editScores: '점수 편집',
+        dataMaster: '마스터 데이터',
         notifications: '알림',
         reports: '보고서',
         settings: '설정',
@@ -1999,9 +2000,8 @@ export const translations: Record<string, Translation> = {
         class: '학급',
         average: '평균',
       },
-      dataInputPage: {
-        title: '일일 데이터 입력',
-        description: '여기에 정기적으로 학생 습관 진행 상황을 기록하십시오.',
+      dataMasterPage: {
+        description: '한 곳에서 학생 및 점수와 관련된 모든 마스터 데이터를 관리합니다.',
       },
       dataInputClient: {
         formTitle: '일일 입력 양식',

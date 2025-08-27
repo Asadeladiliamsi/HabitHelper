@@ -15,6 +15,7 @@ import {
   Loader2,
   Shield,
   Heart,
+  Database,
 } from 'lucide-react';
 import {
   SidebarProvider,
@@ -60,9 +61,7 @@ export default function AppLayout({
 
   const guruNavItems: NavItem[] = [
     { href: '/dashboard', icon: LayoutDashboard, label: t.sidebar.dashboard },
-    { href: '/data-input', icon: FilePlus2, label: t.sidebar.dataInput },
-    { href: '/manage-students', icon: Users, label: t.sidebar.manageStudents },
-    { href: '/edit-scores', icon: Pencil, label: t.sidebar.editScores },
+    { href: '/data-master', icon: Database, label: t.sidebar.dataMaster },
     { href: '/notifications', icon: Bell, label: t.sidebar.notifications },
     { href: '/reports', icon: FileText, label: t.sidebar.reports },
   ];
@@ -139,7 +138,7 @@ export default function AppLayout({
                   <SidebarMenuItem key={item.href}>
                     <Link href={item.href}>
                       <SidebarMenuButton
-                        isActive={pathname === item.href}
+                        isActive={pathname.startsWith(item.href)}
                         tooltip={{ children: item.label }}
                       >
                         <item.icon />

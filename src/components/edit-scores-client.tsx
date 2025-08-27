@@ -15,8 +15,6 @@ import type { Habit } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
-import { StudentProvider } from '@/contexts/student-context';
-
 
 const formSchema = z.object({
   studentId: z.string().min(1, 'Siswa harus dipilih.'),
@@ -26,7 +24,7 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-function EditScoresClient() {
+export function EditScoresClient() {
   const { students, updateHabitScore } = useStudent();
   const { toast } = useToast();
   const [selectedStudentHabits, setSelectedStudentHabits] = useState<Habit[]>([]);
@@ -210,23 +208,4 @@ function EditScoresClient() {
         </CardContent>
       </Card>
   );
-}
-
-export default function EditScoresPage() {
-  const { language } = useLanguage();
-  const t = translations[language]?.editScoresPage || translations.en.editScoresPage;
-
-  return (
-    <StudentProvider>
-      <div className="flex flex-col gap-6">
-        <header>
-          <h1 className="text-3xl font-bold tracking-tight">{t.title}</h1>
-          <p className="text-muted-foreground">
-            {t.description}
-          </p>
-        </header>
-        <EditScoresClient />
-      </div>
-    </StudentProvider>
-  )
 }
