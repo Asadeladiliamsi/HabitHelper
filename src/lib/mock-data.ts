@@ -2,11 +2,11 @@ import type { Student, Habit } from '@/lib/types';
 import { HABIT_NAMES } from '@/lib/types';
 
 const staticScores: { [key: string]: number[] } = {
-  'student-1': [10, 8, 9, 7, 8, 10],
-  'student-2': [8, 9, 7, 10, 8, 9],
-  'student-3': [9, 7, 10, 8, 9, 7],
-  'student-4': [7, 10, 8, 9, 7, 8],
-  'student-5': [10, 8, 9, 7, 10, 9],
+  'student-1': [10, 8, 9, 7, 8, 10, 9],
+  'student-2': [8, 9, 7, 10, 8, 9, 8],
+  'student-3': [9, 7, 10, 8, 9, 7, 10],
+  'student-4': [7, 10, 8, 9, 7, 8, 7],
+  'student-5': [10, 8, 9, 7, 10, 9, 9],
 };
 
 const createHabits = (studentId: string): Habit[] => {
@@ -62,4 +62,5 @@ export const overallHabitData = [
   { name: 'Makan Sehat & Bergizi', 'Minggu Ini': 95, 'Minggu Lalu': 91 },
   { name: 'Gemar Belajar', 'Minggu Ini': 89, 'Minggu Lalu': 85 },
   { name: 'Bermasyarakat', 'Minggu Ini': 91, 'Minggu Lalu': 93 },
+  { name: 'Tidur Cepat', 'Minggu Ini': 87, 'Minggu Lalu': 89 },
 ];

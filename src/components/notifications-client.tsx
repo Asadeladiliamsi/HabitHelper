@@ -45,6 +45,7 @@ export function NotificationsClient() {
     'Makan Sehat & Bergizi': tHabits.makanSehat.name,
     'Gemar Belajar': tHabits.gemarBelajar.name,
     'Bermasyarakat': tHabits.bermasyarakat.name,
+    'Tidur Cepat': tHabits.tidurCepat.name,
   };
 
   const form = useForm<FormValues>({

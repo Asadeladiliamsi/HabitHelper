@@ -18,7 +18,8 @@ import {
   Minus,
   Utensils,
   HandHelping,
-  Church
+  Church,
+  Bed
 } from 'lucide-react';
 import type { Student, Habit } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -34,6 +35,7 @@ const habitIcons: { [key: string]: React.ReactNode } = {
   'Makan Sehat & Bergizi': <Utensils className="h-5 w-5 text-green-500" />,
   'Gemar Belajar': <BookOpen className="h-5 w-5 text-blue-500" />,
   'Bermasyarakat': <HandHelping className="h-5 w-5 text-orange-500" />,
+  'Tidur Cepat': <Bed className="h-5 w-5 text-indigo-500" />,
 };
 
 export function DashboardClient() {
@@ -49,6 +51,7 @@ export function DashboardClient() {
     'Makan Sehat & Bergizi': tHabits.makanSehat.name,
     'Gemar Belajar': tHabits.gemarBelajar.name,
     'Bermasyarakat': tHabits.bermasyarakat.name,
+    'Tidur Cepat': tHabits.tidurCepat.name,
   };
   
   return (
@@ -85,7 +88,7 @@ export function DashboardClient() {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">6</div>
+            <div className="text-2xl font-bold">7</div>
             <p className="text-xs text-muted-foreground">{t.coreHabitsMonitored}</p>
           </CardContent>
         </Card>

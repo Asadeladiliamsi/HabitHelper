@@ -19,6 +19,7 @@ export const HABIT_NAMES = [
   'Makan Sehat & Bergizi',
   'Gemar Belajar',
   'Bermasyarakat',
+  'Tidur Cepat',
 ];
 
 export type UserRole = 'guru' | 'siswa' | 'orangtua';

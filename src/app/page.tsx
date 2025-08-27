@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, Sunrise, BookOpen, HeartPulse, Users, TrendingUp, Activity, ArrowRight, Utensils, HandHelping, Church } from 'lucide-react';
+import { CheckCircle, Sunrise, BookOpen, HeartPulse, Users, TrendingUp, Activity, ArrowRight, Utensils, HandHelping, Church, Bed } from 'lucide-react';
 import { Logo } from '@/components/icons/logo';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
@@ -45,6 +45,12 @@ const habits = [
     name: 'Bermasyarakat',
     description: 'Berinteraksi dan berkontribusi di lingkungan sosial.',
     translationKey: 'bermasyarakat'
+  },
+  {
+    icon: <Bed className="h-8 w-8 text-accent" />,
+    name: 'Tidur Cepat',
+    description: 'Istirahat yang cukup untuk pemulihan tubuh.',
+    translationKey: 'tidurCepat'
   },
 ];
 
