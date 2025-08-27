@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, type User } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import type { UserProfile, UserRole } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
@@ -15,10 +15,19 @@ interface AuthContextType {
   login: (email: string, pass: string) => Promise<any>;
   signup: (email: string, pass: string) => Promise<any>;
   logout: () => Promise<any>;
-  createUserProfile: (user: User, name: string, role: UserRole, nisn?: string) => Promise<void>;
+  validateAndCreateUserProfile: (user: User, name: string, role: UserRole, nisn?: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Helper function to check if NISN is registered
+const isNisnRegistered = async (nisn: string): Promise<boolean> => {
+  const studentsRef = collection(db, 'students');
+  const q = query(studentsRef, where('nisn', '==', nisn));
+  const querySnapshot = await getDocs(q);
+  return !querySnapshot.empty;
+};
+
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -63,7 +72,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return createUserWithEmailAndPassword(auth, email, pass);
   };
 
-  const createUserProfile = async (user: User, name: string, role: UserRole, nisn?: string) => {
+  const validateAndCreateUserProfile = async (user: User, name: string, role: UserRole, nisn?: string) => {
+     if (role === 'siswa') {
+      if (!nisn) {
+        throw new Error('NISN wajib diisi untuk mendaftar sebagai siswa.');
+      }
+      const isRegistered = await isNisnRegistered(nisn);
+      if (!isRegistered) {
+        throw new Error(`NISN "${nisn}" tidak terdaftar. Harap hubungi guru Anda untuk mendaftarkan NISN Anda terlebih dahulu.`);
+      }
+    }
+    
      const userDocRef = doc(db, 'users', user.uid);
      const userProfileData: Omit<UserProfile, 'createdAt'> = {
         uid: user.uid,
@@ -84,7 +103,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push('/login');
   };
 
-  const value = { user, userProfile, loading, login, signup, logout, createUserProfile };
+  const value = { user, userProfile, loading, login, signup, logout, validateAndCreateUserProfile };
 
   return (
     <AuthContext.Provider value={value}>

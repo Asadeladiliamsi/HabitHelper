@@ -27,9 +27,8 @@ const formSchema = z.object({
   }),
   nisn: z.string().optional(),
 }).refine(data => {
-    // Make NISN required only if the role is 'siswa'
     if (data.role === 'siswa') {
-      return !!data.nisn && data.nisn.length > 0;
+      return !!data.nisn && data.nisn.trim().length > 0;
     }
     return true;
 }, {
@@ -40,7 +39,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export default function SignupPage() {
-  const { signup, createUserProfile } = useAuth();
+  const { signup, validateAndCreateUserProfile } = useAuth();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -62,11 +61,16 @@ export default function SignupPage() {
     setError(null);
     setIsLoading(true);
     try {
+      // Create the user in Firebase Auth first
       const userCredential = await signup(data.email, data.password);
-      await createUserProfile(userCredential.user, data.name, data.role, data.nisn);
+      
+      // Then, validate and create the user profile in Firestore.
+      // This function will throw an error if the NISN is not valid for a student.
+      await validateAndCreateUserProfile(userCredential.user, data.name, data.role as UserRole, data.nisn);
+      
       router.push('/dashboard');
     } catch (err: any) {
-      if (err.code === 'auth/email-already-in-use') {
+       if (err.code === 'auth/email-already-in-use') {
         setError('Email ini sudah terdaftar. Silakan gunakan email lain atau masuk.');
       } else {
         console.error(err);
