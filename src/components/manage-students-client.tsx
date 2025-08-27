@@ -6,8 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Pencil, Trash2, Search } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { MoreHorizontal, PlusCircle, Pencil, Trash2, Search, Link2 } from 'lucide-react';
 import type { Student } from '@/lib/types';
 import { StudentDialog } from '@/components/student-dialog';
 import { useStudent } from '@/contexts/student-context';
@@ -16,11 +16,15 @@ import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
+import { LinkParentDialog } from './link-parent-dialog';
+import { useUser } from '@/contexts/user-context';
 
 
 export function ManageStudentsClient() {
-  const { students, addStudent, updateStudent, deleteStudent } = useStudent();
+  const { students, addStudent, updateStudent, deleteStudent, linkParentToStudent } = useStudent();
+  const { users } = useUser();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [linkParentDialogOpen, setLinkParentDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const { language } = useLanguage();
@@ -35,6 +39,11 @@ export function ManageStudentsClient() {
   const handleEditStudent = (student: Student) => {
     setSelectedStudent(student);
     setDialogOpen(true);
+  };
+  
+  const handleOpenLinkParentDialog = (student: Student) => {
+    setSelectedStudent(student);
+    setLinkParentDialogOpen(true);
   };
   
   const handleDialogSave = async (studentData: Omit<Student, 'id' | 'habits' | 'avatarUrl'>) => {
@@ -64,6 +73,18 @@ export function ManageStudentsClient() {
       });
     }
   };
+  
+  const handleLinkParentSave = async (studentId: string, parentId: string) => {
+    const parent = users.find(u => u.uid === parentId);
+    if (parent) {
+      await linkParentToStudent(studentId, parent.uid, parent.name);
+      toast({
+        title: "Sukses",
+        description: `Akun orang tua ${parent.name} berhasil ditautkan.`,
+      });
+    }
+    setLinkParentDialogOpen(false);
+  };
 
   const handleDeleteStudent = (studentId: string) => {
     deleteStudent(studentId);
@@ -78,6 +99,8 @@ export function ManageStudentsClient() {
     );
   });
 
+  const parentUsers = users.filter(u => u.role === 'orangtua');
+
   return (
     <>
       <StudentDialog 
@@ -86,6 +109,15 @@ export function ManageStudentsClient() {
         onSave={handleDialogSave}
         student={selectedStudent} 
       />
+      {selectedStudent && (
+        <LinkParentDialog
+            isOpen={linkParentDialogOpen}
+            onOpenChange={setLinkParentDialogOpen}
+            onSave={handleLinkParentSave}
+            student={selectedStudent}
+            parents={parentUsers}
+        />
+      )}
         <Card>
           <CardHeader>
              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -116,7 +148,7 @@ export function ManageStudentsClient() {
                 <TableRow>
                   <TableHead>{t.student}</TableHead>
                   <TableHead>NISN</TableHead>
-                  <TableHead>Email</TableHead>
+                  <TableHead>Orang Tua</TableHead>
                   <TableHead>{t.class}</TableHead>
                   <TableHead className="text-right">{t.actions}</TableHead>
                 </TableRow>
@@ -137,7 +169,11 @@ export function ManageStudentsClient() {
                         <span className="font-mono text-xs">{student.nisn}</span>
                     </TableCell>
                     <TableCell>
-                        <span className="text-muted-foreground">{student.email}</span>
+                        {student.parentName ? (
+                            <Badge variant="outline">{student.parentName}</Badge>
+                        ) : (
+                            <span className="text-xs text-muted-foreground">Belum ditautkan</span>
+                        )}
                     </TableCell>
                     <TableCell>
                       <Badge variant="secondary">{student.class}</Badge>
@@ -155,6 +191,11 @@ export function ManageStudentsClient() {
                             <Pencil className="mr-2 h-4 w-4" />
                             {t.edit}
                           </DropdownMenuItem>
+                           <DropdownMenuItem onClick={() => handleOpenLinkParentDialog(student)}>
+                            <Link2 className="mr-2 h-4 w-4" />
+                            Tautkan Orang Tua
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
                           <DropdownMenuItem 
                             className="text-destructive focus:text-destructive"
                             onClick={() => handleDeleteStudent(student.id)}

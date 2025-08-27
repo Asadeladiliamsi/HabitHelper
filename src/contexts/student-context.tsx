@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, serverTimestamp, getDocs, where } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, serverTimestamp, getDocs, where, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Student, HabitEntry } from '@/lib/types';
 import { useAuth } from './auth-context';
@@ -16,6 +16,7 @@ interface StudentContextType {
   deleteStudent: (studentId: string) => Promise<void>;
   updateHabitScore: (studentId: string, habitId: string, newScore: number) => Promise<void>;
   addHabitEntry: (data: Omit<HabitEntry, 'id' | 'timestamp' | 'recordedBy'>) => Promise<void>;
+  linkParentToStudent: (studentId: string, parentId: string, parentName: string) => Promise<void>;
 }
 
 const StudentContext = createContext<StudentContextType | undefined>(undefined);
@@ -181,6 +182,20 @@ export const StudentProvider = ({ children }: { children: React.ReactNode }) => 
     }
   };
 
+  const linkParentToStudent = async (studentId: string, parentId: string, parentName: string) => {
+    if (!user || user.uid === parentId) throw new Error("Authentication required and cannot link to self");
+    const studentDocRef = doc(db, 'students', studentId);
+    try {
+      await updateDoc(studentDocRef, {
+        parentId: parentId,
+        parentName: parentName,
+      });
+    } catch (error) {
+      console.error("Error linking parent:", error);
+      throw error;
+    }
+  };
+
    if (authLoading && loading) {
      return (
       <div className="flex h-screen items-center justify-center">
@@ -189,7 +204,7 @@ export const StudentProvider = ({ children }: { children: React.ReactNode }) => 
     );
   }
 
-  const contextValue = { students, loading, addStudent, updateStudent, deleteStudent, updateHabitScore, addHabitEntry };
+  const contextValue = { students, loading, addStudent, updateStudent, deleteStudent, updateHabitScore, addHabitEntry, linkParentToStudent };
 
   return (
     <StudentContext.Provider value={contextValue}>

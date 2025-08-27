@@ -53,17 +53,17 @@ export function OrangTuaDashboardClient() {
     );
   }
 
-  // Find student data based on the logged-in parent's verified NISN.
-  const studentData = students.find(s => s.nisn === userProfile?.nisn);
+  // Find student data based on the logged-in parent's UID.
+  const studentData = students.find(s => s.parentId === userProfile?.uid);
 
   if (!studentData) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Data Anak Belum Ditemukan</CardTitle>
+          <CardTitle>Data Anak Belum Ditautkan</CardTitle>
         </CardHeader>
         <CardContent>
-          <p>Profil Anda belum terhubung dengan data siswa di sistem. Mohon pastikan NISN yang Anda gunakan untuk verifikasi sudah benar dan sesuai dengan data anak Anda yang terdaftar oleh guru.</p>
+          <p>Akun Anda belum ditautkan dengan data siswa di sistem. Mohon hubungi pihak sekolah atau guru wali kelas untuk menautkan akun Anda ke data anak Anda.</p>
         </CardContent>
       </Card>
     );

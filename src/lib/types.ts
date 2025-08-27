@@ -14,6 +14,8 @@ export interface Student extends DocumentData {
   avatarUrl: string;
   class: string;
   habits: Habit[];
+  parentId?: string;
+  parentName?: string;
 }
 
 export const HABIT_NAMES = [

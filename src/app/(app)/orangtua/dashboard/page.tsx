@@ -15,13 +15,10 @@ export default function OrangTuaDashboardPage() {
         if (!loading && (!userProfile || userProfile.role !== 'orangtua')) {
              router.replace('/dashboard');
         }
-         if (!loading && userProfile?.role === 'orangtua' && !userProfile.nisn) {
-            router.replace('/verify-nisn');
-        }
     }, [userProfile, loading, router]);
 
 
-    if (loading || !userProfile || userProfile.role !== 'orangtua' || !userProfile.nisn) {
+    if (loading || !userProfile || userProfile.role !== 'orangtua') {
         return (
           <div className="flex h-full w-full items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin" />
