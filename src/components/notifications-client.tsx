@@ -121,7 +121,7 @@ export function NotificationsClient() {
                             const student = students.find(s => s.id === value);
                             if (student) {
                                 const nameMatch = student.name.toLowerCase().includes(search.toLowerCase());
-                                const nisnMatch = student.nisn.includes(search);
+                                const nisnMatch = student.nisn ? student.nisn.includes(search) : false;
                                 return nameMatch || nisnMatch ? 1 : 0;
                             }
                             return 0;
