@@ -9,12 +9,10 @@ import {
   updateDoc,
   deleteDoc,
   writeBatch,
-  getDocs,
   setDoc,
 } from 'firebase/firestore';
 import { mockStudents } from '@/lib/mock-data';
 import type { Student } from '@/lib/types';
-import { useAuth } from './auth-context';
 import { Loader2 } from 'lucide-react';
 
 interface StudentContextType {
@@ -29,16 +27,11 @@ interface StudentContextType {
 const StudentContext = createContext<StudentContextType | undefined>(undefined);
 
 export const StudentProvider = ({ children }: { children: ReactNode }) => {
-  const { user, loading: authLoading } = useAuth();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (authLoading || !user) {
-      setLoading(true);
-      return;
-    }
-
+    setLoading(true);
     const studentsCollectionRef = collection(db, 'students');
 
     const unsubscribe = onSnapshot(studentsCollectionRef, async (snapshot) => {
@@ -68,7 +61,7 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
         }
     }, (error) => {
         console.error("Error fetching students:", error);
-        setStudents([]); 
+        setStudents([]);
         setLoading(false);
     });
 
@@ -77,13 +70,9 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
       setStudents([]);
       setLoading(true);
     };
-  }, [user, authLoading]);
+  }, []);
   
   const addStudent = async (newStudentData: Omit<Student, 'id' | 'avatarUrl'>) => {
-    if (!user) {
-      console.error("No user logged in to add student.");
-      return;
-    }
     const studentId = `student-${Date.now()}`;
     const newStudent: Omit<Student, 'id'> = {
       ...newStudentData,
@@ -98,7 +87,6 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateStudent = async (studentId: string, updatedData: Partial<Omit<Student, 'id' | 'habits' | 'avatarUrl'>>) => {
-     if (!user) return;
      try {
       const studentDocRef = doc(db, 'students', studentId);
       await updateDoc(studentDocRef, updatedData);
@@ -108,7 +96,6 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const deleteStudent = async (studentId: string) => {
-    if (!user) return;
     try {
       const studentDocRef = doc(db, 'students', studentId);
       await deleteDoc(studentDocRef);
@@ -118,7 +105,6 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const updateHabitScore = async (studentId: string, habitId: string, newScore: number) => {
-    if (!user) return;
     const studentToUpdate = students.find(s => s.id === studentId);
     if (!studentToUpdate) return;
     

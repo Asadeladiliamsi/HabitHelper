@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   FilePlus2,
@@ -11,8 +10,6 @@ import {
   Settings,
   Users,
   Pencil,
-  LogOut,
-  Loader2,
 } from 'lucide-react';
 import {
   SidebarProvider,
@@ -29,7 +26,6 @@ import {
 import { Logo } from '@/components/icons/logo';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
-import { useAuth } from '@/contexts/auth-context';
 
 export interface NavItem {
   href: string;
@@ -45,15 +41,6 @@ export default function AppLayout({
   const pathname = usePathname();
   const { language } = useLanguage();
   const t = translations[language] || translations.en;
-  const { user, loading, logout } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    }
-  }, [user, loading, router]);
-
 
   const navItems: NavItem[] = [
     { href: '/dashboard', icon: LayoutDashboard, label: t.sidebar.dashboard },
@@ -73,14 +60,6 @@ export default function AppLayout({
     }
     return t.sidebar.teacherDashboard;
   };
-  
-  if (loading || !user) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
 
   return (
       <SidebarProvider>
@@ -122,12 +101,6 @@ export default function AppLayout({
                     <span>{t.sidebar.settings}</span>
                   </SidebarMenuButton>
                 </Link>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={logout} tooltip={{ children: t.sidebar.logout }}>
-                  <LogOut />
-                  <span>{t.sidebar.logout}</span>
-                </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarFooter>

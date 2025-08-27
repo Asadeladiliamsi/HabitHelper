@@ -92,7 +92,7 @@ export default function LandingPage() {
             <Logo />
             <span className="font-bold text-xl text-primary">HabitHelper</span>
           </Link>
-          <Link href="/login">
+          <Link href="/dashboard">
             <Button>
               {t.openDashboard}
               <ArrowRight className="ml-2 h-4 w-4" />
@@ -111,7 +111,7 @@ export default function LandingPage() {
               {t.heroSubtitle}
             </p>
             <div className="mt-10 flex justify-center gap-4">
-               <Link href="/login">
+               <Link href="/dashboard">
                   <Button size="lg">
                     {t.viewDemo}
                   </Button>
