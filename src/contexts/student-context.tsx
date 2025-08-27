@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, serverTimestamp } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, serverTimestamp, getDocs, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Student, HabitEntry } from '@/lib/types';
 import { useAuth } from './auth-context';
@@ -58,6 +58,14 @@ export const StudentProvider = ({ children }: { children: React.ReactNode }) => 
 
   const addStudent = async (newStudentData: Omit<Student, 'id' | 'habits' | 'avatarUrl'>) => {
     if (!user) throw new Error("Authentication required");
+
+    // Check for NISN uniqueness
+    const nisnQuery = query(collection(db, 'students'), where('nisn', '==', newStudentData.nisn));
+    const querySnapshot = await getDocs(nisnQuery);
+    if (!querySnapshot.empty) {
+      throw new Error(`NISN ${newStudentData.nisn} sudah terdaftar untuk siswa lain.`);
+    }
+
     try {
       await addDoc(collection(db, 'students'), {
         ...newStudentData,
@@ -71,16 +79,29 @@ export const StudentProvider = ({ children }: { children: React.ReactNode }) => 
       });
     } catch (error) {
       console.error("Error adding student:", error);
+      throw error;
     }
   };
 
   const updateStudent = async (studentId: string, updatedData: Partial<Omit<Student, 'id' | 'habits' | 'avatarUrl'>>) => {
     if (!user) throw new Error("Authentication required");
+
+    // Check for NISN uniqueness if NISN is being updated
+    if (updatedData.nisn) {
+      const nisnQuery = query(collection(db, 'students'), where('nisn', '==', updatedData.nisn));
+      const querySnapshot = await getDocs(nisnQuery);
+      const isOwnedByAnother = querySnapshot.docs.some(doc => doc.id !== studentId);
+      if (isOwnedByAnother) {
+        throw new Error(`NISN ${updatedData.nisn} sudah terdaftar untuk siswa lain.`);
+      }
+    }
+    
     const studentDocRef = doc(db, 'students', studentId);
     try {
       await updateDoc(studentDocRef, updatedData);
     } catch (error) {
       console.error("Error updating student:", error);
+      throw error;
     }
   };
 

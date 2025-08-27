@@ -8,15 +8,25 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Lightbulb, AlertTriangle, Loader2 } from 'lucide-react';
+import { Lightbulb, AlertTriangle, Loader2, Check, ChevronsUpDown } from 'lucide-react';
 import { checkHabitDecline } from '@/app/actions';
 import { useStudent } from '@/contexts/student-context';
 import { HABIT_NAMES } from '@/lib/types';
 import type { HabitDeclineNotificationOutput } from '@/ai/flows/habit-decline-notification';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
+import { cn } from '@/lib/utils';
 
 
 const formSchema = z.object({
@@ -38,6 +48,9 @@ export function NotificationsClient() {
   const t = translations[language]?.notificationsClient || translations.en.notificationsClient;
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
 
+  const [openStudentCombobox, setOpenStudentCombobox] = useState(false);
+
+
   const habitTranslationMapping: Record<string, string> = {
     'Bangun Pagi': tHabits.bangunPagi.name,
     'Taat Beribadah': tHabits.taatBeribadah.name,
@@ -58,6 +71,8 @@ export function NotificationsClient() {
       score3: 2,
     },
   });
+  
+  const studentValue = form.watch('studentId');
 
   const onSubmit = async (data: FormValues) => {
     setIsLoading(true);
@@ -84,24 +99,52 @@ export function NotificationsClient() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="studentId">{t.student}</Label>
-            <Controller
-              control={form.control}
-              name="studentId"
-              render={({ field }) => (
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <SelectTrigger id="studentId">
-                    <SelectValue placeholder={t.selectStudentPlaceholder} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {students.map((student) => (
-                      <SelectItem key={student.id} value={student.id}>
-                        {student.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
+              <Popover open={openStudentCombobox} onOpenChange={setOpenStudentCombobox}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={openStudentCombobox}
+                    className="w-full justify-between"
+                  >
+                    {studentValue
+                      ? students.find((s) => s.id === studentValue)?.name
+                      : t.selectStudentPlaceholder}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                   <Command>
+                    <CommandInput placeholder={t.selectStudentPlaceholder} />
+                    <CommandList>
+                      <CommandEmpty>Siswa tidak ditemukan.</CommandEmpty>
+                      <CommandGroup>
+                        {students.map((student) => (
+                          <CommandItem
+                            key={student.id}
+                            value={`${student.name} ${student.nisn}`}
+                            onSelect={() => {
+                              form.setValue('studentId', student.id);
+                              setOpenStudentCombobox(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                'mr-2 h-4 w-4',
+                                studentValue === student.id ? 'opacity-100' : 'opacity-0'
+                              )}
+                            />
+                             <div>
+                              <p>{student.name}</p>
+                              <p className="text-xs text-muted-foreground">{student.nisn}</p>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
              {form.formState.errors.studentId && <p className="text-sm text-destructive mt-1">{form.formState.errors.studentId.message}</p>}
           </div>
           <div>

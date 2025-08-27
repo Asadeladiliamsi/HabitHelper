@@ -14,12 +14,14 @@ import { useStudent } from '@/contexts/student-context';
 import { HABIT_NAMES } from '@/lib/types';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
+import { useToast } from '@/hooks/use-toast';
 
 export function ManageStudentsClient() {
   const { students, addStudent, updateStudent, deleteStudent } = useStudent();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const { language } = useLanguage();
+  const { toast } = useToast();
   const t = translations[language]?.manageStudentsPage || translations.en.manageStudentsPage;
 
   const handleAddStudent = () => {
@@ -32,24 +34,32 @@ export function ManageStudentsClient() {
     setDialogOpen(true);
   };
   
-  const handleDialogSave = (studentData: Omit<Student, 'id' | 'habits' | 'avatarUrl'>) => {
-    if (selectedStudent) {
-      // Update existing student
-      updateStudent(selectedStudent.id, studentData);
-    } else {
-      // Add new student
-      const newStudent: Omit<Student, 'id'> = {
-        habits: HABIT_NAMES.map((name, index) => ({
-          id: `habit-${index + 1}`,
-          name: name,
-          score: 4, // Default score
-        })),
-        avatarUrl: `https://placehold.co/100x100.png?text=${studentData.name.charAt(0)}`,
-        ...studentData,
-      };
-      addStudent(newStudent);
+  const handleDialogSave = async (studentData: Omit<Student, 'id' | 'habits' | 'avatarUrl'>) => {
+    try {
+      if (selectedStudent) {
+        // Update existing student
+        await updateStudent(selectedStudent.id, studentData);
+      } else {
+        // Add new student
+        const newStudent: Omit<Student, 'id'> = {
+          habits: HABIT_NAMES.map((name, index) => ({
+            id: `habit-${index + 1}`,
+            name: name,
+            score: 4, // Default score
+          })),
+          avatarUrl: `https://placehold.co/100x100.png?text=${studentData.name.charAt(0)}`,
+          ...studentData,
+        };
+        await addStudent(newStudent);
+      }
+      setDialogOpen(false);
+    } catch (error: any) {
+       toast({
+        variant: "destructive",
+        title: "Gagal Menyimpan",
+        description: error.message,
+      });
     }
-    setDialogOpen(false);
   };
 
   const handleDeleteStudent = (studentId: string) => {
