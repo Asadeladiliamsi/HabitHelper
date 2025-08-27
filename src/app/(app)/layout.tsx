@@ -5,12 +5,9 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
-  FilePlus2,
   Bell,
   FileText,
   Settings,
-  Users,
-  Pencil,
   LogOut,
   Loader2,
   Shield,
@@ -34,13 +31,6 @@ import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
 import { useAuth } from '@/contexts/auth-context';
 import { UserProvider } from '@/contexts/user-context';
-import { StudentProvider } from '@/contexts/student-context';
-
-export interface NavItem {
-  href: string;
-  icon: React.ElementType;
-  label: string;
-}
 
 export default function AppLayout({
   children,
@@ -59,23 +49,23 @@ export default function AppLayout({
     }
   }, [loading, user, router]);
 
-  const guruNavItems: NavItem[] = [
+  const guruNavItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: t.sidebar.dashboard },
     { href: '/data-master', icon: Database, label: t.sidebar.dataMaster },
     { href: '/notifications', icon: Bell, label: t.sidebar.notifications },
     { href: '/reports', icon: FileText, label: t.sidebar.reports },
   ];
 
-  const siswaNavItems: NavItem[] = [
+  const siswaNavItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: t.sidebar.dashboard },
     { href: '/reports', icon: FileText, label: t.sidebar.reports },
   ];
   
-  const adminNavItems: NavItem[] = [
+  const adminNavItems = [
     { href: '/admin/dashboard', icon: Shield, label: 'Dasbor Admin' },
   ];
 
-  const orangtuaNavItems: NavItem[] = [
+  const orangtuaNavItems = [
     { href: '/orangtua/dashboard', icon: Heart, label: 'Dasbor Orang Tua' },
   ];
 
@@ -94,16 +84,6 @@ export default function AppLayout({
     }
   }
 
-  const navItems = getNavItems();
-
-  if (loading || !user) {
-     return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
   const getDashboardTitle = () => {
     switch (userProfile?.role) {
       case 'guru':
@@ -119,76 +99,85 @@ export default function AppLayout({
     }
   };
 
+  if (loading || !user) {
+     return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  const navItems = getNavItems();
+  const dashboardTitle = getDashboardTitle();
+
   return (
     <UserProvider>
-      <StudentProvider>
-        <SidebarProvider>
-          <Sidebar>
-            <SidebarHeader>
-              <div className="flex items-center gap-2 p-2">
-                <Logo />
-                <span className="font-bold text-xl text-primary group-data-[collapsible=icon]:hidden">
-                  HabitHelper
-                </span>
-              </div>
-            </SidebarHeader>
-            <SidebarContent>
-              <SidebarMenu>
-                {navItems.map((item) => (
-                  <SidebarMenuItem key={item.href}>
-                    <Link href={item.href}>
-                      <SidebarMenuButton
-                        isActive={pathname.startsWith(item.href)}
-                        tooltip={{ children: item.label }}
-                      >
-                        <item.icon />
-                        <span>{item.label}</span>
-                      </SidebarMenuButton>
-                    </Link>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarContent>
-            <SidebarFooter>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <Link href="/settings">
+      <SidebarProvider>
+        <Sidebar>
+          <SidebarHeader>
+            <div className="flex items-center gap-2 p-2">
+              <Logo />
+              <span className="font-bold text-xl text-primary group-data-[collapsible=icon]:hidden">
+                HabitHelper
+              </span>
+            </div>
+          </SidebarHeader>
+          <SidebarContent>
+            <SidebarMenu>
+              {navItems.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                  <Link href={item.href}>
                     <SidebarMenuButton
-                      isActive={pathname === '/settings'}
-                      tooltip={{ children: t.sidebar.settings }}
+                      isActive={pathname.startsWith(item.href)}
+                      tooltip={{ children: item.label }}
                     >
-                      <Settings />
-                      <span>{t.sidebar.settings}</span>
+                      <item.icon />
+                      <span>{item.label}</span>
                     </SidebarMenuButton>
                   </Link>
                 </SidebarMenuItem>
-                <SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarContent>
+          <SidebarFooter>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <Link href="/settings">
                   <SidebarMenuButton
-                    onClick={logout}
-                    tooltip={{ children: t.sidebar.logout }}
-                    className="w-full"
+                    isActive={pathname === '/settings'}
+                    tooltip={{ children: t.sidebar.settings }}
                   >
-                    <LogOut />
-                    <span>{t.sidebar.logout}</span>
+                    <Settings />
+                    <span>{t.sidebar.settings}</span>
                   </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarFooter>
-          </Sidebar>
-          <SidebarInset>
-            <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-card px-4 sm:px-6">
-              <SidebarTrigger className="md:hidden" />
-              <div className="flex-1">
-                  <span className="font-semibold capitalize text-sm">
-                    {getDashboardTitle()}
-                  </span>
-                  <span className="text-sm text-muted-foreground ml-2">({user?.email})</span>
-              </div>
-            </header>
-            <main className="flex-1 p-4 sm:p-6">{children}</main>
-          </SidebarInset>
-        </SidebarProvider>
-      </StudentProvider>
+                </Link>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={logout}
+                  tooltip={{ children: t.sidebar.logout }}
+                  className="w-full"
+                >
+                  <LogOut />
+                  <span>{t.sidebar.logout}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarFooter>
+        </Sidebar>
+        <SidebarInset>
+          <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-card px-4 sm:px-6">
+            <SidebarTrigger className="md:hidden" />
+            <div className="flex-1">
+                <span className="font-semibold capitalize text-sm">
+                  {dashboardTitle}
+                </span>
+                <span className="text-sm text-muted-foreground ml-2">({user?.email})</span>
+            </div>
+          </header>
+          <main className="flex-1 p-4 sm:p-6">{children}</main>
+        </SidebarInset>
+      </SidebarProvider>
     </UserProvider>
   );
 }
