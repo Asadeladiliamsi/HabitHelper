@@ -84,8 +84,6 @@ export function OrangTuaDashboardClient() {
   
   const selectedStudentData = parentStudents.find(s => s.id === selectedStudentId);
 
-  const averageScore = selectedStudentData?.habits.reduce((acc, h) => acc + h.score, 0) / (selectedStudentData.habits.length || 1) || 0;
-
   return (
     <div className="flex flex-col gap-6">
       <header>
@@ -148,8 +146,8 @@ export function OrangTuaDashboardClient() {
                     <TableCell>Rata-rata Keseluruhan</TableCell>
                     <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                            <Progress value={(averageScore / 4) * 100} className="w-24 h-2" />
-                            <span className="font-mono text-sm">{averageScore.toFixed(1)}</span>
+                            <Progress value={( (selectedStudentData.habits.reduce((acc, h) => acc + h.score, 0) / (selectedStudentData.habits.length || 1)) / 4) * 100} className="w-24 h-2" />
+                            <span className="font-mono text-sm">{(selectedStudentData.habits.reduce((acc, h) => acc + h.score, 0) / (selectedStudentData.habits.length || 1)).toFixed(1)}</span>
                         </div>
                     </TableCell>
                     </TableRow>
