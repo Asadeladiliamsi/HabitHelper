@@ -15,26 +15,21 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!loading) {
       if (!userProfile) {
-        // This case can happen briefly during logout or if profile creation fails.
-        // Redirecting to login is a safe fallback.
         router.replace('/login');
         return;
       }
 
+      // Arahkan berdasarkan peran
       if (userProfile.role === 'admin') {
         router.replace('/admin/dashboard');
       } else if (userProfile.role === 'orangtua') {
         router.replace('/orangtua/dashboard');
-      } else if (userProfile.role === 'siswa' && !userProfile.nisn) {
-        // If the user is a student but doesn't have an NISN linked,
-        // redirect them to the verification page.
-        router.replace('/verify-nisn');
       }
     }
   }, [loading, userProfile, router]);
 
-  if (loading || !userProfile || userProfile.role !== 'siswa' || !userProfile.nisn) {
-    // Show a loader while checks are being performed or if the user is not a verified student.
+  // Tampilkan loader saat memeriksa otentikasi atau jika pengguna belum dimuat
+  if (loading || !userProfile) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -42,11 +37,20 @@ export default function DashboardPage() {
     );
   }
   
+  // Tampilkan dasbor yang sesuai berdasarkan peran
   return (
     <StudentProvider>
-      <div className="flex flex-col gap-6">
-        <SiswaDashboardClient />
-      </div>
+       {userProfile.role === 'guru' && (
+          <div className="flex flex-col gap-6">
+            <DashboardClient />
+          </div>
+       )}
+       {userProfile.role === 'siswa' && (
+          <div className="flex flex-col gap-6">
+            <SiswaDashboardClient />
+          </div>
+       )}
+       {/* Placeholder untuk dasbor lain jika diperlukan */}
     </StudentProvider>
   );
 }

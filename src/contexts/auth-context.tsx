@@ -4,8 +4,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, type User } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-import type { UserProfile, UserRole } from '@/lib/types';
-import { Loader2 } from 'lucide-react';
+import type { UserProfile } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
@@ -14,8 +13,7 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, pass: string) => Promise<any>;
   signup: (email: string, pass: string) => Promise<any>;
-  validateAndCreateUserProfile: (name: string, email: string, pass: string, role: UserRole) => Promise<void>;
-  verifyAndLinkNisn: (nisn: string) => Promise<void>;
+  validateAndCreateUserProfile: (name: string, email: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -37,8 +35,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (userDoc.exists()) {
           setUserProfile(userDoc.data() as UserProfile);
         } else {
-          // This case might occur if the user exists in Auth but not in Firestore.
-          // We can decide to create a profile here or log them out.
           setUserProfile(null);
         }
       } else {
@@ -67,14 +63,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return createUserWithEmailAndPassword(auth, email, pass);
   };
 
-  const validateAndCreateUserProfile = async (name: string, email: string, pass: string, role: UserRole) => {
+  // Pendaftaran hanya untuk siswa, jadi peran di-hardcode.
+  const validateAndCreateUserProfile = async (name: string, email: string, pass: string) => {
      const userCredential = await signup(email, pass);
      const userDocRef = doc(db, 'users', userCredential.user.uid);
-     const profileData: Omit<UserProfile, 'createdAt' | 'nisn'> = {
+     
+     // Buat profil dengan peran 'siswa' secara default.
+     // NISN tidak disimpan di sini, karena akan dikelola oleh guru.
+     const profileData: UserProfile = {
         uid: userCredential.user.uid,
         email: email,
         name: name,
-        role: role,
+        role: 'siswa',
       };
 
      await setDoc(userDocRef, {
@@ -83,49 +83,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
   };
 
-  const verifyAndLinkNisn = async (nisn: string) => {
-    if (!user) {
-      throw new Error("Anda harus login terlebih dahulu.");
-    }
-    
-    // 1. Check if the NISN exists in the 'students' collection
-    const studentsRef = collection(db, 'students');
-    const studentQuery = query(studentsRef, where('nisn', '==', nisn));
-    const studentSnapshot = await getDocs(studentQuery);
-    
-    if (studentSnapshot.empty) {
-      throw new Error(`NISN "${nisn}" tidak ditemukan dalam data siswa. Mohon hubungi guru Anda.`);
-    }
-
-    // 2. Check if this NISN is already linked to another user
-    const usersRef = collection(db, 'users');
-    const userNisnQuery = query(usersRef, where('nisn', '==', nisn));
-    const userNisnSnapshot = await getDocs(userNisnQuery);
-
-    if (!userNisnSnapshot.empty) {
-        // Check if it's the current user who is already linked
-        const isLinkedToCurrentUser = userNisnSnapshot.docs.some(doc => doc.id === user.uid);
-        if (!isLinkedToCurrentUser) {
-            throw new Error(`NISN "${nisn}" ini sudah terhubung dengan akun lain.`);
-        }
-    }
-    
-    // 3. If valid and available, link it to the current user
-    const userDocRef = doc(db, 'users', user.uid);
-    await updateDoc(userDocRef, { nisn: nisn });
-
-    // 4. Update local user profile state
-    setUserProfile(prevProfile => prevProfile ? { ...prevProfile, nisn: nisn } : null);
-  };
-
-
   const logout = async () => {
     setUserProfile(null);
     await signOut(auth);
     router.push('/login');
   };
 
-  const value = { user, userProfile, loading, login, signup, validateAndCreateUserProfile, verifyAndLinkNisn, logout };
+  const value = { user, userProfile, loading, login, signup, validateAndCreateUserProfile, logout };
 
   return (
     <AuthContext.Provider value={value}>

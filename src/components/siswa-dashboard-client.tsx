@@ -31,7 +31,7 @@ const habitIcons: { [key: string]: React.ReactNode } = {
 
 
 export function SiswaDashboardClient() {
-  const { userProfile } = useAuth();
+  const { user, userProfile } = useAuth();
   const { students, loading: studentsLoading } = useStudent();
   const { language } = useLanguage();
   const t = translations[language]?.dashboardPage || translations.en.dashboardPage;
@@ -55,17 +55,18 @@ export function SiswaDashboardClient() {
     );
   }
 
-  // Find the student data that matches the logged-in user's NISN
+  // Temukan data siswa berdasarkan NISN yang cocok dengan profil pengguna.
+  // Asumsi: Guru telah memasukkan NISN yang benar untuk setiap siswa.
   const studentData = students.find(s => s.nisn === userProfile?.nisn);
 
   if (!studentData) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Data Siswa Tidak Ditemukan</CardTitle>
+          <CardTitle>Data Siswa Belum Tertaut</CardTitle>
         </CardHeader>
         <CardContent>
-          <p>Data untuk siswa dengan NISN &quot;{userProfile?.nisn}&quot; tidak dapat ditemukan. Pastikan NISN Anda benar dan sudah didaftarkan oleh guru.</p>
+          <p>Profil Anda belum terhubung dengan data siswa di sistem. Mohon hubungi guru Anda untuk memastikan NISN Anda telah ditambahkan ke profil siswa.</p>
         </CardContent>
       </Card>
     );

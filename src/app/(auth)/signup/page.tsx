@@ -14,6 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
+// Pendaftaran hanya untuk siswa, jadi skema disederhanakan.
 const formSchema = z.object({
   name: z.string().min(3, { message: 'Nama minimal 3 karakter.' }),
   email: z.string().email({ message: 'Email tidak valid.' }),
@@ -41,10 +42,9 @@ export default function SignupPage() {
     setError(null);
     setIsLoading(true);
     try {
-      // We are creating a user with the 'siswa' role by default.
-      // NISN verification will happen after login.
-      await validateAndCreateUserProfile(data.name, data.email, data.password, 'siswa');
-      // Redirect to login so they can sign in and then verify their NISN.
+      // Semua pendaftaran baru akan memiliki peran 'siswa' secara default.
+      await validateAndCreateUserProfile(data.name, data.email, data.password);
+      // Arahkan ke halaman login setelah pendaftaran berhasil.
       router.push('/login'); 
     } catch (err: any) {
        if (err.code === 'auth/email-already-in-use') {
