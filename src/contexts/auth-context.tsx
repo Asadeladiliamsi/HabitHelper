@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
@@ -29,6 +30,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setLoading(true);
       if (user) {
         setUser(user);
         const userDocRef = doc(db, 'users', user.uid);
@@ -36,6 +38,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (docSnap.exists()) {
           setUserProfile(docSnap.data() as UserProfile);
         } else {
+          // This case can happen if the user exists in Auth but not in Firestore.
+          // For this app's logic, we can treat them as not fully set up.
           setUserProfile(null);
         }
       } else {
@@ -53,10 +57,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       await signInWithEmailAndPassword(auth, email, pass);
       router.push('/dashboard');
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Login Gagal',
-        description: error.message,
+        description: 'Email atau kata sandi salah. Silakan coba lagi.',
         variant: 'destructive',
       });
       console.error("Error logging in:", error);
@@ -79,12 +83,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       await setDoc(doc(db, 'users', newUser.uid), userProfileData);
       
-      router.push('/dashboard');
+      // onAuthStateChanged will handle the rest, no need to push here
+      // router.push('/dashboard');
 
-    } catch (error: any) {
+    } catch (error) {
+      let description = 'Terjadi kesalahan saat mendaftar. Silakan coba lagi.';
+      if ((error as {code?: string}).code === 'auth/email-already-in-use') {
+        description = 'Email ini sudah terdaftar. Silakan gunakan email lain atau masuk.';
+      }
+      
       toast({
         title: 'Pendaftaran Gagal',
-        description: error.message,
+        description: description,
         variant: 'destructive',
       });
       console.error("Error signing up:", error);
