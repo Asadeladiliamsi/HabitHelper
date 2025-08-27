@@ -7,7 +7,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Combobox } from '@/components/ui/combobox';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -50,11 +49,6 @@ export function DataInputClient() {
   const t = translations[language]?.dataInputClient || translations.en.dataInputClient;
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
   const locale = language === 'id' ? id : enUS;
-
-  const studentOptions = students.map(student => ({
-    value: student.id,
-    label: student.name,
-  }));
 
   const habitTranslationMapping: Record<string, string> = {
     'Bangun Pagi': tHabits.bangunPagi.name,
@@ -128,13 +122,18 @@ export function DataInputClient() {
                 control={form.control}
                 name="studentId"
                 render={({ field }) => (
-                  <Combobox
-                    options={studentOptions}
-                    value={field.value}
-                    onChange={field.onChange}
-                    placeholder={t.selectStudentPlaceholder}
-                    searchPlaceholder="Cari siswa..."
-                  />
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <SelectTrigger id="studentId">
+                      <SelectValue placeholder={t.selectStudentPlaceholder} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {students.map((student) => (
+                        <SelectItem key={student.id} value={student.id}>
+                          {student.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
               />
             {form.formState.errors.studentId && (

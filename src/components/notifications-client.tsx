@@ -17,7 +17,6 @@ import { HABIT_NAMES } from '@/lib/types';
 import type { HabitDeclineNotificationOutput } from '@/ai/flows/habit-decline-notification';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
-import { Combobox } from '@/components/ui/combobox';
 
 const formSchema = z.object({
   studentId: z.string().min(1, 'Siswa harus dipilih.'),
@@ -37,11 +36,6 @@ export function NotificationsClient() {
   const { language } = useLanguage();
   const t = translations[language]?.notificationsClient || translations.en.notificationsClient;
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
-
-  const studentOptions = students.map(student => ({
-    value: student.id,
-    label: student.name,
-  }));
 
   const habitTranslationMapping: Record<string, string> = {
     'Bangun Pagi': tHabits.bangunPagi.name,
@@ -93,13 +87,18 @@ export function NotificationsClient() {
               control={form.control}
               name="studentId"
               render={({ field }) => (
-                <Combobox
-                    options={studentOptions}
-                    value={field.value}
-                    onChange={field.onChange}
-                    placeholder={t.selectStudentPlaceholder}
-                    searchPlaceholder="Cari siswa..."
-                  />
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <SelectTrigger id="studentId">
+                    <SelectValue placeholder={t.selectStudentPlaceholder} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {students.map((student) => (
+                      <SelectItem key={student.id} value={student.id}>
+                        {student.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
             />
              {form.formState.errors.studentId && <p className="text-sm text-destructive mt-1">{form.formState.errors.studentId.message}</p>}
