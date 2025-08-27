@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, doc, getDocs, onSnapshot, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, doc, onSnapshot, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { mockStudents } from '@/lib/mock-data';
 import type { Student } from '@/lib/types';
 import { HABIT_NAMES } from '@/lib/types';
@@ -21,7 +21,7 @@ const StudentContext = createContext<StudentContextType | undefined>(undefined);
 
 export const StudentProvider = ({ children }: { children: ReactNode }) => {
   const { user, loading: authLoading } = useAuth();
-  const [students, setStudents] = useState<Student[]>([]);
+  const [students, setStudents] = useState<Student[]>(mockStudents);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -31,24 +31,22 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
     }
 
     if (!user) {
-      setStudents([]);
+      setStudents(mockStudents); // Reset to mock data or empty array if preferred
       setLoading(false);
       return;
     }
 
     const studentsCollection = collection(db, 'students');
     const unsubscribe = onSnapshot(studentsCollection, async (snapshot) => {
-      // Seeding logic is now inside onSnapshot
       if (snapshot.empty) {
-        console.log('No students found, seeding initial data...');
+        console.log('No students found in Firestore, using mock data. Seeding initial data...');
         const batch = writeBatch(db);
         mockStudents.forEach((student) => {
           const docRef = doc(db, 'students', student.id);
           batch.set(docRef, student);
         });
         await batch.commit();
-        console.log('Initial data seeded.');
-        // The snapshot will update automatically after seeding, so we just wait for the next snapshot
+        // Snapshot will update automatically after seeding
       } else {
          const studentsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
          setStudents(studentsData);
@@ -63,6 +61,10 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
   }, [user, authLoading]);
   
   const addStudent = async (newStudentData: Omit<Student, 'id'>) => {
+    if (!user) {
+      console.error("No user logged in to add student.");
+      return;
+    }
     const studentId = `student-${Date.now()}`;
     const newStudent: Student = {
       id: studentId,
@@ -81,6 +83,7 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateStudent = async (studentId: string, updatedData: Partial<Omit<Student, 'id' | 'habits'>>) => {
+     if (!user) return;
      try {
       const studentDocRef = doc(db, 'students', studentId);
       await setDoc(studentDocRef, updatedData, { merge: true });
@@ -90,6 +93,7 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const deleteStudent = async (studentId: string) => {
+    if (!user) return;
     try {
       await deleteDoc(doc(db, 'students', studentId));
     } catch (error) {
@@ -98,10 +102,11 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const updateHabitScore = async (studentId: string, habitId: string, newScore: number) => {
-    const student = students.find(s => s.id === studentId);
-    if (!student) return;
+    if (!user) return;
+    const studentToUpdate = students.find(s => s.id === studentId);
+    if (!studentToUpdate) return;
 
-    const updatedHabits = student.habits.map(habit => 
+    const updatedHabits = studentToUpdate.habits.map(habit => 
       habit.id === habitId ? { ...habit, score: newScore } : habit
     );
     
