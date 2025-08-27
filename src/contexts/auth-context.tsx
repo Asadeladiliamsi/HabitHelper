@@ -48,8 +48,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, []);
   
-  const login = (email: string, pass: string) => {
-    return signInWithEmailAndPassword(auth, email, pass);
+  const login = async (email: string, pass: string) => {
+    try {
+        return await signInWithEmailAndPassword(auth, email, pass);
+    } catch (error: any) {
+        if (error.code === 'auth/invalid-credential') {
+            throw new Error('Email atau kata sandi salah. Silakan coba lagi.');
+        }
+        throw new Error('Terjadi kesalahan saat mencoba masuk.');
+    }
   };
 
   const signup = async (email: string, pass: string) => {

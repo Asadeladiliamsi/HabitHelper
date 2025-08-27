@@ -42,11 +42,8 @@ export default function LoginPage() {
       await login(data.email, data.password);
       router.push('/dashboard');
     } catch (err: any) {
-      if (err.code === 'auth/invalid-credential') {
-        setError('Email atau kata sandi salah. Silakan coba lagi.');
-      } else {
-        setError('Terjadi kesalahan. Silakan coba lagi nanti.');
-      }
+      // The error message now comes directly from the login function in the context
+      setError(err.message);
       console.error(err);
     } finally {
       setIsLoading(false);
