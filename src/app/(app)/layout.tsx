@@ -10,6 +10,7 @@ import {
   Settings,
   Users,
   Pencil,
+  LogOut,
 } from 'lucide-react';
 import {
   SidebarProvider,
@@ -91,7 +92,7 @@ export default function AppLayout({
         </SidebarContent>
         <SidebarFooter>
           <SidebarMenu>
-            <SidebarMenuItem>
+             <SidebarMenuItem>
               <Link href="/settings">
                 <SidebarMenuButton
                   isActive={pathname === '/settings'}
@@ -99,6 +100,14 @@ export default function AppLayout({
                 >
                   <Settings />
                   <span>{t.sidebar.settings}</span>
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <Link href="/">
+                <SidebarMenuButton tooltip={{ children: t.sidebar.logout }}>
+                  <LogOut />
+                  <span>{t.sidebar.logout}</span>
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>

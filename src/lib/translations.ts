@@ -9,6 +9,7 @@ type Translation = {
     reports: string;
     settings: string;
     teacherDashboard: string;
+    logout: string;
   };
   settingsPage: {
     title: string;
@@ -173,6 +174,7 @@ export const translations: Record<string, Translation> = {
       reports: 'Laporan',
       settings: 'Pengaturan',
       teacherDashboard: 'Dasbor Guru',
+      logout: 'Keluar',
     },
     settingsPage: {
       title: 'Pengaturan',
@@ -335,6 +337,7 @@ export const translations: Record<string, Translation> = {
       reports: 'Reports',
       settings: 'Settings',
       teacherDashboard: 'Teacher Dashboard',
+      logout: 'Logout',
     },
     settingsPage: {
       title: 'Settings',
@@ -497,6 +500,7 @@ export const translations: Record<string, Translation> = {
         reports: 'Informes',
         settings: 'Configuración',
         teacherDashboard: 'Tablero del Profesor',
+        logout: 'Cerrar Sesión',
     },
     settingsPage: {
       title: 'Configuración',
@@ -659,6 +663,7 @@ export const translations: Record<string, Translation> = {
         reports: 'Rapports',
         settings: 'Paramètres',
         teacherDashboard: 'Tableau de Bord Enseignant',
+        logout: 'Déconnexion',
     },
     settingsPage: {
       title: 'Paramètres',
@@ -797,7 +802,7 @@ export const translations: Record<string, Translation> = {
         rajinOlahraga: { name: 'Assidu dans l\'Exercice', description: 'Maintenir la santé et la forme physique.' },
         makanSehat: { name: 'Manger Sainement et Nutritif', description: 'Consommer des aliments bons pour le corps.' },
         gemarBelajar: { name: 'Aimer Apprendre', description: 'Avoir l\'esprit d\'acquérir continuellement des connaissances.' },
-        bermasyarakat: { name: 'Socialiser', description: 'Interagir et contribuer à l\'environnement social.' },
+        bermasyarakat: { name: 'Socialiser', description: 'Interagir et contribuir à l\'environnement social.' },
         tidurCepat: { name: 'Dormir Tôt', description: 'Se reposer suffisamment pour la récupération du corps.' },
       },
       featuresTitle: 'Nos Fonctionnalités en Vedette',
@@ -821,6 +826,7 @@ export const translations: Record<string, Translation> = {
         reports: 'Berichte',
         settings: 'Einstellungen',
         teacherDashboard: 'Lehrer-Dashboard',
+        logout: 'Abmelden',
     },
     settingsPage: {
       title: 'Einstellungen',
@@ -983,6 +989,7 @@ export const translations: Record<string, Translation> = {
         reports: 'レポート',
         settings: '設定',
         teacherDashboard: '教師ダッシュボード',
+        logout: 'ログアウト',
     },
     settingsPage: {
       title: '設定',
@@ -1145,6 +1152,7 @@ export const translations: Record<string, Translation> = {
         reports: 'Relatórios',
         settings: 'Configurações',
         teacherDashboard: 'Painel do Professor',
+        logout: 'Sair',
     },
     settingsPage: {
       title: 'Configurações',
@@ -1307,6 +1315,7 @@ export const translations: Record<string, Translation> = {
         reports: 'Отчеты',
         settings: 'Настройки',
         teacherDashboard: 'Панель учителя',
+        logout: 'Выйти',
     },
     settingsPage: {
       title: 'Настройки',
@@ -1469,6 +1478,7 @@ export const translations: Record<string, Translation> = {
         reports: '报告',
         settings: '设置',
         teacherDashboard: '教师仪表板',
+        logout: '登出',
     },
     settingsPage: {
       title: '设置',
@@ -1631,6 +1641,7 @@ export const translations: Record<string, Translation> = {
         reports: 'रिपोर्ट',
         settings: 'सेटिंग्स',
         teacherDashboard: 'शिक्षक डैशबोर्ड',
+        logout: 'लॉग आउट करें',
     },
     settingsPage: {
       title: 'सेटिंग्स',
@@ -1793,6 +1804,7 @@ export const translations: Record<string, Translation> = {
         reports: 'التقارير',
         settings: 'الإعدادات',
         teacherDashboard: 'لوحة تحكم المعلم',
+        logout: 'تسجيل الخروج',
     },
     settingsPage: {
       title: 'الإعدادات',
@@ -1955,6 +1967,7 @@ export const translations: Record<string, Translation> = {
         reports: '보고서',
         settings: '설정',
         teacherDashboard: '교사 대시보드',
+        logout: '로그아웃',
     },
     settingsPage: {
       title: '설정',
