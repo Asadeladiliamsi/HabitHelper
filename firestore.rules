@@ -1,16 +1,23 @@
+
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users can be created by anyone (for signup)
-    // Users can only read/update their own document after logging in
+    // Users Collection
+    // - Allow anyone to create a user document (signup).
+    // - Allow authenticated users to read their own profile.
     match /users/{userId} {
       allow create: if true;
-      allow read, update: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Authenticated users can read and write to the students collection
+    // Students Collection
+    // - Allow any authenticated user to read, write, create, and delete student data.
+    // This is a common setup for teacher roles. We can make this more restrictive later
+    // if needed (e.g., only allow users with a 'guru' role).
     match /students/{studentId} {
-       allow read, write: if request.auth != null;
+      allow read, write, create, delete: if request.auth != null;
     }
   }
 }
