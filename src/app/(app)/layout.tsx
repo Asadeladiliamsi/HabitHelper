@@ -31,8 +31,8 @@ import { Logo } from '@/components/icons/logo';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
 import { useAuth } from '@/contexts/auth-context';
-import { StudentProvider } from '@/contexts/student-context';
 import { UserProvider } from '@/contexts/user-context';
+import { StudentProvider } from '@/contexts/student-context';
 
 export interface NavItem {
   href: string;
