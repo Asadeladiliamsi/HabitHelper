@@ -80,6 +80,7 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
     const studentId = `student-${Date.now()}`;
     const newStudent: Student = {
       id: studentId,
+      avatarUrl: `https://placehold.co/100x100.png?text=${newStudentData.name.charAt(0)}`,
       ...newStudentData,
     };
     try {
@@ -90,7 +91,7 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const updateStudent = async (studentId: string, updatedData: Partial<Omit<Student, 'id' | 'habits'>>) => {
+  const updateStudent = async (studentId: string, updatedData: Partial<Omit<Student, 'id' | 'habits' | 'avatarUrl'>>) => {
      if (!user) return;
      try {
       const studentDocRef = doc(db, 'students', studentId);
