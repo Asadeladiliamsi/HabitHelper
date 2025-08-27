@@ -14,49 +14,47 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
-const nisnLoginSchema = z.object({
-    nisn: z.string().min(1, { message: 'NISN harus diisi.' }),
-    password: z.string().min(6, { message: 'Kata sandi minimal 6 karakter.' }),
+const formSchema = z.object({
+  email: z.string().email({ message: 'Email tidak valid.' }),
+  password: z.string().min(6, { message: 'Kata sandi minimal 6 karakter.' }),
 });
 
-type NisnLoginValues = z.infer<typeof nisnLoginSchema>;
+type FormValues = z.infer<typeof formSchema>;
 
 export default function LoginPage() {
-  const { loginWithNisn } = useAuth();
+  const { login } = useAuth();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const nisnForm = useForm<NisnLoginValues>({
-      resolver: zodResolver(nisnLoginSchema),
-      defaultValues: {
-          nisn: '',
-          password: '',
-      }
-  })
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  });
 
-  const handleLogin = async (loginFn: Promise<any>) => {
-    setIsLoading(true);
+  const onSubmit = async (data: FormValues) => {
     setError(null);
+    setIsLoading(true);
     try {
-      await loginFn;
+      await login(data.email, data.password);
       router.push('/dashboard');
     } catch (err: any) {
       setError(err.message);
     } finally {
       setIsLoading(false);
     }
-  }
-
-  const onNisnSubmit = (data: NisnLoginValues) => {
-      handleLogin(loginWithNisn(data.nisn, data.password));
-  }
+  };
 
   return (
     <Card>
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl">Masuk Siswa</CardTitle>
-        <CardDescription>Masukkan NISN dan kata sandi Anda untuk masuk.</CardDescription>
+        <CardTitle className="text-2xl">Masuk</CardTitle>
+        <CardDescription>
+          Masukkan email dan kata sandi Anda untuk masuk.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         {error && (
@@ -66,16 +64,16 @@ export default function LoginPage() {
                 <AlertDescription>{error}</AlertDescription>
             </Alert>
         )}
-        <form onSubmit={nisnForm.handleSubmit(onNisnSubmit)} className="space-y-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
-                <Label htmlFor="nisn">NISN</Label>
-                <Input id="nisn" type="text" placeholder="Masukkan NISN Anda" {...nisnForm.register('nisn')} />
-                {nisnForm.formState.errors.nisn && <p className="text-sm text-destructive">{nisnForm.formState.errors.nisn.message}</p>}
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" type="email" placeholder="email@contoh.com" {...form.register('email')} />
+                {form.formState.errors.email && <p className="text-sm text-destructive">{form.formState.errors.email.message}</p>}
             </div>
             <div className="space-y-2">
-                <Label htmlFor="password-siswa">Kata Sandi</Label>
-                <Input id="password-siswa" type="password" placeholder="••••••••" {...nisnForm.register('password')} />
-                {nisnForm.formState.errors.password && <p className="text-sm text-destructive">{nisnForm.formState.errors.password.message}</p>}
+                <Label htmlFor="password">Kata Sandi</Label>
+                <Input id="password" type="password" placeholder="••••••••" {...form.register('password')} />
+                {form.formState.errors.password && <p className="text-sm text-destructive">{form.formState.errors.password.message}</p>}
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? <Loader2 className="animate-spin" /> : 'Masuk'}
