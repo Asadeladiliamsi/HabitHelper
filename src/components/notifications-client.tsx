@@ -144,10 +144,7 @@ export function NotificationsClient() {
                                     field.value === student.id ? 'opacity-100' : 'opacity-0'
                                   )}
                                 />
-                                 <div>
-                                  <p>{student.name}</p>
-                                  <p className="text-xs text-muted-foreground">{student.nisn}</p>
-                                </div>
+                                 {student.name}
                               </CommandItem>
                             ))}
                           </CommandGroup>
