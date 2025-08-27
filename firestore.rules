@@ -2,8 +2,18 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if true;
+    // Aturan untuk koleksi 'students'
+    // Mengizinkan semua pengguna yang terautentikasi untuk membaca dan menulis data siswa.
+    // Ini berguna untuk pengembangan, tetapi harus diperketat untuk produksi.
+    match /students/{studentId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Aturan untuk koleksi 'users'
+    // Mengizinkan pengguna yang terautentikasi untuk membaca dan menulis HANYA dokumen mereka sendiri.
+    // Ini penting untuk keamanan data profil pengguna.
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
