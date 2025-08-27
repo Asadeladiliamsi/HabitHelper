@@ -78,14 +78,14 @@ export default function LoginPage() {
                 {nisnForm.formState.errors.password && <p className="text-sm text-destructive">{nisnForm.formState.errors.password.message}</p>}
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? <Loader2 className="animate-spin" /> : 'Masuk sebagai Siswa'}
+                {isLoading ? <Loader2 className="animate-spin" /> : 'Masuk'}
             </Button>
         </form>
        
         <div className="mt-4 text-center text-sm">
-          Bukan siswa?{' '}
+          Belum punya akun?{' '}
           <Link href="/signup" className="underline">
-            Daftar sebagai Guru atau Orang Tua
+            Daftar di sini
           </Link>
         </div>
       </CardContent>

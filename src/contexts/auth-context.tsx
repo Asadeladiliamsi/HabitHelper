@@ -16,6 +16,7 @@ interface AuthContextType {
   loginWithNisn: (nisn: string, pass: string) => Promise<any>;
   signup: (email: string, pass: string) => Promise<any>;
   validateAndCreateUserProfile: (name: string, email: string, pass: string, role: UserRole, nisn?: string) => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
