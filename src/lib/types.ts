@@ -1,4 +1,4 @@
-import type { Timestamp } from 'firebase/firestore';
+import type { Timestamp, DocumentData } from 'firebase/firestore';
 
 export interface Habit {
   id: string;
@@ -6,7 +6,7 @@ export interface Habit {
   score: number;
 }
 
-export interface Student {
+export interface Student extends DocumentData {
   id: string;
   name: string;
   nisn: string;

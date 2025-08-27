@@ -67,16 +67,34 @@ export const StudentProvider = ({ children }: { children: React.ReactNode }) => 
     }
 
     try {
-      await addDoc(collection(db, 'students'), {
+      const newDocRef = await addDoc(collection(db, 'students'), {
         ...newStudentData,
         habits: HABIT_NAMES.map((name, index) => ({
-          id: `habit-${index + 1}`,
+          id: `habit-${Date.now()}-${index}`, // More unique ID
           name: name,
-          score: 4,
+          score: 4, // Default score
         })),
         avatarUrl: `https://placehold.co/100x100.png?text=${newStudentData.name.charAt(0)}`,
         createdBy: user.uid,
       });
+
+      const newStudent = { id: newDocRef.id, ...newStudentData };
+      
+      // Auto-populate habit_entries for the new student
+      const today = new Date();
+      for (let i = 0; i < 3; i++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() - i);
+        for (const habitName of HABIT_NAMES) {
+           await addHabitEntry({
+              studentId: newDocRef.id,
+              habitName: habitName,
+              score: 4, // Default starting score
+              date: date,
+           });
+        }
+      }
+
     } catch (error) {
       console.error("Error adding student:", error);
       throw error;
@@ -110,6 +128,12 @@ export const StudentProvider = ({ children }: { children: React.ReactNode }) => 
     const studentDocRef = doc(db, 'students', studentId);
     try {
       await deleteDoc(studentDocRef);
+       // Optional: also delete related habit_entries
+      const entriesQuery = query(collection(db, 'habit_entries'), where('studentId', '==', studentId));
+      const entriesSnapshot = await getDocs(entriesQuery);
+      const deletePromises = entriesSnapshot.docs.map(d => deleteDoc(d.ref));
+      await Promise.all(deletePromises);
+
     } catch (error) {
       console.error("Error deleting student:", error);
     }
@@ -134,11 +158,24 @@ export const StudentProvider = ({ children }: { children: React.ReactNode }) => 
   const addHabitEntry = async (data: Omit<HabitEntry, 'id' | 'timestamp' | 'recordedBy'>) => {
     if (!user) throw new Error("Authentication required");
     try {
-      await addDoc(collection(db, 'habit_entries'), {
+      // Create a unique ID for the entry to avoid duplicates for the same student/habit/date
+      const entryDate = data.date.toISOString().split('T')[0];
+      const entryId = `${data.studentId}-${data.habitName}-${entryDate}`;
+      
+      const docRef = doc(db, 'habit_entries', entryId);
+      
+      await updateDoc(doc(db, 'students', data.studentId), {
+         habits: students.find(s => s.id === data.studentId)?.habits.map(h => 
+            h.name === data.habitName ? {...h, score: data.score} : h
+         )
+      });
+
+      await setDoc(docRef, {
         ...data,
         recordedBy: user.uid,
         timestamp: serverTimestamp(),
-      });
+      }, { merge: true }); // Use set with merge to create or overwrite
+
     } catch (error) {
       console.error("Error adding habit entry:", error);
     }
