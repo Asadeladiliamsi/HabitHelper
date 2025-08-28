@@ -22,6 +22,7 @@ import { StudentUserSearchDialog } from './student-user-search-dialog';
 import { checkNisnExists } from '@/app/actions';
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
+import { ScrollArea } from './ui/scroll-area';
 
 
 interface StudentDialogProps {
@@ -160,79 +161,77 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student, studentUs
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <DialogHeader>
+      <DialogContent className="sm:max-w-[425px] flex flex-col max-h-[90vh]">
+        <DialogHeader>
             <DialogTitle>{student ? t.editTitle : t.addTitle}</DialogTitle>
             <DialogDescription>
               {student ? t.editDescription : 'Pilih akun siswa yang sudah terdaftar, lalu lengkapi data NISN dan kelas.'}
             </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            
-            {!isEditMode && (
-                 <div className="space-y-2">
-                    <Label htmlFor="linkedUserUid">Akun Siswa</Label>
-                    <Controller
-                        control={control}
-                        name="linkedUserUid"
-                        render={({ field }) => (
-                           <StudentUserSearchDialog
-                             users={studentUsers}
-                             selectedUserId={field.value}
-                             onUserSelect={(userId) => field.onChange(userId)}
-                             placeholder="Cari & pilih akun siswa..."
-                             selectedUserName={selectedUserName}
-                           />
-                        )}
-                    />
-                    {errors.linkedUserUid && <p className="text-sm text-destructive mt-1">{errors.linkedUserUid.message}</p>}
-                </div>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="name">
-                {t.name}
-              </Label>
-              <Input id="name" {...register('name')} readOnly className="bg-muted/50 cursor-not-allowed" />
-            </div>
-             <div className="space-y-2">
-              <Label htmlFor="email">
-                Email Siswa
-              </Label>
-              <Input id="email" type="email" {...register('email')} readOnly className="bg-muted/50 cursor-not-allowed"/>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="class">
-                {t.class}
-              </Label>
-              <Input id="class" {...register('class')} />
-              {errors.class && <p className="text-sm text-destructive mt-1">{errors.class.message}</p>}
-            </div>
-            <div className="space-y-2">
-                <Label htmlFor="nisn">
-                    NISN
-                </Label>
-                <div className="flex gap-2">
-                    <Input id="nisn" {...register('nisn')} placeholder="Nomor Induk Siswa Nasional" />
-                    <Button type="button" variant="secondary" onClick={handleCheckNisn} disabled={isNisnChecking || !nisnValue}>
-                        {isNisnChecking ? <Loader2 className="h-4 w-4 animate-spin" /> : "Cek NISN"}
-                    </Button>
-                </div>
-                {errors.nisn && <p className="text-sm text-destructive mt-1">{errors.nisn.message}</p>}
-                {nisnMessage && (
-                     <p className={cn("text-sm", nisnStatus === 'valid' ? 'text-green-600' : 'text-destructive')}>
-                        {nisnMessage}
-                     </p>
+        </DialogHeader>
+        <ScrollArea className="flex-grow pr-6 -mr-6">
+            <form id="student-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4">
+                {!isEditMode && (
+                    <div className="space-y-2">
+                        <Label htmlFor="linkedUserUid">Akun Siswa</Label>
+                        <Controller
+                            control={control}
+                            name="linkedUserUid"
+                            render={({ field }) => (
+                            <StudentUserSearchDialog
+                                users={studentUsers}
+                                selectedUserId={field.value}
+                                onUserSelect={(userId) => field.onChange(userId)}
+                                placeholder="Cari & pilih akun siswa..."
+                                selectedUserName={selectedUserName}
+                            />
+                            )}
+                        />
+                        {errors.linkedUserUid && <p className="text-sm text-destructive mt-1">{errors.linkedUserUid.message}</p>}
+                    </div>
                 )}
-            </div>
-           
-          </div>
-          <DialogFooter>
+
+                <div className="space-y-2">
+                <Label htmlFor="name">
+                    {t.name}
+                </Label>
+                <Input id="name" {...register('name')} readOnly className="bg-muted/50 cursor-not-allowed" />
+                </div>
+                <div className="space-y-2">
+                <Label htmlFor="email">
+                    Email Siswa
+                </Label>
+                <Input id="email" type="email" {...register('email')} readOnly className="bg-muted/50 cursor-not-allowed"/>
+                </div>
+                <div className="space-y-2">
+                <Label htmlFor="class">
+                    {t.class}
+                </Label>
+                <Input id="class" {...register('class')} />
+                {errors.class && <p className="text-sm text-destructive mt-1">{errors.class.message}</p>}
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="nisn">
+                        NISN
+                    </Label>
+                    <div className="flex gap-2">
+                        <Input id="nisn" {...register('nisn')} placeholder="Nomor Induk Siswa Nasional" />
+                        <Button type="button" variant="secondary" onClick={handleCheckNisn} disabled={isNisnChecking || !nisnValue}>
+                            {isNisnChecking ? <Loader2 className="h-4 w-4 animate-spin" /> : "Cek NISN"}
+                        </Button>
+                    </div>
+                    {errors.nisn && <p className="text-sm text-destructive mt-1">{errors.nisn.message}</p>}
+                    {nisnMessage && (
+                        <p className={cn("text-sm", nisnStatus === 'valid' ? 'text-green-600' : 'text-destructive')}>
+                            {nisnMessage}
+                        </p>
+                    )}
+                </div>
+            </form>
+        </ScrollArea>
+        <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>{t.cancel}</Button>
-            <Button type="submit" disabled={!canSubmit}>{t.save}</Button>
-          </DialogFooter>
-        </form>
+            <Button type="submit" form="student-form" disabled={!canSubmit}>{t.save}</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
