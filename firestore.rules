@@ -1,59 +1,81 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // Helper function to check user role from the 'users' collection
+
+    // Helper function to check user role from their profile in the 'users' collection
     function getUserRole(userId) {
       return get(/databases/$(database)/documents/users/$(userId)).data.role;
     }
     
-    // Helper function to check if the requesting user is an admin or a teacher
-    function isAdminOrGuru() {
-      return getUserRole(request.auth.uid) in ['admin', 'guru'];
+    // Helper function to get a user's profile
+    function getUserProfile(userId) {
+        return get(/databases/$(database)/documents/users/$(userId)).data;
+    }
+    
+    // Helper function to get a student's profile by their ID
+    function getStudentProfile(studentId) {
+      return get(/databases/$(database)/documents/students/$(studentId)).data;
     }
 
     // Rules for the 'users' collection
     match /users/{userId} {
-      // Admins and Gurus can read any user profile
-      allow read: if isAdminOrGuru();
-      // Any authenticated user can read their own profile
-      allow read: if request.auth.uid == userId;
+      // Allow read access for the owner of the document, or for admins/teachers
+      allow read: if request.auth != null &&
+                   (request.auth.uid == userId || getUserRole(request.auth.uid) in ['admin', 'guru']);
+
+      // Allow a user to create their own profile upon signup
+      allow create: if request.auth != null && request.auth.uid == userId;
       
-      // Only admins can write/update user roles
-      allow write: if isAdminOrGuru();
-      // Users can update their own profile (e.g., name, linking NISN)
-      allow update: if request.auth.uid == userId;
-      // Allow new users to be created during signup
-      allow create: if request.auth.uid != null;
+      // Allow profile updates only by the owner or an admin
+      allow update: if request.auth != null &&
+                     (request.auth.uid == userId || getUserRole(request.auth.uid) == 'admin');
+
+      // Only admins can delete user profiles
+      allow delete: if request.auth != null && getUserRole(request.auth.uid) == 'admin';
     }
 
     // Rules for the 'students' collection
     match /students/{studentId} {
-      // Admins and Gurus can read/write all student data
-      allow read, write: if isAdminOrGuru();
+      // Allow read access for admins, teachers, the linked parent, or the linked student
+      allow read: if request.auth != null &&
+                   (getUserRole(request.auth.uid) in ['admin', 'guru'] ||
+                    (resource.data.parentId != null && resource.data.parentId == request.auth.uid) ||
+                    (resource.data.linkedUserUid != null && resource.data.linkedUserUid == request.auth.uid));
       
-      // A student can read their own data if their email matches
-      allow read: if request.auth.token.email == resource.data.email && getUserRole(request.auth.uid) == 'siswa';
-      
-      // A parent can read their child's data
-      allow read: if resource.data.parentId == request.auth.uid && getUserRole(request.auth.uid) == 'orangtua';
+      // Allow create, update, delete only for admins and teachers
+      allow create, update, delete: if request.auth != null && getUserRole(request.auth.uid) in ['admin', 'guru'];
     }
-    
-    // Rules for habit entries
+
+    // Rules for the 'habit_entries' collection
     match /habit_entries/{entryId} {
-        // Admins and Gurus can manage all entries
-        allow read, write: if isAdminOrGuru();
-        
-        // Students can create their own entries
-        allow create: if request.auth.uid == request.resource.data.recordedBy && getUserRole(request.auth.uid) == 'siswa';
-        
-        // Parents can read entries for their children
-        // This requires a lookup on the student document
-        allow read: if getUserRole(request.auth.uid) == 'orangtua' && get(/databases/$(database)/documents/students/$(request.resource.data.studentId)).data.parentId == request.auth.uid;
-        
-        // Students can read their own entries
-        allow read: if getUserRole(request.auth.uid) == 'siswa' && get(/databases/$(database)/documents/students/$(request.resource.data.studentId)).data.linkedUserUid == request.auth.uid;
+      // Allow read access for admins, teachers, or the parent/student linked to the entry
+      allow read: if request.auth != null &&
+                   (getUserRole(request.auth.uid) in ['admin', 'guru'] ||
+                    (getStudentProfile(resource.data.studentId).parentId == request.auth.uid) ||
+                    (getStudentProfile(resource.data.studentId).linkedUserUid == request.auth.uid));
+
+      // Allow create access if the user is an admin, teacher, or the linked student.
+      // Parents have special conditions.
+      allow create: if request.auth != null &&
+                     (
+                       // Admins and Teachers can write anything
+                       getUserRole(request.auth.uid) in ['admin', 'guru'] ||
+                       
+                       // Students can only write for themselves
+                       (getUserRole(request.auth.uid) == 'siswa' && getStudentProfile(request.resource.data.studentId).linkedUserUid == request.auth.uid) ||
+                       
+                       // Parents can only write for their own children and only for specific habits
+                       (
+                         getUserRole(request.auth.uid) == 'orangtua' &&
+                         getStudentProfile(request.resource.data.studentId).parentId == request.auth.uid &&
+                         request.resource.data.habitName in ['Taat Beribadah', 'Rajin Olahraga', 'Makan Sehat & Bergizi', 'Tidur Cepat']
+                       )
+                     );
+
+      // No one should be able to update or delete individual entries to preserve data integrity.
+      allow update, delete: if false;
     }
   }
 }
