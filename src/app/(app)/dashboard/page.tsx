@@ -15,16 +15,19 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!loading) {
       if (!userProfile) {
+        // If not logged in at all, go to login page.
         router.replace('/login');
         return;
       }
        
-      // Redirect unverified students
+      // This is the CRITICAL check. If the user is a student and does NOT have an NISN,
+      // they MUST be redirected to the verification page. This logic acts as a guard.
       if (userProfile.role === 'siswa' && !userProfile.nisn) {
         router.replace('/verify-nisn');
         return;
       }
 
+      // Redirects for other roles
       if (userProfile.role === 'admin') {
         router.replace('/admin/dashboard');
       } else if (userProfile.role === 'orangtua') {
@@ -33,6 +36,9 @@ export default function DashboardPage() {
     }
   }, [loading, userProfile, router]);
 
+  // This is the guard that prevents content from flashing for unverified students.
+  // While loading, or if the user is a student without an NISN, show a spinner.
+  // The useEffect above will handle the actual redirection.
   if (loading || !userProfile || (userProfile.role === 'siswa' && !userProfile.nisn)) {
     return (
       <div className="flex h-full w-full items-center justify-center">

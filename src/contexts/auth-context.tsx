@@ -1,12 +1,12 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, type User } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import type { UserProfile } from '@/lib/types';
 import { useRouter, usePathname } from 'next/navigation';
-import { verifyNisnFlow } from '@/ai/flows/verify-nisn-flow';
+
 
 interface AuthContextType {
   user: User | null;
@@ -16,7 +16,7 @@ interface AuthContextType {
   signup: (email: string, pass: string) => Promise<any>;
   validateAndCreateUserProfile: (name: string, email: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
-  verifyAndLinkNisn: (nisn: string) => Promise<{ success: boolean; message: string }>;
+  refreshUserProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,33 +28,54 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const pathname = usePathname();
 
+  const fetchUserProfile = useCallback(async (user: User | null) => {
+    if (!user) {
+      setUser(null);
+      setUserProfile(null);
+      setLoading(false);
+      return null;
+    }
+
+    setUser(user);
+    const userDocRef = doc(db, 'users', user.uid);
+    const userDoc = await getDoc(userDocRef);
+
+    if (userDoc.exists()) {
+      const profile = userDoc.data() as UserProfile;
+      setUserProfile(profile);
+      return profile;
+    } else {
+      setUserProfile(null);
+      return null;
+    }
+  }, []);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setLoading(true);
-      if (user) {
-        setUser(user);
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDoc = await getDoc(userDocRef);
+      const profile = await fetchUserProfile(user);
+      
+      const isAuthPage = pathname === '/login' || pathname === '/signup';
+      const isOnVerifyPage = pathname === '/verify-nisn';
 
-        if (userDoc.exists()) {
-          const profile = userDoc.data() as UserProfile;
-          setUserProfile(profile);
-          // Core redirection logic
-          if (pathname !== '/verify-nisn' && profile.role === 'siswa' && !profile.nisn) {
+      if (profile) {
+        // User is logged in and has a profile
+        if (profile.role === 'siswa' && !profile.nisn) {
+          // If unverified student, force to verify page
+          if (!isOnVerifyPage) {
             router.replace('/verify-nisn');
-          } else if (pathname === '/verify-nisn' && profile.nisn) {
-            router.replace('/dashboard');
           }
-
         } else {
-          // This case is for new signups before a profile is created.
-          // Let them proceed to login/signup.
-          setUserProfile(null);
+           // Any other verified user (or admin/teacher etc)
+           // If they are on auth pages or verify page, redirect them to dashboard
+           if(isAuthPage || isOnVerifyPage) {
+              router.replace('/dashboard');
+           }
         }
-      } else {
-        setUser(null);
-        setUserProfile(null);
-        const isAppPage = !['/login', '/signup', '/', '/verify-nisn'].includes(pathname);
+      } else if (!user) {
+        // User is not logged in
+        // If they are on a protected app page, redirect to login
+        const isAppPage = !isAuthPage && !isOnVerifyPage && pathname !== '/';
          if (isAppPage) {
             router.replace('/login');
          }
@@ -63,7 +84,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => unsubscribe();
-  }, [pathname, router]);
+  }, [pathname, router, fetchUserProfile]);
   
   const login = async (email: string, pass: string) => {
     try {
@@ -99,35 +120,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
   };
 
-  const verifyAndLinkNisn = async (nisn: string): Promise<{ success: boolean; message: string }> => {
-    if (!user) {
-        throw new Error("Pengguna tidak terautentikasi.");
-    }
-
-    try {
-        const result = await verifyNisnFlow({ uid: user.uid, nisn });
-
-        if (result.success) {
-            // Manually update the userProfile in the context for immediate UI feedback
-            setUserProfile(prev => prev ? { ...prev, nisn } : null);
-        }
-
-        return result;
-
-    } catch (error: any) {
-        console.error('Error calling verifyNisnFlow:', error);
-        return { success: false, message: error.message || 'Terjadi kesalahan tidak terduga.' };
-    }
-  };
-
   const logout = async () => {
     await signOut(auth);
     setUser(null);
     setUserProfile(null);
     router.push('/login');
   };
+  
+  const refreshUserProfile = useCallback(async () => {
+    if (user) {
+        setLoading(true);
+        await fetchUserProfile(user);
+        setLoading(false);
+    }
+  }, [user, fetchUserProfile]);
 
-  const value = { user, userProfile, loading, login, signup, validateAndCreateUserProfile, logout, verifyAndLinkNisn };
+  const value = { user, userProfile, loading, login, signup, validateAndCreateUserProfile, logout, refreshUserProfile };
 
   return (
     <AuthContext.Provider value={value}>

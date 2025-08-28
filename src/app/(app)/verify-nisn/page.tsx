@@ -20,6 +20,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import { Logo } from '@/components/icons/logo';
 import Link from 'next/link';
+import { verifyNisn } from '@/app/actions';
 
 const formSchema = z.object({
   nisn: z.string().min(1, { message: 'NISN tidak boleh kosong.' }),
@@ -28,7 +29,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export default function VerifyNisnPage() {
-  const { verifyAndLinkNisn, userProfile, loading, user } = useAuth();
+  const { userProfile, loading, refreshUserProfile } = useAuth();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -36,10 +37,10 @@ export default function VerifyNisnPage() {
   useEffect(() => {
     // This effect ensures that only unverified students can access this page.
     if (!loading) {
-      if (!user) {
+      if (!userProfile) {
         // Not logged in, send to login
         router.replace('/login');
-      } else if (userProfile?.role !== 'siswa') {
+      } else if (userProfile.role !== 'siswa') {
         // Not a student, send to their default dashboard
         router.replace('/dashboard');
       } else if (userProfile.nisn) {
@@ -48,7 +49,7 @@ export default function VerifyNisnPage() {
       }
       // If none of the above, they are an unverified student and should stay here.
     }
-  }, [loading, user, userProfile, router]);
+  }, [loading, userProfile, router]);
 
 
   const form = useForm<FormValues>({
@@ -62,10 +63,17 @@ export default function VerifyNisnPage() {
     setError(null);
     setIsLoading(true);
     try {
-      const result = await verifyAndLinkNisn(data.nisn);
+      if (!userProfile?.uid) throw new Error("User profile not found.");
+
+      const result = await verifyNisn(data.nisn);
+      
       if (!result.success) {
         throw new Error(result.message);
       }
+      
+      // Manually refresh the user profile to get the new NISN
+      await refreshUserProfile();
+      
       // On success, the auth context's useEffect will automatically redirect
       // to the dashboard because userProfile.nisn will now exist.
       // We can also add an explicit push here for faster navigation.
