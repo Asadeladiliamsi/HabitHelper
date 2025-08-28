@@ -15,16 +15,11 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Student, UserProfile } from '@/lib/types';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { StudentUserSearchDialog } from './student-user-search-dialog';
+
 
 interface StudentDialogProps {
   isOpen: boolean;
@@ -48,6 +43,7 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student, studentUs
   const { language } = useLanguage();
   const t = translations[language]?.studentDialog || translations.en.studentDialog;
   const isEditMode = !!student;
+  const [selectedUserName, setSelectedUserName] = useState('');
 
   const {
     register,
@@ -77,27 +73,28 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student, studentUs
         reset({ 
             name: student.name, 
             class: student.class, 
-            nisn: student.nisn, 
+            nisn: student.nisn || '', 
             email: student.email,
             linkedUserUid: student.linkedUserUid || ''
         });
+        setSelectedUserName(student.name);
       } else {
         // Add mode
         reset({ name: '', class: '', nisn: '', email: '', linkedUserUid: '' });
+        setSelectedUserName('');
       }
     }
   }, [isOpen, student, reset]);
 
 
   useEffect(() => {
-    if (!isEditMode && selectedUserUid) {
-        const selectedUser = studentUsers.find(u => u.uid === selectedUserUid);
-        if (selectedUser) {
-            setValue('name', selectedUser.name);
-            setValue('email', selectedUser.email || '');
-        }
+    const selectedUser = studentUsers.find(u => u.uid === selectedUserUid);
+    if (selectedUser) {
+        setValue('name', selectedUser.name);
+        setValue('email', selectedUser.email || '');
+        setSelectedUserName(selectedUser.name);
     }
-  }, [selectedUserUid, isEditMode, studentUsers, setValue]);
+  }, [selectedUserUid, studentUsers, setValue]);
 
 
   const onSubmit = (data: FormValues) => {
@@ -126,22 +123,17 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student, studentUs
             {!isEditMode && (
                  <div className="space-y-2">
                     <Label htmlFor="linkedUserUid">Akun Siswa</Label>
-                     <Controller
+                    <Controller
                         control={control}
                         name="linkedUserUid"
                         render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <SelectTrigger id="linkedUserUid">
-                            <SelectValue placeholder="Pilih akun siswa..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                            {studentUsers.map((user) => (
-                                <SelectItem key={user.uid} value={user.uid}>
-                                    {user.name} ({user.email})
-                                </SelectItem>
-                            ))}
-                            </SelectContent>
-                        </Select>
+                           <StudentUserSearchDialog
+                             users={studentUsers}
+                             selectedUserId={field.value}
+                             onUserSelect={(userId) => field.onChange(userId)}
+                             placeholder="Cari & pilih akun siswa..."
+                             selectedUserName={selectedUserName}
+                           />
                         )}
                     />
                     {errors.linkedUserUid && <p className="text-sm text-destructive mt-1">{errors.linkedUserUid.message}</p>}
@@ -152,13 +144,13 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student, studentUs
               <Label htmlFor="name">
                 {t.name}
               </Label>
-              <Input id="name" {...register('name')} readOnly={!isEditMode} className={isEditMode ? "" : "bg-muted/50 cursor-not-allowed"} />
+              <Input id="name" {...register('name')} readOnly className="bg-muted/50 cursor-not-allowed" />
             </div>
              <div className="space-y-2">
               <Label htmlFor="email">
                 Email Siswa
               </Label>
-              <Input id="email" type="email" {...register('email')} readOnly={!isEditMode} className={isEditMode ? "" : "bg-muted/50 cursor-not-allowed"}/>
+              <Input id="email" type="email" {...register('email')} readOnly className="bg-muted/50 cursor-not-allowed"/>
             </div>
             <div className="space-y-2">
               <Label htmlFor="class">

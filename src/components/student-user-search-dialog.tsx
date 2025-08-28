@@ -19,34 +19,33 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Search } from 'lucide-react';
-import type { Student } from '@/lib/types';
+import type { UserProfile } from '@/lib/types';
 import { ScrollArea } from './ui/scroll-area';
 
-interface StudentSearchDialogProps {
-  students: Student[];
-  selectedStudentId: string;
-  onStudentSelect: (studentId: string) => void;
+interface StudentUserSearchDialogProps {
+  users: UserProfile[];
+  selectedUserId: string;
+  onUserSelect: (userId: string) => void;
   placeholder: string;
-  selectedStudentName: string;
+  selectedUserName: string;
 }
 
-export function StudentSearchDialog({
-  students,
-  selectedStudentId,
-  onStudentSelect,
+export function StudentUserSearchDialog({
+  users,
+  onUserSelect,
   placeholder,
-  selectedStudentName,
-}: StudentSearchDialogProps) {
+  selectedUserName,
+}: StudentUserSearchDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const filteredStudents = students.filter(student =>
-    student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (student.nisn && student.nisn.includes(searchTerm))
+  const filteredUsers = users.filter(user =>
+    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const handleSelect = (studentId: string) => {
-    onStudentSelect(studentId);
+  const handleSelect = (userId: string) => {
+    onUserSelect(userId);
     setIsOpen(false);
   };
 
@@ -54,20 +53,21 @@ export function StudentSearchDialog({
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button
+          type="button"
           variant="outline"
           className="w-full justify-start font-normal text-left"
         >
-          {selectedStudentName || placeholder}
+          {selectedUserName || placeholder}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[625px]">
         <DialogHeader>
-          <DialogTitle>Pilih Siswa</DialogTitle>
+          <DialogTitle>Pilih Akun Siswa</DialogTitle>
         </DialogHeader>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Cari berdasarkan nama atau NISN..."
+            placeholder="Cari berdasarkan nama atau email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -78,27 +78,25 @@ export function StudentSearchDialog({
             <TableHeader className="sticky top-0 bg-background">
               <TableRow>
                 <TableHead>Nama</TableHead>
-                <TableHead>NISN</TableHead>
-                <TableHead>Kelas</TableHead>
+                <TableHead>Email</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredStudents.length > 0 ? (
-                filteredStudents.map((student) => (
+              {filteredUsers.length > 0 ? (
+                filteredUsers.map((user) => (
                   <TableRow
-                    key={student.id}
-                    onClick={() => handleSelect(student.id)}
+                    key={user.uid}
+                    onClick={() => handleSelect(user.uid)}
                     className="cursor-pointer hover:bg-muted"
                   >
-                    <TableCell className="font-medium">{student.name}</TableCell>
-                    <TableCell>{student.nisn}</TableCell>
-                    <TableCell>{student.class}</TableCell>
+                    <TableCell className="font-medium">{user.name}</TableCell>
+                    <TableCell>{user.email}</TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={3} className="h-24 text-center">
-                    Tidak ada hasil.
+                  <TableCell colSpan={2} className="h-24 text-center">
+                    Tidak ada pengguna siswa yang belum tertaut.
                   </TableCell>
                 </TableRow>
               )}
