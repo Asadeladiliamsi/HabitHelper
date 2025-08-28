@@ -63,9 +63,9 @@ export default function VerifyNisnPage() {
     setError(null);
     setIsLoading(true);
     try {
-      if (!userProfile?.uid) throw new Error("User profile not found.");
+      if (!userProfile?.uid) throw new Error("Profil pengguna tidak ditemukan.");
 
-      const result = await verifyNisn(data.nisn);
+      const result = await verifyNisn({uid: userProfile.uid, nisn: data.nisn});
       
       if (!result.success) {
         throw new Error(result.message);
