@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -10,19 +11,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Lightbulb, AlertTriangle, Loader2 } from 'lucide-react';
-import { checkHabitDecline, getRecentHabitScores } from '@/app/actions';
+import { checkHabitDecline } from '@/app/actions';
 import { useStudent } from '@/contexts/student-context';
 import { HABIT_NAMES } from '@/lib/types';
 import type { HabitDeclineNotificationOutput } from '@/ai/flows/habit-decline-notification';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
 import { StudentSearchDialog } from './student-search-dialog';
-import { Badge } from './ui/badge';
+import { Input } from './ui/input';
 
 
 const formSchema = z.object({
   studentId: z.string().min(1, 'Siswa harus dipilih.'),
   habitName: z.string().min(1, 'Kebiasaan harus dipilih.'),
+  score1: z.coerce.number().min(1).max(4),
+  score2: z.coerce.number().min(1).max(4),
+  score3: z.coerce.number().min(1).max(4),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -32,7 +36,6 @@ export function NotificationsClient() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<HabitDeclineNotificationOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [fetchedScores, setFetchedScores] = useState<number[] | null>(null);
   const { language } = useLanguage();
   const t = translations[language]?.notificationsClient || translations.en.notificationsClient;
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
@@ -52,6 +55,9 @@ export function NotificationsClient() {
     defaultValues: {
       studentId: '',
       habitName: '',
+      score1: 4,
+      score2: 4,
+      score3: 4,
     },
   });
   
@@ -62,24 +68,13 @@ export function NotificationsClient() {
     setIsLoading(true);
     setResult(null);
     setError(null);
-    setFetchedScores(null);
-
-    // Step 1: Fetch recent scores
-    const scoreResponse = await getRecentHabitScores(data.studentId, data.habitName);
-
-    if (!scoreResponse.success || !scoreResponse.scores) {
-        setError(scoreResponse.error || 'Gagal mengambil data skor.');
-        setIsLoading(false);
-        return;
-    }
     
-    setFetchedScores(scoreResponse.scores);
+    const scores = [data.score1, data.score2, data.score3];
 
-    // Step 2: Run AI analysis with fetched scores
     const response = await checkHabitDecline({
       studentId: data.studentId,
       habitName: data.habitName,
-      habitScores: scoreResponse.scores,
+      habitScores: scores,
     });
 
     if (response.success && response.data) {
@@ -135,6 +130,27 @@ export function NotificationsClient() {
           </div>
         </div>
 
+        <div>
+            <Label>{t.last3Scores}</Label>
+            <div className="grid grid-cols-3 gap-2 mt-1">
+                <div>
+                     <Label htmlFor='score1' className='text-xs text-muted-foreground'>{t.day1}</Label>
+                     <Input id='score1' type='number' min={1} max={4} {...form.register('score1')} />
+                </div>
+                 <div>
+                     <Label htmlFor='score2' className='text-xs text-muted-foreground'>{t.day2}</Label>
+                     <Input id='score2' type='number' min={1} max={4} {...form.register('score2')} />
+                </div>
+                 <div>
+                     <Label htmlFor='score3' className='text-xs text-muted-foreground'>{t.day3}</Label>
+                     <Input id='score3' type='number' min={1} max={4} {...form.register('score3')} />
+                </div>
+            </div>
+             {form.formState.errors.score1 && <p className="text-sm text-destructive mt-1">{form.formState.errors.score1.message}</p>}
+             {form.formState.errors.score2 && <p className="text-sm text-destructive mt-1">{form.formState.errors.score2.message}</p>}
+             {form.formState.errors.score3 && <p className="text-sm text-destructive mt-1">{form.formState.errors.score3.message}</p>}
+        </div>
+
         <Button type="submit" disabled={isLoading} className="w-full">
           {isLoading ? (
             <>
@@ -145,15 +161,6 @@ export function NotificationsClient() {
           )}
         </Button>
       </form>
-
-       {fetchedScores && (
-         <div className="p-4 border rounded-md bg-muted/50">
-            <h4 className="font-semibold text-sm mb-2">Data Skor Otomatis</h4>
-            <p className="text-sm text-muted-foreground">
-              Sistem menemukan 3 skor terakhir untuk kebiasaan ini: <Badge variant="outline" className="mx-1">{fetchedScores[0]}</Badge> <Badge variant="outline" className="mx-1">{fetchedScores[1]}</Badge> <Badge variant="outline" className="mx-1">{fetchedScores[2]}</Badge>. Data ini digunakan untuk analisis AI.
-            </p>
-         </div>
-       )}
 
       {result && (
         <Card>

@@ -49,7 +49,7 @@ export default function NotificationsPage() {
               <CardHeader>
                 <CardTitle>{t.cardTitle}</CardTitle>
                 <CardDescription>
-                  Pilih siswa dan kebiasaan, sistem akan otomatis mengambil 3 skor terakhir untuk dianalisis.
+                  {t.cardDescription}
                 </CardDescription>
               </CardHeader>
               <CardContent>
