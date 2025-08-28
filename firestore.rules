@@ -1,25 +1,59 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Aturan untuk koleksi users
-    match /users/{userId} {
-      // Izinkan siapa saja untuk membuat dokumen pengguna baru saat mendaftar.
-      allow create;
-
-      // Izinkan pengguna untuk membaca dokumen mereka sendiri.
-      // Izinkan admin untuk membaca dokumen pengguna mana pun.
-      allow read: if request.auth.uid == userId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-
-      // Izinkan admin untuk menulis/memperbarui peran pengguna mana pun.
-      allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-
-      // Izinkan admin untuk mendaftar (list) semua pengguna.
-      allow list: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+  
+    // Helper function to check user role from the 'users' collection
+    function getUserRole(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.role;
+    }
+    
+    // Helper function to check if the requesting user is an admin or a teacher
+    function isAdminOrGuru() {
+      return getUserRole(request.auth.uid) in ['admin', 'guru'];
     }
 
-    // Izinkan pengguna yang terautentikasi (guru/admin) untuk membaca/menulis data siswa.
+    // Rules for the 'users' collection
+    match /users/{userId} {
+      // Admins and Gurus can read any user profile
+      allow read: if isAdminOrGuru();
+      // Any authenticated user can read their own profile
+      allow read: if request.auth.uid == userId;
+      
+      // Only admins can write/update user roles
+      allow write: if isAdminOrGuru();
+      // Users can update their own profile (e.g., name, linking NISN)
+      allow update: if request.auth.uid == userId;
+      // Allow new users to be created during signup
+      allow create: if request.auth.uid != null;
+    }
+
+    // Rules for the 'students' collection
     match /students/{studentId} {
-      allow read, write: if request.auth != null;
+      // Admins and Gurus can read/write all student data
+      allow read, write: if isAdminOrGuru();
+      
+      // A student can read their own data if their email matches
+      allow read: if request.auth.token.email == resource.data.email && getUserRole(request.auth.uid) == 'siswa';
+      
+      // A parent can read their child's data
+      allow read: if resource.data.parentId == request.auth.uid && getUserRole(request.auth.uid) == 'orangtua';
+    }
+    
+    // Rules for habit entries
+    match /habit_entries/{entryId} {
+        // Admins and Gurus can manage all entries
+        allow read, write: if isAdminOrGuru();
+        
+        // Students can create their own entries
+        allow create: if request.auth.uid == request.resource.data.recordedBy && getUserRole(request.auth.uid) == 'siswa';
+        
+        // Parents can read entries for their children
+        // This requires a lookup on the student document
+        allow read: if getUserRole(request.auth.uid) == 'orangtua' && get(/databases/$(database)/documents/students/$(request.resource.data.studentId)).data.parentId == request.auth.uid;
+        
+        // Students can read their own entries
+        allow read: if getUserRole(request.auth.uid) == 'siswa' && get(/databases/$(database)/documents/students/$(request.resource.data.studentId)).data.linkedUserUid == request.auth.uid;
     }
   }
 }
