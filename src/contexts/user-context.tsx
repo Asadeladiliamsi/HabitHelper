@@ -41,8 +41,8 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       return;
     }
 
-    // Only admins should be able to fetch the full user list.
-    if (userProfile.role !== 'admin') {
+    // Only admins and teachers should be able to fetch the full user list.
+    if (!['admin', 'guru'].includes(userProfile.role)) {
       setLoading(false);
       setUsers([]);
       return;
