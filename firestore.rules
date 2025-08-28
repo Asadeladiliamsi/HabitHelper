@@ -2,98 +2,11 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // Helper function to check if a user is signed in
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    // Helper function to get the user's role from their profile in the 'users' collection
-    function getUserRole(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data.role;
-    }
-    
-    // Helper function to check if a user is an admin
-    function isAdmin() {
-      return isSignedIn() && getUserRole(request.auth.uid) == 'admin';
-    }
-
-    // Helper function to check if a user is a teacher
-    function isGuru() {
-      return isSignedIn() && getUserRole(request.auth.uid) == 'guru';
-    }
-
-    // Helper function to get student data
-    function getStudent(studentId) {
-        return get(/databases/$(database)/documents/students/$(studentId)).data;
-    }
-    
-    // Helper function to check if the user is the parent of the student
-    function isParentOfStudent(studentId) {
-        return isSignedIn() && request.auth.uid == getStudent(studentId).parentId;
-    }
-    
-    // Helper function to check if the user is the linked student
-    function isStudentOwner(studentId) {
-        return isSignedIn() && request.auth.uid == getStudent(studentId).linkedUserUid;
-    }
-
-
-    // Rules for the 'users' collection
-    match /users/{userId} {
-      // Admins can do anything
-      allow read, write: if isAdmin();
-      // Users can read and update their own profile, but cannot change their role
-      allow read: if isSignedIn();
-      allow update: if isSignedIn() && request.auth.uid == userId && request.resource.data.role == resource.data.role;
-    }
-    
-    // Rules for the 'students' collection
-    match /students/{studentId} {
-      // Admins and Gurus have full access
-      allow read, create, delete: if isAdmin() || isGuru();
-      
-      // Allow update with specific conditions
-      allow update: if 
-        // Admins and Gurus can update anything
-        (isAdmin() || isGuru()) ||
-        // Parents or the student themselves can ONLY update the 'habits' array
-        ((isParentOfStudent(studentId) || isStudentOwner(studentId)) 
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['habits']));
-
-      // Parents can read their own child's data
-      allow read: if isParentOfStudent(studentId);
-      // Students can read their own data if their account is linked
-      allow read: if isStudentOwner(studentId);
-    }
-    
-    // Rules for the 'habit_entries' collection
-    match /habit_entries/{entryId} {
-      // Admins and Gurus can read any habit entry
-      allow read: if isAdmin() || isGuru();
-      
-      // Parents can read their own child's entries, Students can read their own entries
-      allow read: if isParentOfStudent(request.resource.data.studentId) || isStudentOwner(request.resource.data.studentId);
-      
-      // Rules for creating new habit entries
-      allow create: if 
-        (
-          // Request must be from a signed-in user
-          isSignedIn() && 
-          // The user recording the data must be themselves
-          request.resource.data.recordedBy == request.auth.uid &&
-          (
-            // OR rule: either a Guru/Admin, a Parent, or a Student
-            (isAdmin() || isGuru()) ||
-            // Parents can create entries for their children, but only for allowed habits
-            (isParentOfStudent(request.resource.data.studentId) && request.resource.data.habitName in ['Taat Beribadah', 'Rajin Olahraga', 'Makan Sehat & Bergizi', 'Tidur Cepat']) ||
-            // Students can create entries for themselves
-            (isStudentOwner(request.resource.data.studentId))
-          )
-        );
-        
-      // No one can update or delete raw habit entries to preserve data integrity
-      allow update, delete: if false;
+    // Aturan Terbuka untuk Pengembangan
+    // MENGIZINKAN SEMUA PENGGUNA YANG SUDAH LOGIN UNTUK MEMBACA DAN MENULIS SEMUA DATA.
+    // PERINGATAN: JANGAN GUNAKAN ATURAN INI DI LINGKUNGAN PRODUKSI.
+    match /{document=**} {
+      allow read, write: if request.auth != null;
     }
   }
 }
