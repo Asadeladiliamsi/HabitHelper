@@ -2,88 +2,40 @@
 'use server';
 
 /**
- * @fileOverview This file defines a Genkit flow for verifying a student's NISN and linking it to their user account.
+ * @fileOverview This file defines a Genkit flow for verifying a student's NISN for session login.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { getFirestore } from 'firebase-admin/firestore';
-import { initializeApp, getApps, App } from 'firebase-admin/app';
 
-const VerifyNisnInputSchema = z.object({
-  uid: z.string().describe('The user ID of the student attempting to verify.'),
-  nisn: z.string().describe("The student's national student identification number (NISN)."),
+const VerifyLoginNisnInputSchema = z.object({
+  enteredNisn: z.string().describe("The student's submitted national student identification number (NISN)."),
+  userNisn: z.string().describe("The correct NISN stored in the user's profile."),
 });
-export type VerifyNisnInput = z.infer<typeof VerifyNisnInputSchema>;
+export type VerifyLoginNisnInput = z.infer<typeof VerifyLoginNisnInputSchema>;
 
-const VerifyNisnOutputSchema = z.object({
-  success: z.boolean().describe('Whether the verification and linking were successful.'),
+const VerifyLoginNisnOutputSchema = z.object({
+  success: z.boolean().describe('Whether the verification was successful.'),
   message: z.string().describe('A message indicating the result of the operation.'),
 });
-export type VerifyNisnOutput = z.infer<typeof VerifyNisnOutputSchema>;
+export type VerifyLoginNisnOutput = z.infer<typeof VerifyLoginNisnOutputSchema>;
 
 
-// Initialize Firebase Admin SDK
-let adminApp: App;
-if (!getApps().length) {
-  adminApp = initializeApp();
-} else {
-  adminApp = getApps()[0];
-}
-const db = getFirestore(adminApp);
-
-
-export const verifyNisnFlow = ai.defineFlow(
+export const verifyLoginNisnFlow = ai.defineFlow(
   {
-    name: 'verifyNisnFlow',
-    inputSchema: VerifyNisnInputSchema,
-    outputSchema: VerifyNisnOutputSchema,
+    name: 'verifyLoginNisnFlow',
+    inputSchema: VerifyLoginNisnInputSchema,
+    outputSchema: VerifyLoginNisnOutputSchema,
   },
-  async ({ uid, nisn }) => {
-    try {
-      const studentsRef = db.collection('students');
-      const usersRef = db.collection('users');
+  async ({ enteredNisn, userNisn }) => {
+    if (!enteredNisn || !userNisn) {
+        return { success: false, message: 'Data tidak lengkap untuk verifikasi.' };
+    }
 
-      // 1. Check if a student with the given NISN exists
-      const studentQuery = await studentsRef.where('nisn', '==', nisn).limit(1).get();
-
-      if (studentQuery.empty) {
-        return { success: false, message: `NISN ${nisn} tidak ditemukan. Pastikan Anda memasukkan NISN yang benar atau hubungi guru Anda.` };
-      }
-      
-      const studentDoc = studentQuery.docs[0];
-      const studentData = studentDoc.data();
-
-      // 2. Check if the student data is already linked to a different user account
-      if (studentData.linkedUserUid && studentData.linkedUserUid !== uid) {
-          return { success: false, message: `NISN ${nisn} sudah ditautkan ke akun lain.` };
-      }
-
-      // 3. Check if any other user account already has this NISN
-      const userNisnQuery = await usersRef.where('nisn', '==', nisn).limit(1).get();
-      if (!userNisnQuery.empty) {
-          const userDoc = userNisnQuery.docs[0];
-          if (userDoc.id !== uid) {
-              return { success: false, message: `NISN ${nisn} sudah digunakan oleh pengguna lain.` };
-          }
-      }
-
-      // 4. If all checks pass, link the NISN to the user and the user to the student
-      const userDocRef = usersRef.doc(uid);
-      
-      // Get user email to store in student document for easier lookup
-      const userRecord = await userDocRef.get();
-      const userEmail = userRecord.data()?.email;
-
-      await userDocRef.update({ nisn: nisn });
-      await studentDoc.ref.update({ linkedUserUid: uid, email: userEmail });
-
-
-      return { success: true, message: 'Verifikasi NISN berhasil! Anda akan diarahkan ke dasbor.' };
-
-    } catch (error) {
-      console.error('Error in verifyNisnFlow:', error);
-      return { success: false, message: 'Terjadi kesalahan internal saat verifikasi. Silakan coba lagi nanti.' };
+    if (enteredNisn === userNisn) {
+      return { success: true, message: 'Verifikasi NISN berhasil!' };
+    } else {
+      return { success: false, message: 'NISN yang Anda masukkan salah. Silakan coba lagi.' };
     }
   }
 );

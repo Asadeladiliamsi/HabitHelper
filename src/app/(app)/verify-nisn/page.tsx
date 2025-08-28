@@ -20,7 +20,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import { Logo } from '@/components/icons/logo';
 import Link from 'next/link';
-import { verifyNisn } from '@/app/actions';
+import { verifyLoginNisn } from '@/app/actions';
 
 const formSchema = z.object({
   nisn: z.string().min(1, { message: 'NISN tidak boleh kosong.' }),
@@ -29,13 +29,13 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export default function VerifyNisnPage() {
-  const { userProfile, loading, refreshUserProfile } = useAuth();
+  const { userProfile, loading, setNisnVerified } = useAuth();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    // This effect ensures that only unverified students can access this page.
+    // This effect ensures that only students who need verification can access this page.
     if (!loading) {
       if (!userProfile) {
         // Not logged in, send to login
@@ -43,11 +43,8 @@ export default function VerifyNisnPage() {
       } else if (userProfile.role !== 'siswa') {
         // Not a student, send to their default dashboard
         router.replace('/dashboard');
-      } else if (userProfile.nisn) {
-        // Student is already verified, send to dashboard
-        router.replace('/dashboard');
       }
-      // If none of the above, they are an unverified student and should stay here.
+      // If the user is a student, they should be here until they verify.
     }
   }, [loading, userProfile, router]);
 
@@ -63,20 +60,19 @@ export default function VerifyNisnPage() {
     setError(null);
     setIsLoading(true);
     try {
-      if (!userProfile?.uid) throw new Error("Profil pengguna tidak ditemukan.");
+      if (!userProfile?.nisn) throw new Error("Profil siswa tidak lengkap atau tidak memiliki NISN. Hubungi guru Anda.");
 
-      const result = await verifyNisn({uid: userProfile.uid, nisn: data.nisn});
+      const result = await verifyLoginNisn({
+          enteredNisn: data.nisn, 
+          userNisn: userProfile.nisn
+      });
       
       if (!result.success) {
         throw new Error(result.message);
       }
       
-      // Manually refresh the user profile to get the new NISN
-      await refreshUserProfile();
-      
-      // On success, the auth context's useEffect will automatically redirect
-      // to the dashboard because userProfile.nisn will now exist.
-      // We can also add an explicit push here for faster navigation.
+      // If successful, update the session state and redirect to dashboard
+      setNisnVerified(true);
       router.push('/dashboard');
 
     } catch (err: any) {
@@ -87,8 +83,7 @@ export default function VerifyNisnPage() {
   };
   
   // Show a loading spinner while the auth state is being determined.
-  // This prevents the form from flashing for users who should be redirected.
-  if (loading || !userProfile || userProfile.role !== 'siswa' || userProfile.nisn) {
+  if (loading || !userProfile || userProfile.role !== 'siswa') {
       return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -107,9 +102,9 @@ export default function VerifyNisnPage() {
         </div>
         <Card className="w-full max-w-sm">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Verifikasi Akun, {userProfile.name}</CardTitle>
+            <CardTitle className="text-2xl">Verifikasi Akses</CardTitle>
             <CardDescription>
-              Masukkan Nomor Induk Siswa Nasional (NISN) Anda untuk menghubungkan akun Anda.
+              Untuk keamanan, masukkan Nomor Induk Siswa Nasional (NISN) Anda untuk melanjutkan ke dasbor.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -125,7 +120,7 @@ export default function VerifyNisnPage() {
                 <Label htmlFor="nisn">NISN</Label>
                 <Input
                   id="nisn"
-                  type="text"
+                  type="password"
                   placeholder="Masukkan NISN Anda"
                   {...form.register('nisn')}
                 />
@@ -139,7 +134,7 @@ export default function VerifyNisnPage() {
                 {isLoading ? (
                   <Loader2 className="animate-spin" />
                 ) : (
-                  'Verifikasi & Lanjutkan'
+                  'Lanjutkan ke Dasbor'
                 )}
               </Button>
             </form>

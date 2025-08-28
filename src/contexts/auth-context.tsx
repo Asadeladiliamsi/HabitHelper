@@ -2,21 +2,22 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, type User } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import type { UserProfile } from '@/lib/types';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 
 interface AuthContextType {
   user: User | null;
   userProfile: UserProfile | null;
   loading: boolean;
+  isNisnVerified: boolean; // New state for session verification
+  setNisnVerified: (isVerified: boolean) => void; // New setter
   login: (email: string, pass: string) => Promise<any>;
   signup: (email: string, pass: string) => Promise<any>;
   validateAndCreateUserProfile: (name: string, email: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
-  refreshUserProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,15 +26,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isNisnVerified, setNisnVerified] = useState(false); // Default to false
   const router = useRouter();
-  const pathname = usePathname();
 
   const fetchUserProfile = useCallback(async (user: User | null) => {
     if (!user) {
       setUser(null);
       setUserProfile(null);
       setLoading(false);
-      return null;
+      return;
     }
 
     setUser(user);
@@ -41,50 +42,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const userDoc = await getDoc(userDocRef);
 
     if (userDoc.exists()) {
-      const profile = userDoc.data() as UserProfile;
-      setUserProfile(profile);
-      return profile;
+      setUserProfile(userDoc.data() as UserProfile);
     } else {
       setUserProfile(null);
-      return null;
     }
   }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setLoading(true);
-      const profile = await fetchUserProfile(user);
-      
-      const isAuthPage = pathname === '/login' || pathname === '/signup';
-      const isOnVerifyPage = pathname === '/verify-nisn';
-
-      if (profile) {
-        // User is logged in and has a profile
-        if (profile.role === 'siswa' && !profile.nisn) {
-          // If unverified student, force to verify page
-          if (!isOnVerifyPage) {
-            router.replace('/verify-nisn');
-          }
-        } else {
-           // Any other verified user (or admin/teacher etc)
-           // If they are on auth pages or verify page, redirect them to dashboard
-           if(isAuthPage || isOnVerifyPage) {
-              router.replace('/dashboard');
-           }
-        }
-      } else if (!user) {
-        // User is not logged in
-        // If they are on a protected app page, redirect to login
-        const isAppPage = !isAuthPage && !isOnVerifyPage && pathname !== '/';
-         if (isAppPage) {
-            router.replace('/login');
-         }
-      }
+      setNisnVerified(false); // Reset verification state on any auth change
+      await fetchUserProfile(user);
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [pathname, router, fetchUserProfile]);
+  }, [fetchUserProfile]);
   
   const login = async (email: string, pass: string) => {
     try {
@@ -111,7 +84,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         email: email,
         name: name,
         role: 'siswa',
-        // NISN is not present on creation
+        // NISN is not present on creation, must be added by teacher/admin
       };
 
      await setDoc(userDocRef, {
@@ -124,18 +97,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await signOut(auth);
     setUser(null);
     setUserProfile(null);
+    setNisnVerified(false);
     router.push('/login');
   };
-  
-  const refreshUserProfile = useCallback(async () => {
-    if (user) {
-        setLoading(true);
-        await fetchUserProfile(user);
-        setLoading(false);
-    }
-  }, [user, fetchUserProfile]);
 
-  const value = { user, userProfile, loading, login, signup, validateAndCreateUserProfile, logout, refreshUserProfile };
+  const value = { 
+    user, 
+    userProfile, 
+    loading, 
+    login, 
+    signup, 
+    validateAndCreateUserProfile, 
+    logout,
+    isNisnVerified,
+    setNisnVerified
+  };
 
   return (
     <AuthContext.Provider value={value}>

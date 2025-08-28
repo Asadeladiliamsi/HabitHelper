@@ -5,7 +5,7 @@ import {
   habitDeclineNotification,
   type HabitDeclineNotificationInput,
 } from '@/ai/flows/habit-decline-notification';
-import { verifyNisnFlow, type VerifyNisnInput } from '@/ai/flows/verify-nisn-flow';
+import { verifyLoginNisnFlow, type VerifyLoginNisnInput } from '@/ai/flows/verify-nisn-flow';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
 
@@ -44,13 +44,12 @@ export async function getRecentHabitScores(studentId: string, habitName: string)
     }
 }
 
-
-export async function verifyNisn(input: VerifyNisnInput): Promise<{ success: boolean; message: string }> {
+export async function verifyLoginNisn(input: VerifyLoginNisnInput): Promise<{ success: boolean; message: string }> {
     try {
-        const result = await verifyNisnFlow(input);
+        const result = await verifyLoginNisnFlow(input);
         return result;
     } catch (error: any) {
-        console.error('Error in verifyNisn action:', error);
+        console.error('Error in verifyLoginNisn action:', error);
         return { success: false, message: error.message || 'An unexpected error occurred.' };
     }
 }
