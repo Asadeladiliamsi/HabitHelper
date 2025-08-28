@@ -2,10 +2,12 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, type User } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import type { UserProfile } from '@/lib/types';
 import { useRouter } from 'next/navigation';
+import { verifyNisnFlow } from '@/app/actions';
+
 
 interface AuthContextType {
   user: User | null;
@@ -82,32 +84,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const verifyAndLinkNisn = async (uid: string, nisn: string) => {
-    // 1. Check if a student with this NISN exists in the 'students' collection
-    const studentsQuery = query(collection(db, 'students'), where('nisn', '==', nisn));
-    const studentSnapshot = await getDocs(studentsQuery);
-
-    if (studentSnapshot.empty) {
-      throw new Error('NISN tidak ditemukan. Pastikan NISN sudah benar dan terdaftar oleh guru Anda.');
-    }
-
-    // 2. Check if this NISN is already linked to another user account
-    const usersQuery = query(collection(db, 'users'), where('nisn', '==', nisn));
-    const userSnapshot = await getDocs(usersQuery);
-
-    if (!userSnapshot.empty) {
-      // Check if it's the same user trying to re-verify, which is okay.
-      const isSameUser = userSnapshot.docs.some(doc => doc.id === uid);
-      if (!isSameUser) {
-        throw new Error('NISN ini sudah ditautkan ke akun lain.');
+    try {
+      const result = await verifyNisnFlow({ uid, nisn });
+      if (result.success) {
+        // Update local userProfile state
+        setUserProfile(prevProfile => prevProfile ? { ...prevProfile, nisn } : null);
+      } else {
+        throw new Error(result.error);
       }
+    } catch (err: any) {
+       console.error("Verification flow failed:", err);
+       throw new Error(err.message || 'Gagal memverifikasi NISN.');
     }
-    
-    // 3. Link the NISN to the user's profile
-    const userDocRef = doc(db, 'users', uid);
-    await updateDoc(userDocRef, { nisn: nisn });
-    
-    // Update local userProfile state
-    setUserProfile(prevProfile => prevProfile ? { ...prevProfile, nisn } : null);
   };
 
 
