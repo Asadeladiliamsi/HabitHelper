@@ -32,10 +32,11 @@ import { UserEditDialog } from './user-edit-dialog';
 import { UserDeleteDialog } from './user-delete-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { ManageStudentsClient } from './manage-students-client';
+import { useStudent } from '@/contexts/student-context';
 
 export function AdminDashboardClient() {
-  const { users, loading, updateUserRole, updateUserName, deleteUser } =
-    useUser();
+  const { users, loading: usersLoading, updateUserRole, updateUserName, deleteUser } = useUser();
+  const { students, loading: studentsLoading } = useStudent();
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [deletingUser, setDeletingUser] = useState<UserProfile | null>(null);
 
@@ -68,7 +69,7 @@ export function AdminDashboardClient() {
     }
   };
 
-  if (loading) {
+  if (usersLoading || studentsLoading) {
     return (
       <div className="flex h-96 items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -77,6 +78,9 @@ export function AdminDashboardClient() {
   }
 
   const parentUsers = users.filter(u => u.role === 'orangtua');
+  const linkedUserUids = new Set(students.map(s => s.linkedUserUid).filter(Boolean));
+  const unlinkedStudentUsers = users.filter(user => user.role === 'siswa' && !linkedUserUids.has(user.uid));
+
 
   return (
     <>
@@ -196,9 +200,7 @@ export function AdminDashboardClient() {
                 </Card>
             </TabsContent>
              <TabsContent value="manage-students" className="mt-6">
-                <UserProvider>
-                    <ManageStudentsClient parentUsers={parentUsers} />
-                </UserProvider>
+                <ManageStudentsClient parentUsers={parentUsers} studentUsers={unlinkedStudentUsers} />
             </TabsContent>
         </Tabs>
       </div>

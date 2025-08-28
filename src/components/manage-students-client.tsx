@@ -17,15 +17,14 @@ import { translations } from '@/lib/translations';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { LinkParentDialog } from './link-parent-dialog';
-import { useUser } from '@/contexts/user-context';
 
 interface ManageStudentsClientProps {
   parentUsers: UserProfile[];
+  studentUsers: UserProfile[];
 }
 
-export function ManageStudentsClient({ parentUsers }: ManageStudentsClientProps) {
+export function ManageStudentsClient({ parentUsers, studentUsers }: ManageStudentsClientProps) {
   const { students, addStudent, updateStudent, deleteStudent, linkParentToStudent } = useStudent();
-  const { users } = useUser(); // Get all users
   const [dialogOpen, setDialogOpen] = useState(false);
   const [linkParentDialogOpen, setLinkParentDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -33,10 +32,6 @@ export function ManageStudentsClient({ parentUsers }: ManageStudentsClientProps)
   const { language } = useLanguage();
   const { toast } = useToast();
   const t = translations[language]?.manageStudentsPage || translations.en.manageStudentsPage;
-
-  // Filter users with 'siswa' role who are not yet linked to a student profile
-  const linkedUserUids = new Set(students.map(s => s.linkedUserUid).filter(Boolean));
-  const unlinkedStudentUsers = users.filter(user => user.role === 'siswa' && !linkedUserUids.has(user.uid));
 
   const handleAddStudent = () => {
     setSelectedStudent(null);
@@ -107,7 +102,7 @@ export function ManageStudentsClient({ parentUsers }: ManageStudentsClientProps)
         onOpenChange={setDialogOpen} 
         onSave={handleDialogSave}
         student={selectedStudent} 
-        studentUsers={unlinkedStudentUsers}
+        studentUsers={studentUsers}
       />
       {selectedStudent && (
         <LinkParentDialog
