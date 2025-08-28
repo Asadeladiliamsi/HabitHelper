@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -43,10 +44,11 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 interface DataInputClientProps {
-  studentId?: string; // Optional: To lock the form to a specific student
+  studentId?: string;
+  allowedHabits?: string[];
 }
 
-export function DataInputClient({ studentId: lockedStudentId }: DataInputClientProps) {
+export function DataInputClient({ studentId: lockedStudentId, allowedHabits }: DataInputClientProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { students, addHabitEntry } = useStudent();
@@ -57,6 +59,9 @@ export function DataInputClient({ studentId: lockedStudentId }: DataInputClientP
   const locale = language === 'id' ? id : enUS;
 
   const isStudentRole = userProfile?.role === 'siswa';
+  const isParentRole = userProfile?.role === 'orangtua';
+  
+  const habitsToShow = allowedHabits ? HABIT_NAMES.filter(h => allowedHabits.includes(h)) : HABIT_NAMES;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -71,11 +76,15 @@ export function DataInputClient({ studentId: lockedStudentId }: DataInputClientP
   useEffect(() => {
     if (lockedStudentId) {
       form.setValue('studentId', lockedStudentId);
+      form.resetField('habitName');
+      form.resetField('score', {defaultValue: 4});
     }
   }, [lockedStudentId, form]);
 
   const onSubmit = async (data: FormValues) => {
     setIsLoading(true);
+    const selectedStudent = students.find(s => s.id === data.studentId);
+    const studentName = selectedStudent?.name || 'Siswa';
     const translatedHabitName = habitTranslationMapping[data.habitName] || data.habitName;
 
     try {
@@ -88,7 +97,7 @@ export function DataInputClient({ studentId: lockedStudentId }: DataInputClientP
 
       toast({
         title: t.toast.title,
-        description: `${t.toast.description1} ${translatedHabitName} ${t.toast.description2}`,
+        description: `${t.toast.description1} ${translatedHabitName} untuk ${studentName} berhasil disimpan.`,
       });
       
       form.reset({
@@ -127,12 +136,14 @@ export function DataInputClient({ studentId: lockedStudentId }: DataInputClientP
       <CardHeader>
         <CardTitle>{t.formTitle}</CardTitle>
         <CardDescription>
-          {isStudentRole ? "Pilih kebiasaan, masukkan skor dan tanggal progres harianmu." : t.formDescription}
+          {isStudentRole && "Pilih kebiasaan, masukkan skor dan tanggal progres harianmu."}
+          {isParentRole && "Pilih kebiasaan yang Anda pantau, masukkan skor dan tanggal."}
+          {!isStudentRole && !isParentRole && t.formDescription}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {!isStudentRole && (
+          {!isStudentRole && !isParentRole && (
             <div className="space-y-2">
               <Label htmlFor="studentId">{t.selectStudent}</Label>
               <Controller
@@ -168,7 +179,7 @@ export function DataInputClient({ studentId: lockedStudentId }: DataInputClientP
                       <SelectValue placeholder={t.selectHabitPlaceholder} />
                     </SelectTrigger>
                     <SelectContent>
-                      {HABIT_NAMES.map((name) => (
+                      {habitsToShow.map((name) => (
                         <SelectItem key={name} value={name}>
                           {habitTranslationMapping[name] || name}
                         </SelectItem>
