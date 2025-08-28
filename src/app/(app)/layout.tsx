@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect } from 'react';
@@ -36,8 +37,10 @@ import { UserProvider } from '@/contexts/user-context';
 
 export default function AppLayout({
   children,
+  params: _params,
 }: {
   children: React.ReactNode;
+  params: any;
 }) {
   const pathname = usePathname();
   const router = useRouter();
