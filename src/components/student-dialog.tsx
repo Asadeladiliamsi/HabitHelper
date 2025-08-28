@@ -168,67 +168,71 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student, studentUs
               {student ? t.editDescription : 'Pilih akun siswa yang sudah terdaftar, lalu lengkapi data NISN dan kelas.'}
             </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="flex-grow pr-6 -mr-6">
-            <form id="student-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4">
-                {!isEditMode && (
-                    <div className="space-y-2">
-                        <Label htmlFor="linkedUserUid">Akun Siswa</Label>
-                        <Controller
-                            control={control}
-                            name="linkedUserUid"
-                            render={({ field }) => (
-                            <StudentUserSearchDialog
-                                users={studentUsers}
-                                selectedUserId={field.value}
-                                onUserSelect={(userId) => field.onChange(userId)}
-                                placeholder="Cari & pilih akun siswa..."
-                                selectedUserName={selectedUserName}
+        
+        <form id="student-form" onSubmit={handleSubmit(onSubmit)} className="flex-1 overflow-hidden">
+            <ScrollArea className="h-full pr-6 -mr-6">
+                <div className="space-y-4 py-4">
+                    {!isEditMode && (
+                        <div className="space-y-2">
+                            <Label htmlFor="linkedUserUid">Akun Siswa</Label>
+                            <Controller
+                                control={control}
+                                name="linkedUserUid"
+                                render={({ field }) => (
+                                <StudentUserSearchDialog
+                                    users={studentUsers}
+                                    selectedUserId={field.value}
+                                    onUserSelect={(userId) => field.onChange(userId)}
+                                    placeholder="Cari & pilih akun siswa..."
+                                    selectedUserName={selectedUserName}
+                                />
+                                )}
                             />
-                            )}
-                        />
-                        {errors.linkedUserUid && <p className="text-sm text-destructive mt-1">{errors.linkedUserUid.message}</p>}
-                    </div>
-                )}
-
-                <div className="space-y-2">
-                    <Label htmlFor="name">
-                        {t.name}
-                    </Label>
-                    <Input id="name" {...register('name')} readOnly className="bg-muted/50 cursor-not-allowed" />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="email">
-                        Email Siswa
-                    </Label>
-                    <Input id="email" type="email" {...register('email')} readOnly className="bg-muted/50 cursor-not-allowed"/>
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="class">
-                        {t.class}
-                    </Label>
-                    <Input id="class" {...register('class')} />
-                    {errors.class && <p className="text-sm text-destructive mt-1">{errors.class.message}</p>}
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="nisn">
-                        NISN
-                    </Label>
-                    <div className="flex gap-2">
-                        <Input id="nisn" {...register('nisn')} placeholder="Nomor Induk Siswa Nasional" />
-                        <Button type="button" variant="secondary" onClick={handleCheckNisn} disabled={isNisnChecking || !nisnValue}>
-                            {isNisnChecking ? <Loader2 className="h-4 w-4 animate-spin" /> : "Cek NISN"}
-                        </Button>
-                    </div>
-                    {errors.nisn && <p className="text-sm text-destructive mt-1">{errors.nisn.message}</p>}
-                    {nisnMessage && (
-                        <p className={cn("text-sm", nisnStatus === 'valid' ? 'text-green-600' : 'text-destructive')}>
-                            {nisnMessage}
-                        </p>
+                            {errors.linkedUserUid && <p className="text-sm text-destructive mt-1">{errors.linkedUserUid.message}</p>}
+                        </div>
                     )}
+
+                    <div className="space-y-2">
+                        <Label htmlFor="name">
+                            {t.name}
+                        </Label>
+                        <Input id="name" {...register('name')} readOnly className="bg-muted/50 cursor-not-allowed" />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="email">
+                            Email Siswa
+                        </Label>
+                        <Input id="email" type="email" {...register('email')} readOnly className="bg-muted/50 cursor-not-allowed"/>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="class">
+                            {t.class}
+                        </Label>
+                        <Input id="class" {...register('class')} />
+                        {errors.class && <p className="text-sm text-destructive mt-1">{errors.class.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="nisn">
+                            NISN
+                        </Label>
+                        <div className="flex gap-2">
+                            <Input id="nisn" {...register('nisn')} placeholder="Nomor Induk Siswa Nasional" />
+                            <Button type="button" variant="secondary" onClick={handleCheckNisn} disabled={isNisnChecking || !nisnValue}>
+                                {isNisnChecking ? <Loader2 className="h-4 w-4 animate-spin" /> : "Cek NISN"}
+                            </Button>
+                        </div>
+                        {errors.nisn && <p className="text-sm text-destructive mt-1">{errors.nisn.message}</p>}
+                        {nisnMessage && (
+                            <p className={cn("text-sm", nisnStatus === 'valid' ? 'text-green-600' : 'text-destructive')}>
+                                {nisnMessage}
+                            </p>
+                        )}
+                    </div>
                 </div>
-            </form>
-        </ScrollArea>
-        <DialogFooter>
+            </ScrollArea>
+        </form>
+        
+        <DialogFooter className="mt-auto pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>{t.cancel}</Button>
             <Button type="submit" form="student-form" disabled={!canSubmit}>{t.save}</Button>
         </DialogFooter>
