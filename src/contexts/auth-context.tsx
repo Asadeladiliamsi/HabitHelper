@@ -6,7 +6,6 @@ import { doc, setDoc, getDoc, serverTimestamp, updateDoc } from 'firebase/firest
 import { auth, db } from '@/lib/firebase';
 import type { UserProfile } from '@/lib/types';
 import { useRouter } from 'next/navigation';
-import { verifyNisnFlow } from '@/app/actions';
 
 
 interface AuthContextType {
@@ -17,7 +16,6 @@ interface AuthContextType {
   signup: (email: string, pass: string) => Promise<any>;
   validateAndCreateUserProfile: (name: string, email: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
-  verifyAndLinkNisn: (uid: string, nisn: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -70,7 +68,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
      const userCredential = await signup(email, pass);
      const userDocRef = doc(db, 'users', userCredential.user.uid);
      
-     const profileData: Omit<UserProfile, 'nisn'> = {
+     const profileData: UserProfile = {
         uid: userCredential.user.uid,
         email: email,
         name: name,
@@ -83,29 +81,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
   };
 
-  const verifyAndLinkNisn = async (uid: string, nisn: string) => {
-    try {
-      const result = await verifyNisnFlow({ uid, nisn });
-      if (result.success) {
-        // Update local userProfile state
-        setUserProfile(prevProfile => prevProfile ? { ...prevProfile, nisn } : null);
-      } else {
-        throw new Error(result.error);
-      }
-    } catch (err: any) {
-       console.error("Verification flow failed:", err);
-       throw new Error(err.message || 'Gagal memverifikasi NISN.');
-    }
-  };
-
-
   const logout = async () => {
     setUserProfile(null);
     await signOut(auth);
     router.push('/login');
   };
 
-  const value = { user, userProfile, loading, login, signup, validateAndCreateUserProfile, logout, verifyAndLinkNisn };
+  const value = { user, userProfile, loading, login, signup, validateAndCreateUserProfile, logout };
 
   return (
     <AuthContext.Provider value={value}>

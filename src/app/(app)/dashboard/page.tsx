@@ -23,13 +23,11 @@ export default function DashboardPage() {
         router.replace('/admin/dashboard');
       } else if (userProfile.role === 'orangtua') {
         router.replace('/orangtua/dashboard');
-      } else if (userProfile.role === 'siswa' && !userProfile.nisn) {
-        router.replace('/verify-nisn');
       }
     }
   }, [loading, userProfile, router]);
 
-  if (loading || !userProfile || ['admin', 'orangtua'].includes(userProfile.role) || (userProfile.role === 'siswa' && !userProfile.nisn)) {
+  if (loading || !userProfile || ['admin', 'orangtua'].includes(userProfile.role)) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -44,7 +42,7 @@ export default function DashboardPage() {
             <DashboardClient />
           </div>
        )}
-       {userProfile.role === 'siswa' && userProfile.nisn && (
+       {userProfile.role === 'siswa' && (
           <div className="flex flex-col gap-6">
             <SiswaDashboardClient />
           </div>

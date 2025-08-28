@@ -40,8 +40,8 @@ export const StudentProvider = ({ children }: { children: React.ReactNode }) => 
       q = query(collection(db, 'students'));
     } else if (userProfile?.role === 'orangtua') {
       q = query(collection(db, 'students'), where('parentId', '==', user.uid));
-    } else if (userProfile?.role === 'siswa' && userProfile.nisn) {
-      q = query(collection(db, 'students'), where('nisn', '==', userProfile.nisn));
+    } else if (userProfile?.role === 'siswa' && user.email) {
+      q = query(collection(db, 'students'), where('email', '==', user.email));
     } else {
        setLoading(false);
        setStudents([]);
