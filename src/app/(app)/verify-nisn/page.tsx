@@ -90,7 +90,7 @@ export default function VerifyNisnPage() {
         </div>
         <Card className="w-full max-w-sm">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Verifikasi Akun Siswa</CardTitle>
+            <CardTitle className="text-2xl">Verifikasi Akun, {userProfile.name}</CardTitle>
             <CardDescription>
               Masukkan Nomor Induk Siswa Nasional (NISN) Anda untuk menghubungkan akun Anda.
             </CardDescription>
