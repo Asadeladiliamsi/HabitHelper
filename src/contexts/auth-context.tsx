@@ -2,10 +2,11 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, type User } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import type { UserProfile } from '@/lib/types';
 import { useRouter, usePathname } from 'next/navigation';
+import { verifyNisnFlow } from '@/ai/flows/verify-nisn-flow';
 
 interface AuthContextType {
   user: User | null;
@@ -15,6 +16,7 @@ interface AuthContextType {
   signup: (email: string, pass: string) => Promise<any>;
   validateAndCreateUserProfile: (name: string, email: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
+  verifyAndLinkNisn: (nisn: string) => Promise<{ success: boolean; message: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -35,17 +37,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const userDoc = await getDoc(userDocRef);
 
         if (userDoc.exists()) {
-          setUserProfile(userDoc.data() as UserProfile);
+          const profile = userDoc.data() as UserProfile;
+          setUserProfile(profile);
+          // Core redirection logic
+          if (profile.role === 'siswa' && !profile.nisn && pathname !== '/verify-nisn') {
+            router.replace('/verify-nisn');
+          } else if (profile.role === 'siswa' && profile.nisn && pathname === '/verify-nisn') {
+            router.replace('/dashboard');
+          }
+
         } else {
+          // This case is for new signups before a profile is created.
+          // Let them proceed to login/signup.
           setUserProfile(null);
-           if (!pathname.startsWith('/signup') && !pathname.startsWith('/login')) {
-             router.replace('/login');
-           }
         }
       } else {
         setUser(null);
         setUserProfile(null);
-        const isAppPage = !pathname.startsWith('/login') && !pathname.startsWith('/signup') && pathname !== '/';
+        const isAppPage = !['/login', '/signup', '/', '/verify-nisn'].includes(pathname);
          if (isAppPage) {
             router.replace('/login');
          }
@@ -81,12 +90,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         email: email,
         name: name,
         role: 'siswa',
+        // NISN is not present on creation
       };
 
      await setDoc(userDocRef, {
         ...profileData,
         createdAt: serverTimestamp(),
       });
+  };
+
+  const verifyAndLinkNisn = async (nisn: string): Promise<{ success: boolean; message: string }> => {
+    if (!user) {
+        throw new Error("Pengguna tidak terautentikasi.");
+    }
+
+    try {
+        const result = await verifyNisnFlow({ uid: user.uid, nisn });
+
+        if (result.success) {
+            // Manually update the userProfile in the context for immediate UI feedback
+            setUserProfile(prev => prev ? { ...prev, nisn } : null);
+            // The redirection will be handled by the useEffect in DashboardPage
+        }
+
+        return result;
+
+    } catch (error: any) {
+        console.error('Error calling verifyNisnFlow:', error);
+        return { success: false, message: error.message || 'Terjadi kesalahan tidak terduga.' };
+    }
   };
 
   const logout = async () => {
@@ -96,7 +128,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push('/login');
   };
 
-  const value = { user, userProfile, loading, login, signup, validateAndCreateUserProfile, logout };
+  const value = { user, userProfile, loading, login, signup, validateAndCreateUserProfile, logout, verifyAndLinkNisn };
 
   return (
     <AuthContext.Provider value={value}>

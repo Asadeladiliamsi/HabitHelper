@@ -76,18 +76,18 @@ export default function SignupPage() {
           )}
           <div className="space-y-2">
             <Label htmlFor="name">Nama Lengkap</Label>
-            <Input id="name" type="text" placeholder="Nama Anda" {...register('name')} />
+            <Input id="name" type="text" placeholder="Nama Anda" {...form.register('name')} />
             {form.formState.errors.name && <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>}
           </div>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="email@contoh.com" {...register('email')} />
+            <Input id="email" type="email" placeholder="email@contoh.com" {...form.register('email')} />
             {form.formState.errors.email && <p className="text-sm text-destructive">{form.formState.errors.email.message}</p>}
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Kata Sandi</Label>
             <div className="relative">
-              <Input id="password" type={showPassword ? 'text' : 'password'} placeholder="••••••••" {...register('password')} />
+              <Input id="password" type={showPassword ? 'text' : 'password'} placeholder="••••••••" {...form.register('password')} />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
