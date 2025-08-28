@@ -22,7 +22,6 @@ export async function checkHabitDecline(input: HabitDeclineNotificationInput) {
 
 export async function getRecentHabitScores(studentId: string, habitName: string): Promise<{ success: boolean; scores?: number[], error?: string }> {
     try {
-        // Query disederhanakan untuk menghindari kebutuhan indeks komposit yang kompleks.
         const entriesQuery = query(
             collection(db, 'habit_entries'),
             where('studentId', '==', studentId),
@@ -35,11 +34,18 @@ export async function getRecentHabitScores(studentId: string, habitName: string)
             return { success: false, error: `Tidak ada data skor yang ditemukan untuk kebiasaan '${habitName}'.` };
         }
         
-        // Lakukan pengurutan dan pembatasan di sisi server.
-        // PENTING: Konversi Firebase Timestamp ke objek Date JavaScript sebelum mengurutkan.
-        const allEntries = querySnapshot.docs.map(doc => {
+        const allEntries: { score: number; date: Date }[] = [];
+        querySnapshot.forEach(doc => {
             const data = doc.data();
-            return { ...data, date: (data.date as Timestamp).toDate() };
+            // Defensive check: pastikan field 'date' ada dan merupakan Timestamp
+            if (data.date && typeof data.date.toDate === 'function') {
+                allEntries.push({ 
+                    score: data.score, 
+                    date: (data.date as Timestamp).toDate() 
+                });
+            } else {
+                console.warn(`Skipping habit entry with ID ${doc.id} due to missing or invalid date.`);
+            }
         });
 
         // Urutkan berdasarkan tanggal, dari yang terbaru ke yang terlama
@@ -49,7 +55,7 @@ export async function getRecentHabitScores(studentId: string, habitName: string)
         const recentEntries = allEntries.slice(0, 3);
 
         if (recentEntries.length < 3) {
-            return { success: false, error: `Data skor untuk kebiasaan '${habitName}' kurang dari 3 hari.` };
+            return { success: false, error: `Data skor untuk kebiasaan '${habitName}' hanya ada ${recentEntries.length}, dibutuhkan minimal 3 data.` };
         }
         
         // Balik urutan agar menjadi kronologis (dari yang terlama ke terbaru) untuk analisis AI
@@ -59,7 +65,7 @@ export async function getRecentHabitScores(studentId: string, habitName: string)
 
     } catch (error) {
         console.error('Error fetching recent scores:', error);
-        return { success: false, error: 'Gagal mengambil data skor dari database.' };
+        return { success: false, error: 'Gagal mengambil data skor dari database. Terjadi kesalahan internal saat memproses data.' };
     }
 }
 
