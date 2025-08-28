@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm, Controller } from 'react-hook-form';
@@ -19,9 +20,6 @@ import { useEffect, useState } from 'react';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
 import { StudentUserSearchDialog } from './student-user-search-dialog';
-import { checkNisnExists } from '@/app/actions';
-import { cn } from '@/lib/utils';
-import { Loader2 } from 'lucide-react';
 
 interface StudentDialogProps {
   isOpen: boolean;
@@ -46,10 +44,6 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student, studentUs
   const t = translations[language]?.studentDialog || translations.en.studentDialog;
   const isEditMode = !!student;
   const [selectedUserName, setSelectedUserName] = useState('');
-  
-  const [isNisnChecking, setIsNisnChecking] = useState(false);
-  const [nisnStatus, setNisnStatus] = useState<'idle' | 'valid' | 'invalid'>('idle');
-  const [nisnMessage, setNisnMessage] = useState<string | null>(null);
 
   const {
     register,
@@ -57,8 +51,6 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student, studentUs
     reset,
     control,
     setValue,
-    watch,
-    getValues,
     formState: { errors, isValid },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -73,13 +65,6 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student, studentUs
   });
 
   const selectedUserUid = watch('linkedUserUid');
-  const nisnValue = watch('nisn');
-
-  useEffect(() => {
-    // Reset NISN status when the NISN value changes
-    setNisnStatus('idle');
-    setNisnMessage(null);
-  }, [nisnValue]);
 
   useEffect(() => {
     if (isOpen) {
@@ -93,14 +78,10 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student, studentUs
             linkedUserUid: student.linkedUserUid || ''
         });
         setSelectedUserName(student.name);
-        // In edit mode, we can assume the initial NISN is valid for this student
-        setNisnStatus('valid'); 
       } else {
         // Add mode
         reset({ name: '', class: '', nisn: '', email: '', linkedUserUid: '' });
         setSelectedUserName('');
-        setNisnStatus('idle');
-        setNisnMessage(null);
       }
     }
   }, [isOpen, student, reset]);
@@ -116,35 +97,7 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student, studentUs
   }, [selectedUserUid, studentUsers, setValue]);
 
 
-  const handleCheckNisn = async () => {
-    const nisn = getValues('nisn');
-    if (!nisn) return;
-
-    setIsNisnChecking(true);
-    setNisnMessage(null);
-    try {
-      const result = await checkNisnExists(nisn, student ? student.id : null);
-      if (result.exists) {
-        setNisnStatus('invalid');
-        setNisnMessage('NISN ini sudah digunakan oleh siswa lain.');
-      } else {
-        setNisnStatus('valid');
-        setNisnMessage('NISN tersedia.');
-      }
-    } catch (error) {
-      setNisnStatus('invalid');
-      setNisnMessage('Gagal memeriksa NISN.');
-    } finally {
-      setIsNisnChecking(false);
-    }
-  };
-
-
   const onSubmit = (data: FormValues) => {
-    if (nisnStatus !== 'valid') {
-        alert("Mohon periksa ketersediaan NISN terlebih dahulu.");
-        return;
-    }
     onSave({
       name: data.name,
       class: data.class,
@@ -155,7 +108,6 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student, studentUs
     onOpenChange(false);
   };
 
-  const canSubmit = isValid && nisnStatus === 'valid';
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -167,8 +119,8 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student, studentUs
             </DialogDescription>
         </DialogHeader>
         
-        <form id="student-form" onSubmit={handleSubmit(onSubmit)} className="flex-grow overflow-y-auto pr-6 -mr-6">
-            <div className="space-y-4 py-4">
+        <div className="flex-grow overflow-y-auto pr-2 -mr-4">
+             <form id="student-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 {!isEditMode && (
                     <div className="space-y-2">
                         <Label htmlFor="linkedUserUid">Akun Siswa</Label>
@@ -212,25 +164,15 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student, studentUs
                     <Label htmlFor="nisn">
                         NISN
                     </Label>
-                    <div className="flex gap-2">
-                        <Input id="nisn" {...register('nisn')} placeholder="Nomor Induk Siswa Nasional" />
-                        <Button type="button" variant="secondary" onClick={handleCheckNisn} disabled={isNisnChecking || !nisnValue}>
-                            {isNisnChecking ? <Loader2 className="h-4 w-4 animate-spin" /> : "Cek NISN"}
-                        </Button>
-                    </div>
+                    <Input id="nisn" {...register('nisn')} placeholder="Nomor Induk Siswa Nasional" />
                     {errors.nisn && <p className="text-sm text-destructive mt-1">{errors.nisn.message}</p>}
-                    {nisnMessage && (
-                        <p className={cn("text-sm", nisnStatus === 'valid' ? 'text-green-600' : 'text-destructive')}>
-                            {nisnMessage}
-                        </p>
-                    )}
                 </div>
-            </div>
-        </form>
+            </form>
+        </div>
         
         <DialogFooter className="flex-shrink-0 pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>{t.cancel}</Button>
-            <Button type="submit" form="student-form" disabled={!canSubmit}>{t.save}</Button>
+            <Button type="submit" form="student-form" disabled={!isValid}>{t.save}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
