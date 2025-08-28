@@ -23,6 +23,7 @@ const VerifyNisnOutputSchema = z.object({
 export type VerifyNisnOutput = z.infer<typeof VerifyNisnOutputSchema>;
 
 
+// Initialize Firebase Admin SDK
 let adminApp: App;
 if (!getApps().length) {
   adminApp = initializeApp();
@@ -69,8 +70,13 @@ export const verifyNisnFlow = ai.defineFlow(
 
       // 4. If all checks pass, link the NISN to the user and the user to the student
       const userDocRef = usersRef.doc(uid);
+      
+      // Get user email to store in student document for easier lookup
+      const userRecord = await userDocRef.get();
+      const userEmail = userRecord.data()?.email;
+
       await userDocRef.update({ nisn: nisn });
-      await studentDoc.ref.update({ linkedUserUid: uid, email: (await userDocRef.get()).data()?.email });
+      await studentDoc.ref.update({ linkedUserUid: uid, email: userEmail });
 
 
       return { success: true, message: 'Verifikasi NISN berhasil! Anda akan diarahkan ke dasbor.' };
