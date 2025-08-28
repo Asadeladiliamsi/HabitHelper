@@ -186,17 +186,22 @@ export const StudentProvider = ({ children }: { children: React.ReactNode }) => 
   const addHabitEntry = async (data: Omit<HabitEntry, 'id' | 'timestamp' | 'recordedBy'>) => {
     if (!user) throw new Error("Authentication required");
     try {
+      const studentToUpdate = students.find(s => s.id === data.studentId);
+
+      if (studentToUpdate) {
+        const updatedHabits = studentToUpdate.habits.map(h => 
+            h.name === data.habitName ? { ...h, score: data.score } : h
+        );
+
+        await updateDoc(doc(db, 'students', data.studentId), {
+          habits: updatedHabits
+        });
+      }
+
       // Create a unique ID for the entry to avoid duplicates for the same student/habit/date
       const entryDate = data.date.toISOString().split('T')[0];
       const entryId = `${data.studentId}-${data.habitName}-${entryDate}`;
-      
       const docRef = doc(db, 'habit_entries', entryId);
-      
-      await updateDoc(doc(db, 'students', data.studentId), {
-         habits: students.find(s => s.id === data.studentId)?.habits.map(h => 
-            h.name === data.habitName ? {...h, score: data.score} : h
-         )
-      });
 
       await setDoc(docRef, {
         ...data,
