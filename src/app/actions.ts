@@ -22,11 +22,12 @@ export async function checkHabitDecline(input: HabitDeclineNotificationInput) {
 
 export async function getRecentHabitScores(studentId: string, habitName: string): Promise<{ success: boolean; scores?: number[], error?: string }> {
     try {
-        // Simplified query to avoid composite index requirement
         const entriesQuery = query(
             collection(db, 'habit_entries'),
             where('studentId', '==', studentId),
-            where('habitName', '==', habitName)
+            where('habitName', '==', habitName),
+            orderBy('date', 'desc'),
+            limit(3)
         );
 
         const querySnapshot = await getDocs(entriesQuery);
@@ -35,18 +36,13 @@ export async function getRecentHabitScores(studentId: string, habitName: string)
             return { success: false, error: `Data skor untuk kebiasaan '${habitName}' kurang dari 3 hari.` };
         }
         
-        // Sort by date manually on the server
-        const allEntries = querySnapshot.docs.map(doc => doc.data());
-        allEntries.sort((a, b) => b.date.toMillis() - a.date.toMillis());
-
-        // Get the latest 3 scores and reverse them for chronological order
-        const scores = allEntries.slice(0, 3).map(entry => entry.score).reverse(); 
+        const scores = querySnapshot.docs.map(doc => doc.data().score).reverse(); 
 
         return { success: true, scores };
 
     } catch (error) {
         console.error('Error fetching recent scores:', error);
-        return { success: false, error: 'Gagal mengambil data skor dari database.' };
+        return { success: false, error: 'Gagal mengambil data skor dari database. Pastikan indeks komposit Firestore sudah dibuat.' };
     }
 }
 
