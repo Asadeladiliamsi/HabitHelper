@@ -35,16 +35,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(user);
         const userDocRef = doc(db, 'users', user.uid);
         const userDoc = await getDoc(userDocRef);
+
         if (userDoc.exists()) {
           const profile = userDoc.data() as UserProfile;
           setUserProfile(profile);
 
-          // Redirect student if NISN is not verified
-          if (profile.role === 'siswa' && !profile.nisn && pathname !== '/verify-nisn') {
-            router.replace('/verify-nisn');
+          const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup');
+          const isVerifyPage = pathname === '/verify-nisn';
+
+          if (profile.role === 'siswa' && !profile.nisn) {
+            if (!isVerifyPage) {
+              router.replace('/verify-nisn');
+            }
+          } else if (isAuthPage || (profile.role === 'siswa' && isVerifyPage)) {
+            // If user is logged in and verified, or not a student, redirect from auth/verify pages to dashboard
+             router.replace('/dashboard');
           }
         } else {
+          // New user, not yet in firestore, or profile deleted.
           setUserProfile(null);
+           if (!pathname.startsWith('/signup') && !pathname.startsWith('/login')) {
+             router.replace('/login');
+           }
         }
       } else {
         setUser(null);

@@ -18,16 +18,20 @@ export default function DashboardPage() {
         router.replace('/login');
         return;
       }
-      
+       
       if (userProfile.role === 'admin') {
         router.replace('/admin/dashboard');
       } else if (userProfile.role === 'orangtua') {
         router.replace('/orangtua/dashboard');
+      } else if (userProfile.role === 'siswa' && !userProfile.nisn) {
+        // Double-check to ensure unverified students can't access dashboard
+        router.replace('/verify-nisn');
       }
     }
   }, [loading, userProfile, router]);
 
-  if (loading || !userProfile || ['admin', 'orangtua'].includes(userProfile.role)) {
+  // Stricter condition: loading, no profile, or a role that should be redirected
+  if (loading || !userProfile || userProfile.role === 'admin' || userProfile.role === 'orangtua' || (userProfile.role === 'siswa' && !userProfile.nisn)) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -42,7 +46,7 @@ export default function DashboardPage() {
             <DashboardClient />
           </div>
        )}
-       {userProfile.role === 'siswa' && (
+       {userProfile.role === 'siswa' && userProfile.nisn && ( // Render only if verified
           <div className="flex flex-col gap-6">
             <SiswaDashboardClient />
           </div>
