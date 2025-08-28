@@ -2,11 +2,10 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, type User } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import type { UserProfile } from '@/lib/types';
 import { useRouter, usePathname } from 'next/navigation';
-import { verifyNisn } from '@/app/actions';
 
 interface AuthContextType {
   user: User | null;
@@ -15,7 +14,6 @@ interface AuthContextType {
   login: (email: string, pass: string) => Promise<any>;
   signup: (email: string, pass: string) => Promise<any>;
   validateAndCreateUserProfile: (name: string, email: string, pass: string) => Promise<void>;
-  verifyAndLinkNisn: (nisn: string) => Promise<{ success: boolean; message: string }>;
   logout: () => Promise<void>;
 }
 
@@ -37,28 +35,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const userDoc = await getDoc(userDocRef);
 
         if (userDoc.exists()) {
-          const profile = userDoc.data() as UserProfile;
-          setUserProfile(profile);
-
-          const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup');
-          const isVerifyPage = pathname.startsWith('/verify-nisn');
-          
-          // Logic for redirection
-          if (profile.role === 'siswa' && !profile.nisn) {
-            // Student is not verified, MUST be on verification page.
-            if (!isVerifyPage) {
-              router.replace('/verify-nisn');
-            }
-          } else {
-            // User is verified OR not a student.
-            // If they are on auth pages or verify page, redirect to dashboard.
-            if (isAuthPage || isVerifyPage) {
-              router.replace('/dashboard');
-            }
-          }
-          
+          setUserProfile(userDoc.data() as UserProfile);
         } else {
-          // New user, not yet in firestore, or profile deleted.
           setUserProfile(null);
            if (!pathname.startsWith('/signup') && !pathname.startsWith('/login')) {
              router.replace('/login');
@@ -67,7 +45,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else {
         setUser(null);
         setUserProfile(null);
-        const isAppPage = !pathname.startsWith('/login') && !pathname.startsWith('/signup') && !pathname.startsWith('/verify-nisn') && pathname !== '/';
+        const isAppPage = !pathname.startsWith('/login') && !pathname.startsWith('/signup') && pathname !== '/';
          if (isAppPage) {
             router.replace('/login');
          }
@@ -76,7 +54,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => unsubscribe();
-  }, [pathname, router]); // dependency on pathname and router is important
+  }, [pathname, router]);
   
   const login = async (email: string, pass: string) => {
     try {
@@ -111,27 +89,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
   };
 
-  const verifyAndLinkNisn = async (nisn: string): Promise<{ success: boolean; message: string }> => {
-    if (!user) {
-      return { success: false, message: "Anda harus login terlebih dahulu." };
-    }
-
-    try {
-      const result = await verifyNisn({ uid: user.uid, nisn });
-      if (result.success) {
-        // Manually update local user profile to reflect the change immediately
-        // This is crucial to prevent being redirected back to /verify-nisn
-        setUserProfile(prevProfile => prevProfile ? { ...prevProfile, nisn } : null);
-        // The useEffect will handle the redirect to dashboard
-      }
-      return result;
-    } catch (error: any) {
-      console.error("Error calling verifyNisn action:", error);
-      return { success: false, message: error.message || "Terjadi kesalahan pada server." };
-    }
-  };
-
-
   const logout = async () => {
     await signOut(auth);
     setUser(null);
@@ -139,7 +96,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push('/login');
   };
 
-  const value = { user, userProfile, loading, login, signup, validateAndCreateUserProfile, verifyAndLinkNisn, logout };
+  const value = { user, userProfile, loading, login, signup, validateAndCreateUserProfile, logout };
 
   return (
     <AuthContext.Provider value={value}>
