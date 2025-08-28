@@ -22,20 +22,26 @@ export async function checkHabitDecline(input: HabitDeclineNotificationInput) {
 
 export async function getRecentHabitScores(studentId: string, habitName: string): Promise<{ success: boolean; scores?: number[], error?: string }> {
     try {
+        // Simplified query to avoid composite index requirement
         const entriesQuery = query(
             collection(db, 'habit_entries'),
             where('studentId', '==', studentId),
-            where('habitName', '==', habitName),
-            orderBy('date', 'desc'),
-            limit(3)
+            where('habitName', '==', habitName)
         );
 
         const querySnapshot = await getDocs(entriesQuery);
+        
         if (querySnapshot.docs.length < 3) {
             return { success: false, error: `Data skor untuk kebiasaan '${habitName}' kurang dari 3 hari.` };
         }
         
-        const scores = querySnapshot.docs.map(doc => doc.data().score).reverse(); // a prompt says last 3 days, so we need to have it in chronological order
+        // Sort by date manually on the server
+        const allEntries = querySnapshot.docs.map(doc => doc.data());
+        allEntries.sort((a, b) => b.date.toMillis() - a.date.toMillis());
+
+        // Get the latest 3 scores and reverse them for chronological order
+        const scores = allEntries.slice(0, 3).map(entry => entry.score).reverse(); 
+
         return { success: true, scores };
 
     } catch (error) {
