@@ -44,13 +44,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const isVerifyPage = pathname === '/verify-nisn';
 
           if (profile.role === 'siswa' && !profile.nisn) {
+            // Student is not verified, FORCE redirect to verification page
             if (!isVerifyPage) {
               router.replace('/verify-nisn');
             }
-          } else if (isAuthPage || (profile.role === 'siswa' && isVerifyPage)) {
-            // If user is logged in and verified, or not a student, redirect from auth/verify pages to dashboard
-             router.replace('/dashboard');
+          } else if (isAuthPage || isVerifyPage) {
+            // User is verified OR not a student, redirect from auth/verify pages
+            router.replace('/dashboard');
           }
+          
         } else {
           // New user, not yet in firestore, or profile deleted.
           setUserProfile(null);
@@ -66,7 +68,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => unsubscribe();
-  }, [router, pathname]);
+  }, []); // Remove dependencies to let it run once and handle redirection internally
   
   const login = async (email: string, pass: string) => {
     try {
@@ -110,8 +112,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const result = await verifyNisn({ uid: user.uid, nisn });
       if (result.success) {
         // Manually update local user profile to reflect the change immediately
+        // This is crucial to prevent being redirected back to /verify-nisn
         setUserProfile(prevProfile => prevProfile ? { ...prevProfile, nisn } : null);
-        router.push('/dashboard');
+        // The useEffect will handle the redirect to dashboard
       }
       return result;
     } catch (error: any) {

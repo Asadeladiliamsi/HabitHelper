@@ -24,13 +24,16 @@ export default function DashboardPage() {
       } else if (userProfile.role === 'orangtua') {
         router.replace('/orangtua/dashboard');
       } else if (userProfile.role === 'siswa' && !userProfile.nisn) {
-        // Double-check to ensure unverified students can't access dashboard
+        // This is a crucial final check. If a student without NISN lands here,
+        // force them back to verification.
         router.replace('/verify-nisn');
       }
     }
   }, [loading, userProfile, router]);
 
   // Stricter condition: loading, no profile, or a role that should be redirected
+  // OR a student who is not yet verified. This prevents the dashboard from flashing
+  // before the redirect happens.
   if (loading || !userProfile || userProfile.role === 'admin' || userProfile.role === 'orangtua' || (userProfile.role === 'siswa' && !userProfile.nisn)) {
     return (
       <div className="flex h-full w-full items-center justify-center">

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -37,14 +36,16 @@ export default function VerifyNisnPage() {
   useEffect(() => {
     if (!loading) {
       if (!user) {
+        // Not logged in, send to login
         router.replace('/login');
-      }
-      if (userProfile?.role !== 'siswa') {
+      } else if (userProfile?.role !== 'siswa') {
+        // Not a student, send to their default dashboard
+        router.replace('/dashboard');
+      } else if (userProfile.nisn) {
+        // Student is already verified, send to dashboard
         router.replace('/dashboard');
       }
-       if (userProfile?.role === 'siswa' && userProfile.nisn) {
-        router.replace('/dashboard');
-      }
+      // If none of the above, they are an unverified student and should stay here.
     }
   }, [loading, user, userProfile, router]);
 
@@ -64,6 +65,7 @@ export default function VerifyNisnPage() {
       if (!result.success) {
         throw new Error(result.message);
       }
+      // On success, the auth context will automatically redirect to the dashboard
     } catch (err: any) {
       setError(err.message || 'Gagal melakukan verifikasi. Silakan coba lagi.');
     } finally {
@@ -71,6 +73,8 @@ export default function VerifyNisnPage() {
     }
   };
   
+  // Show a loading spinner while the auth state is being determined.
+  // This prevents the form from flashing for users who should be redirected.
   if (loading || !userProfile || userProfile.role !== 'siswa' || userProfile.nisn) {
       return (
       <div className="flex h-screen items-center justify-center">
