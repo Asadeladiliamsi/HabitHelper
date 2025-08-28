@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
@@ -91,7 +92,9 @@ export const StudentProvider = ({ children }: { children: React.ReactNode }) => 
 
 
     try {
-      const newDocRef = await addDoc(collection(db, 'students'), {
+      const newDocRef = doc(collection(db, 'students'));
+      
+      await setDoc(newDocRef, {
         ...newStudentData,
         habits: HABIT_NAMES.map((name, index) => ({
           id: `habit-${Date.now()}-${index}`, // More unique ID
@@ -108,7 +111,7 @@ export const StudentProvider = ({ children }: { children: React.ReactNode }) => 
         await updateDoc(userDocRef, { nisn: newStudentData.nisn });
       }
 
-      // Auto-populate habit_entries for the new student
+      // Auto-populate habit_entries for the new student for the last 3 days
       const today = new Date();
       for (let i = 0; i < 3; i++) {
         const date = new Date(today);
