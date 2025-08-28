@@ -191,23 +191,23 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student, studentUs
                 )}
 
                 <div className="space-y-2">
-                <Label htmlFor="name">
-                    {t.name}
-                </Label>
-                <Input id="name" {...register('name')} readOnly className="bg-muted/50 cursor-not-allowed" />
+                    <Label htmlFor="name">
+                        {t.name}
+                    </Label>
+                    <Input id="name" {...register('name')} readOnly className="bg-muted/50 cursor-not-allowed" />
                 </div>
                 <div className="space-y-2">
-                <Label htmlFor="email">
-                    Email Siswa
-                </Label>
-                <Input id="email" type="email" {...register('email')} readOnly className="bg-muted/50 cursor-not-allowed"/>
+                    <Label htmlFor="email">
+                        Email Siswa
+                    </Label>
+                    <Input id="email" type="email" {...register('email')} readOnly className="bg-muted/50 cursor-not-allowed"/>
                 </div>
                 <div className="space-y-2">
-                <Label htmlFor="class">
-                    {t.class}
-                </Label>
-                <Input id="class" {...register('class')} />
-                {errors.class && <p className="text-sm text-destructive mt-1">{errors.class.message}</p>}
+                    <Label htmlFor="class">
+                        {t.class}
+                    </Label>
+                    <Input id="class" {...register('class')} />
+                    {errors.class && <p className="text-sm text-destructive mt-1">{errors.class.message}</p>}
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="nisn">
