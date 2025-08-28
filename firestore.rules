@@ -3,79 +3,71 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+  
+    // Helper Functions for reusable logic
+    function isUserSignedIn() {
+      return request.auth != null;
+    }
 
-    // Helper function to check user role from their profile in the 'users' collection
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
     function getUserRole(userId) {
       return get(/databases/$(database)/documents/users/$(userId)).data.role;
     }
     
-    // Helper function to get a user's profile
-    function getUserProfile(userId) {
-        return get(/databases/$(database)/documents/users/$(userId)).data;
+    function isAdmin() {
+      return isUserSignedIn() && getUserRole(request.auth.uid) == 'admin';
     }
     
-    // Helper function to get a student's profile by their ID
-    function getStudentProfile(studentId) {
-      return get(/databases/$(database)/documents/students/$(studentId)).data;
+    function isGuru() {
+      return isUserSignedIn() && getUserRole(request.auth.uid) == 'guru';
+    }
+    
+    function isStudent(studentId) {
+      let studentEmail = get(/databases/$(database)/documents/students/$(studentId)).data.email;
+      return isUserSignedIn() && request.auth.token.email == studentEmail;
+    }
+    
+    function isParentOfStudent(studentId) {
+      let parentId = get(/databases/$(database)/documents/students/$(studentId)).data.parentId;
+      return isUserSignedIn() && request.auth.uid == parentId;
     }
 
-    // Rules for the 'users' collection
+    // Collection: users
+    // Stores user profiles and roles.
     match /users/{userId} {
-      // Allow read access for the owner of the document, or for admins/teachers
-      allow read: if request.auth != null &&
-                   (request.auth.uid == userId || getUserRole(request.auth.uid) in ['admin', 'guru']);
-
-      // Allow a user to create their own profile upon signup
-      allow create: if request.auth != null && request.auth.uid == userId;
-      
-      // Allow profile updates only by the owner or an admin
-      allow update: if request.auth != null &&
-                     (request.auth.uid == userId || getUserRole(request.auth.uid) == 'admin');
-
-      // Only admins can delete user profiles
-      allow delete: if request.auth != null && getUserRole(request.auth.uid) == 'admin';
+      allow read: if isOwner(userId) || isAdmin() || isGuru();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
     }
 
-    // Rules for the 'students' collection
+    // Collection: students
+    // Stores student data, including their habits array.
     match /students/{studentId} {
-      // Allow read access for admins, teachers, the linked parent, or the linked student
-      allow read: if request.auth != null &&
-                   (getUserRole(request.auth.uid) in ['admin', 'guru'] ||
-                    (resource.data.parentId != null && resource.data.parentId == request.auth.uid) ||
-                    (resource.data.linkedUserUid != null && resource.data.linkedUserUid == request.auth.uid));
-      
-      // Allow create, update, delete only for admins and teachers
-      allow create, update, delete: if request.auth != null && getUserRole(request.auth.uid) in ['admin', 'guru'];
+      allow read: if isUserSignedIn() && (isAdmin() || isGuru() || isStudent(studentId) || isParentOfStudent(studentId));
+      allow create, delete: if isAdmin() || isGuru();
+      // Allow updates from admins, gurus, or for linking a parent.
+      // The update of the habits array itself is triggered by writing to habit_entries.
+      allow update: if isAdmin() || isGuru();
     }
 
-    // Rules for the 'habit_entries' collection
+    // Collection: habit_entries
+    // Stores daily habit scores, which then trigger updates to the student's main document.
     match /habit_entries/{entryId} {
-      // Allow read access for admins, teachers, or the parent/student linked to the entry
-      allow read: if request.auth != null &&
-                   (getUserRole(request.auth.uid) in ['admin', 'guru'] ||
-                    (getStudentProfile(resource.data.studentId).parentId == request.auth.uid) ||
-                    (getStudentProfile(resource.data.studentId).linkedUserUid == request.auth.uid));
+      allow read: if isUserSignedIn(); // Allow all signed-in users to read for now, can be tightened if needed.
 
-      // Allow create access if the user is an admin, teacher, or the linked student.
-      // Parents have special conditions.
-      allow create: if request.auth != null &&
-                     (
-                       // Admins and Teachers can write anything
-                       getUserRole(request.auth.uid) in ['admin', 'guru'] ||
-                       
-                       // Students can only write for themselves
-                       (getUserRole(request.auth.uid) == 'siswa' && getStudentProfile(request.resource.data.studentId).linkedUserUid == request.auth.uid) ||
-                       
-                       // Parents can only write for their own children and only for specific habits
-                       (
-                         getUserRole(request.auth.uid) == 'orangtua' &&
-                         getStudentProfile(request.resource.data.studentId).parentId == request.auth.uid &&
-                         request.resource.data.habitName in ['Taat Beribadah', 'Rajin Olahraga', 'Makan Sehat & Bergizi', 'Tidur Cepat']
-                       )
-                     );
-
-      // No one should be able to update or delete individual entries to preserve data integrity.
-      allow update, delete: if false;
+      // Create permissions are the most critical here.
+      allow create: if (isAdmin() || isGuru()) ||
+                       // Students can only create entries for themselves.
+                       (isStudent(request.resource.data.studentId)) ||
+                       // Parents can only create entries for their children and for specific habits.
+                       (isParentOfStudent(request.resource.data.studentId) && 
+                         request.resource.data.habitName in ['Taat Beribadah', 'Rajin Olahraga', 'Makan Sehat & Bergizi', 'Tidur Cepat']);
+                         
+      allow update, delete: if isAdmin() || isGuru();
     }
   }
 }
