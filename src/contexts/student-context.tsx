@@ -70,15 +70,25 @@ export const StudentProvider = ({ children }: { children: React.ReactNode }) => 
     return () => unsubscribe();
   }, [user, userProfile, authLoading]);
 
-  const addStudent = async (newStudentData: Omit<Student, 'id' | 'habits' | 'avatarUrl'>) => {
+  const addStudent = async (newStudentData: Omit<Student, 'id'| 'habits' | 'avatarUrl'>) => {
     if (!user) throw new Error("Authentication required");
 
     // Check for NISN uniqueness
     const nisnQuery = query(collection(db, 'students'), where('nisn', '==', newStudentData.nisn));
-    const querySnapshot = await getDocs(nisnQuery);
-    if (!querySnapshot.empty) {
+    const nisnSnapshot = await getDocs(nisnQuery);
+    if (!nisnSnapshot.empty) {
       throw new Error(`NISN ${newStudentData.nisn} sudah terdaftar untuk siswa lain.`);
     }
+
+    // Check if user is already linked
+    if (newStudentData.linkedUserUid) {
+        const userQuery = query(collection(db, 'students'), where('linkedUserUid', '==', newStudentData.linkedUserUid));
+        const userSnapshot = await getDocs(userQuery);
+        if (!userSnapshot.empty) {
+            throw new Error(`Pengguna ini sudah tertaut dengan data siswa lain.`);
+        }
+    }
+
 
     try {
       const newDocRef = await addDoc(collection(db, 'students'), {
@@ -91,9 +101,13 @@ export const StudentProvider = ({ children }: { children: React.ReactNode }) => 
         avatarUrl: `https://placehold.co/100x100.png?text=${newStudentData.name.charAt(0)}`,
         createdBy: user.uid,
       });
-
-      const newStudent = { id: newDocRef.id, ...newStudentData };
       
+      // also update the user document to link the nisn
+      if (newStudentData.linkedUserUid) {
+        const userDocRef = doc(db, 'users', newStudentData.linkedUserUid);
+        await updateDoc(userDocRef, { nisn: newStudentData.nisn });
+      }
+
       // Auto-populate habit_entries for the new student
       const today = new Date();
       for (let i = 0; i < 3; i++) {

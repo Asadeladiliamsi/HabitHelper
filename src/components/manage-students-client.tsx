@@ -17,6 +17,7 @@ import { translations } from '@/lib/translations';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { LinkParentDialog } from './link-parent-dialog';
+import { useUser } from '@/contexts/user-context';
 
 interface ManageStudentsClientProps {
   parentUsers: UserProfile[];
@@ -24,6 +25,7 @@ interface ManageStudentsClientProps {
 
 export function ManageStudentsClient({ parentUsers }: ManageStudentsClientProps) {
   const { students, addStudent, updateStudent, deleteStudent, linkParentToStudent } = useStudent();
+  const { users } = useUser(); // Get all users
   const [dialogOpen, setDialogOpen] = useState(false);
   const [linkParentDialogOpen, setLinkParentDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -31,6 +33,10 @@ export function ManageStudentsClient({ parentUsers }: ManageStudentsClientProps)
   const { language } = useLanguage();
   const { toast } = useToast();
   const t = translations[language]?.manageStudentsPage || translations.en.manageStudentsPage;
+
+  // Filter users with 'siswa' role who are not yet linked to a student profile
+  const linkedUserUids = new Set(students.map(s => s.linkedUserUid).filter(Boolean));
+  const unlinkedStudentUsers = users.filter(user => user.role === 'siswa' && !linkedUserUids.has(user.uid));
 
   const handleAddStudent = () => {
     setSelectedStudent(null);
@@ -50,20 +56,14 @@ export function ManageStudentsClient({ parentUsers }: ManageStudentsClientProps)
   const handleDialogSave = async (studentData: Omit<Student, 'id' | 'habits' | 'avatarUrl'>) => {
     try {
       if (selectedStudent) {
-        // Update existing student
-        await updateStudent(selectedStudent.id, studentData);
+        // Update existing student - only NISN and class can be updated
+        await updateStudent(selectedStudent.id, { nisn: studentData.nisn, class: studentData.class });
       } else {
-        // Add new student
-        const newStudent: Omit<Student, 'id'> = {
-          habits: HABIT_NAMES.map((name, index) => ({
-            id: `habit-${index + 1}`,
-            name: name,
-            score: 4, // Default score
-          })),
-          avatarUrl: `https://placehold.co/100x100.png?text=${studentData.name.charAt(0)}`,
-          ...studentData,
-        };
-        await addStudent(newStudent);
+        // Add new student from an existing user
+        if (!studentData.linkedUserUid) {
+            throw new Error("Pengguna siswa harus dipilih.");
+        }
+        await addStudent(studentData);
       }
       setDialogOpen(false);
     } catch (error: any) {
@@ -107,6 +107,7 @@ export function ManageStudentsClient({ parentUsers }: ManageStudentsClientProps)
         onOpenChange={setDialogOpen} 
         onSave={handleDialogSave}
         student={selectedStudent} 
+        studentUsers={unlinkedStudentUsers}
       />
       {selectedStudent && (
         <LinkParentDialog

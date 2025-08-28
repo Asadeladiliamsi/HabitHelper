@@ -196,7 +196,9 @@ export function AdminDashboardClient() {
                 </Card>
             </TabsContent>
              <TabsContent value="manage-students" className="mt-6">
-                <ManageStudentsClient parentUsers={parentUsers} />
+                <UserProvider>
+                    <ManageStudentsClient parentUsers={parentUsers} />
+                </UserProvider>
             </TabsContent>
         </Tabs>
       </div>
