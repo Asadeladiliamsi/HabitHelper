@@ -52,3 +52,24 @@ export async function verifyNisn(input: VerifyNisnInput) {
     return { success: false, message: error.message || 'Gagal memverifikasi NISN.' };
   }
 }
+
+export async function checkNisnExists(nisn: string, studentIdToExclude: string | null = null): Promise<{ exists: boolean }> {
+    if (!nisn) {
+        return { exists: false };
+    }
+    
+    let q = query(collection(db, 'students'), where('nisn', '==', nisn));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+        return { exists: false };
+    }
+
+    // If we're editing a student, we need to exclude them from the check
+    if (studentIdToExclude) {
+        const isOwnedByAnother = querySnapshot.docs.some(doc => doc.id !== studentIdToExclude);
+        return { exists: isOwnedByAnother };
+    }
+
+    return { exists: true };
+}
