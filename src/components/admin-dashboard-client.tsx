@@ -25,7 +25,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useUser } from '@/contexts/user-context';
-import { Loader2, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Loader2, MoreHorizontal, Pencil, Trash2, Search } from 'lucide-react';
 import type { UserProfile, UserRole } from '@/lib/types';
 import { useState } from 'react';
 import { UserEditDialog } from './user-edit-dialog';
@@ -33,12 +33,14 @@ import { UserDeleteDialog } from './user-delete-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { ManageStudentsClient } from './manage-students-client';
 import { useStudent } from '@/contexts/student-context';
+import { Input } from './ui/input';
 
 export function AdminDashboardClient() {
   const { users, loading: usersLoading, updateUserRole, updateUserName, deleteUser } = useUser();
   const { students, loading: studentsLoading } = useStudent();
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [deletingUser, setDeletingUser] = useState<UserProfile | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const handleRoleChange = (uid: string, role: UserRole) => {
     updateUserRole(uid, role);
@@ -68,6 +70,12 @@ export function AdminDashboardClient() {
         return 'secondary';
     }
   };
+
+  const filteredUsers = users.filter(user =>
+    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
 
   if (usersLoading || studentsLoading) {
     return (
@@ -118,10 +126,23 @@ export function AdminDashboardClient() {
             <TabsContent value="manage-users" className="mt-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Daftar Pengguna</CardTitle>
-                    <CardDescription>
-                      Total {users.length} pengguna terdaftar di dalam sistem.
-                    </CardDescription>
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <CardTitle>Daftar Pengguna</CardTitle>
+                        <CardDescription>
+                          Menampilkan {filteredUsers.length} dari {users.length} total pengguna.
+                        </CardDescription>
+                      </div>
+                       <div className="relative sm:w-64">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                              placeholder="Cari nama atau email..."
+                              value={searchTerm}
+                              onChange={(e) => setSearchTerm(e.target.value)}
+                              className="pl-10"
+                          />
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <Table>
@@ -134,7 +155,7 @@ export function AdminDashboardClient() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {users.map(user => (
+                        {filteredUsers.map(user => (
                           <TableRow key={user.uid}>
                             <TableCell className="font-medium">{user.name}</TableCell>
                             <TableCell className="text-muted-foreground">
