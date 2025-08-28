@@ -5,7 +5,7 @@ import {
   habitDeclineNotification,
   type HabitDeclineNotificationInput,
 } from '@/ai/flows/habit-decline-notification';
-import { verifyLoginNisnFlow, type VerifyLoginNisnInput } from '@/ai/flows/verify-nisn-flow';
+import { verifyLoginNisnFlow, type VerifyLoginNisnInput } from '@/ai-flows/verify-nisn-flow';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, orderBy, limit, Timestamp } from 'firebase/firestore';
 
@@ -37,16 +37,20 @@ export async function getRecentHabitScores(studentId: string, habitName: string)
         const allEntries: { score: number; date: Date }[] = [];
         querySnapshot.forEach(doc => {
             const data = doc.data();
-            // Defensive check: pastikan field 'date' ada dan merupakan Timestamp
-            if (data.date && typeof data.date.toDate === 'function') {
+            // Defensive check: pastikan field 'date' ada dan merupakan Timestamp yang valid
+            if (data.date && data.date instanceof Timestamp) {
                 allEntries.push({ 
                     score: data.score, 
-                    date: (data.date as Timestamp).toDate() 
+                    date: data.date.toDate() 
                 });
             } else {
-                console.warn(`Skipping habit entry with ID ${doc.id} due to missing or invalid date.`);
+                console.warn(`Skipping habit entry with ID ${doc.id} due to missing or invalid date field.`);
             }
         });
+
+        if (allEntries.length === 0) {
+             return { success: false, error: `Tidak ada data skor yang valid yang ditemukan untuk kebiasaan '${habitName}'.` };
+        }
 
         // Urutkan berdasarkan tanggal, dari yang terbaru ke yang terlama
         allEntries.sort((a, b) => b.date.getTime() - a.date.getTime());
