@@ -36,9 +36,9 @@ export async function getRecentHabitScores(studentId: string, habitName: string)
         }
         
         // Lakukan pengurutan dan pembatasan di sisi server.
+        // PENTING: Konversi Firebase Timestamp ke objek Date JavaScript sebelum mengurutkan.
         const allEntries = querySnapshot.docs.map(doc => {
             const data = doc.data();
-            // Konversi Firebase Timestamp ke objek Date JavaScript
             return { ...data, date: (data.date as Timestamp).toDate() };
         });
 
