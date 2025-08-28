@@ -40,9 +40,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const profile = userDoc.data() as UserProfile;
           setUserProfile(profile);
           // Core redirection logic
-          if (profile.role === 'siswa' && !profile.nisn && pathname !== '/verify-nisn') {
+          if (pathname !== '/verify-nisn' && profile.role === 'siswa' && !profile.nisn) {
             router.replace('/verify-nisn');
-          } else if (profile.role === 'siswa' && profile.nisn && pathname === '/verify-nisn') {
+          } else if (pathname === '/verify-nisn' && profile.nisn) {
             router.replace('/dashboard');
           }
 
@@ -110,7 +110,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (result.success) {
             // Manually update the userProfile in the context for immediate UI feedback
             setUserProfile(prev => prev ? { ...prev, nisn } : null);
-            // The redirection will be handled by the useEffect in DashboardPage
         }
 
         return result;
