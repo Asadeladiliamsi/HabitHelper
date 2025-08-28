@@ -1,10 +1,13 @@
+
 import { Logo } from '@/components/icons/logo';
 import Link from 'next/link';
 
 export default function AuthLayout({
   children,
+  params: _params,
 }: {
   children: React.ReactNode;
+  params: any;
 }) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
