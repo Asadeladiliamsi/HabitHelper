@@ -13,6 +13,7 @@ import {
   Shield,
   Heart,
   Database,
+  PencilLine,
 } from 'lucide-react';
 import {
   SidebarProvider,
@@ -71,6 +72,7 @@ export default function AppLayout({
 
   const navItems = [
     { href: dashboardPath, icon: LayoutDashboard, label: t.sidebar.dashboard, roles: ['guru', 'siswa', 'admin', 'orangtua'] },
+    { href: '/input-data', icon: PencilLine, label: 'Input Data Harian', roles: ['siswa'] },
     { href: '/data-master', icon: Database, label: t.sidebar.dataMaster, roles: ['guru', 'admin'] },
     { href: '/notifications', icon: Bell, label: t.sidebar.notifications, roles: ['guru', 'admin'] },
     { href: '/reports', icon: FileText, label: t.sidebar.reports, roles: ['guru', 'admin'] },

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { StudentSearchDialog } from './student-search-dialog';
+import { useAuth } from '@/contexts/auth-context';
 
 const formSchema = z.object({
   studentId: z.string().min(1, 'Siswa harus dipilih.'),
@@ -41,34 +42,37 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function DataInputClient() {
+interface DataInputClientProps {
+  studentId?: string; // Optional: To lock the form to a specific student
+}
+
+export function DataInputClient({ studentId: lockedStudentId }: DataInputClientProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { students, addHabitEntry } = useStudent();
+  const { userProfile } = useAuth();
   const { language } = useLanguage();
   const t = translations[language]?.dataInputClient || translations.en.dataInputClient;
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
   const locale = language === 'id' ? id : enUS;
 
-  const habitTranslationMapping: Record<string, string> = {
-    'Bangun Pagi': tHabits.bangunPagi.name,
-    'Taat Beribadah': tHabits.taatBeribadah.name,
-    'Rajin Olahraga': tHabits.rajinOlahraga.name,
-    'Makan Sehat & Bergizi': tHabits.makanSehat.name,
-    'Gemar Belajar': tHabits.gemarBelajar.name,
-    'Bermasyarakat': tHabits.bermasyarakat.name,
-    'Tidur Cepat': tHabits.tidurCepat.name,
-  };
+  const isStudentRole = userProfile?.role === 'siswa';
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      studentId: '',
+      studentId: lockedStudentId || '',
       habitName: '',
       score: 4,
       date: new Date(),
     },
   });
+
+  useEffect(() => {
+    if (lockedStudentId) {
+      form.setValue('studentId', lockedStudentId);
+    }
+  }, [lockedStudentId, form]);
 
   const onSubmit = async (data: FormValues) => {
     setIsLoading(true);
@@ -89,7 +93,7 @@ export function DataInputClient() {
       
       form.reset({
         ...form.getValues(),
-        studentId: '',
+        studentId: lockedStudentId || '',
         habitName: '',
         score: 4,
       });
@@ -107,39 +111,50 @@ export function DataInputClient() {
   };
   
   const selectedStudentName = students.find(s => s.id === form.watch('studentId'))?.name || '';
-
+  
+  const habitTranslationMapping: Record<string, string> = {
+    'Bangun Pagi': tHabits.bangunPagi.name,
+    'Taat Beribadah': tHabits.taatBeribadah.name,
+    'Rajin Olahraga': tHabits.rajinOlahraga.name,
+    'Makan Sehat & Bergizi': tHabits.makanSehat.name,
+    'Gemar Belajar': tHabits.gemarBelajar.name,
+    'Bermasyarakat': tHabits.bermasyarakat.name,
+    'Tidur Cepat': tHabits.tidurCepat.name,
+  };
 
   return (
     <Card className="mx-auto w-full max-w-2xl">
       <CardHeader>
         <CardTitle>{t.formTitle}</CardTitle>
         <CardDescription>
-          {t.formDescription}
+          {isStudentRole ? "Pilih kebiasaan, masukkan skor dan tanggal progres harianmu." : t.formDescription}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="studentId">{t.selectStudent}</Label>
-             <Controller
-              control={form.control}
-              name="studentId"
-              render={({ field }) => (
-                <StudentSearchDialog
-                  students={students}
-                  selectedStudentId={field.value}
-                  onStudentSelect={(studentId) => field.onChange(studentId)}
-                  placeholder={t.selectStudentPlaceholder}
-                  selectedStudentName={selectedStudentName}
-                />
+          {!isStudentRole && (
+            <div className="space-y-2">
+              <Label htmlFor="studentId">{t.selectStudent}</Label>
+              <Controller
+                control={form.control}
+                name="studentId"
+                render={({ field }) => (
+                  <StudentSearchDialog
+                    students={students}
+                    selectedStudentId={field.value}
+                    onStudentSelect={(studentId) => field.onChange(studentId)}
+                    placeholder={t.selectStudentPlaceholder}
+                    selectedStudentName={selectedStudentName}
+                  />
+                )}
+              />
+              {form.formState.errors.studentId && (
+                <p className="text-sm text-destructive mt-1">
+                  {form.formState.errors.studentId.message}
+                </p>
               )}
-            />
-            {form.formState.errors.studentId && (
-              <p className="text-sm text-destructive mt-1">
-                {form.formState.errors.studentId.message}
-              </p>
-            )}
-          </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div className="space-y-2">
