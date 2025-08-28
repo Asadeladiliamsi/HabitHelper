@@ -85,73 +85,77 @@ export default function AppLayout({
   }
 
   return (
-      <SidebarProvider>
-        <Sidebar>
-          <SidebarHeader>
-            <div className="flex items-center gap-2 p-2">
-              <Logo />
-              <span className="font-bold text-xl text-primary group-data-[collapsible=icon]:hidden">
-                HabitHelper
-              </span>
-            </div>
-          </SidebarHeader>
-          <SidebarContent>
-            <SidebarMenu>
-              {navItems.map((item) => (
-                userProfile && item.roles.includes(userProfile.role) && (
-                  <SidebarMenuItem key={item.href}>
-                    <Link href={item.href}>
-                      <SidebarMenuButton
-                        isActive={pathname.startsWith(item.href)}
-                        tooltip={{ children: item.label }}
-                      >
-                        <item.icon />
-                        <span>{item.label}</span>
-                      </SidebarMenuButton>
-                    </Link>
-                  </SidebarMenuItem>
-                )
-              ))}
-            </SidebarMenu>
-          </SidebarContent>
-          <SidebarFooter>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <Link href="/settings">
-                  <SidebarMenuButton
-                    isActive={pathname === '/settings'}
-                    tooltip={{ children: t.sidebar.settings }}
-                  >
-                    <Settings />
-                    <span>{t.sidebar.settings}</span>
-                  </SidebarMenuButton>
-                </Link>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={logout}
-                  tooltip={{ children: t.sidebar.logout }}
-                  className="w-full"
-                >
-                  <LogOut />
-                  <span>{t.sidebar.logout}</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarFooter>
-        </Sidebar>
-        <SidebarInset>
-          <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-card px-4 sm:px-6">
-            <SidebarTrigger className="md:hidden" />
-            <div className="flex-1">
-                <span className="font-semibold capitalize text-sm">
-                  {dashboardTitle}
+    <UserProvider>
+      <StudentProvider>
+        <SidebarProvider>
+          <Sidebar>
+            <SidebarHeader>
+              <div className="flex items-center gap-2 p-2">
+                <Logo />
+                <span className="font-bold text-xl text-primary group-data-[collapsible=icon]:hidden">
+                  HabitHelper
                 </span>
-                <span className="text-sm text-muted-foreground ml-2">({user?.email})</span>
-            </div>
-          </header>
-          <main className="flex-1 p-4 sm:p-6">{children}</main>
-        </SidebarInset>
-      </SidebarProvider>
+              </div>
+            </SidebarHeader>
+            <SidebarContent>
+              <SidebarMenu>
+                {navItems.map((item) => (
+                  userProfile && item.roles.includes(userProfile.role) && (
+                    <SidebarMenuItem key={item.href}>
+                      <Link href={item.href}>
+                        <SidebarMenuButton
+                          isActive={pathname.startsWith(item.href)}
+                          tooltip={{ children: item.label }}
+                        >
+                          <item.icon />
+                          <span>{item.label}</span>
+                        </SidebarMenuButton>
+                      </Link>
+                    </SidebarMenuItem>
+                  )
+                ))}
+              </SidebarMenu>
+            </SidebarContent>
+            <SidebarFooter>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <Link href="/settings">
+                    <SidebarMenuButton
+                      isActive={pathname === '/settings'}
+                      tooltip={{ children: t.sidebar.settings }}
+                    >
+                      <Settings />
+                      <span>{t.sidebar.settings}</span>
+                    </SidebarMenuButton>
+                  </Link>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={logout}
+                    tooltip={{ children: t.sidebar.logout }}
+                    className="w-full"
+                  >
+                    <LogOut />
+                    <span>{t.sidebar.logout}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarFooter>
+          </Sidebar>
+          <SidebarInset>
+            <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-card px-4 sm:px-6">
+              <SidebarTrigger className="md:hidden" />
+              <div className="flex-1">
+                  <span className="font-semibold capitalize text-sm">
+                    {dashboardTitle}
+                  </span>
+                  <span className="text-sm text-muted-foreground ml-2">({user?.email})</span>
+              </div>
+            </header>
+            <main className="flex-1 p-4 sm:p-6">{children}</main>
+          </SidebarInset>
+        </SidebarProvider>
+      </StudentProvider>
+    </UserProvider>
   );
 }
