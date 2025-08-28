@@ -41,16 +41,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUserProfile(profile);
 
           const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup');
-          const isVerifyPage = pathname === '/verify-nisn';
-
+          const isVerifyPage = pathname.startsWith('/verify-nisn');
+          
+          // Logic for redirection
           if (profile.role === 'siswa' && !profile.nisn) {
-            // Student is not verified, FORCE redirect to verification page
+            // Student is not verified, MUST be on verification page.
             if (!isVerifyPage) {
               router.replace('/verify-nisn');
             }
-          } else if (isAuthPage || isVerifyPage) {
-            // User is verified OR not a student, redirect from auth/verify pages
-            router.replace('/dashboard');
+          } else {
+            // User is verified OR not a student.
+            // If they are on auth pages or verify page, redirect to dashboard.
+            if (isAuthPage || isVerifyPage) {
+              router.replace('/dashboard');
+            }
           }
           
         } else {
@@ -63,12 +67,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else {
         setUser(null);
         setUserProfile(null);
+        const isAppPage = !pathname.startsWith('/login') && !pathname.startsWith('/signup') && !pathname.startsWith('/verify-nisn') && pathname !== '/';
+         if (isAppPage) {
+            router.replace('/login');
+         }
       }
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, []); // Remove dependencies to let it run once and handle redirection internally
+  }, [pathname, router]); // dependency on pathname and router is important
   
   const login = async (email: string, pass: string) => {
     try {
@@ -125,8 +133,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 
   const logout = async () => {
-    setUserProfile(null);
     await signOut(auth);
+    setUser(null);
+    setUserProfile(null);
     router.push('/login');
   };
 

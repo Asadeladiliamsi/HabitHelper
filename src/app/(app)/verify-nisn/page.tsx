@@ -34,6 +34,7 @@ export default function VerifyNisnPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
+    // This effect ensures that only unverified students can access this page.
     if (!loading) {
       if (!user) {
         // Not logged in, send to login
@@ -65,7 +66,11 @@ export default function VerifyNisnPage() {
       if (!result.success) {
         throw new Error(result.message);
       }
-      // On success, the auth context will automatically redirect to the dashboard
+      // On success, the auth context's useEffect will automatically redirect
+      // to the dashboard because userProfile.nisn will now exist.
+      // We can also add an explicit push here for faster navigation.
+      router.push('/dashboard');
+
     } catch (err: any) {
       setError(err.message || 'Gagal melakukan verifikasi. Silakan coba lagi.');
     } finally {
