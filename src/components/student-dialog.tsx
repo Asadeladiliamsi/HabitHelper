@@ -21,14 +21,6 @@ import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
 import { StudentUserSearchDialog } from './student-user-search-dialog';
 
-interface StudentDialogProps {
-  isOpen: boolean;
-  onOpenChange: (isOpen: boolean) => void;
-  onSave: (data: Omit<Student, 'id' | 'habits' | 'avatarUrl'>) => void;
-  student: Student | null;
-  studentUsers: UserProfile[]; // Users with 'siswa' role
-}
-
 const formSchema = z.object({
   name: z.string(), // Now it will be auto-filled
   class: z.string().min(1, { message: 'Kelas harus diisi.' }),
@@ -51,6 +43,7 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student, studentUs
     reset,
     control,
     setValue,
+    watch,
     formState: { errors, isValid },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
