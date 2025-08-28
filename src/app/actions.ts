@@ -4,6 +4,7 @@ import {
   habitDeclineNotification,
   type HabitDeclineNotificationInput,
 } from '@/ai/flows/habit-decline-notification';
+import { verifyNisnFlow, type VerifyNisnInput } from '@/ai/flows/verify-nisn-flow';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
 
@@ -39,4 +40,15 @@ export async function getRecentHabitScores(studentId: string, habitName: string)
         console.error('Error fetching recent scores:', error);
         return { success: false, error: 'Gagal mengambil data skor dari database.' };
     }
+}
+
+
+export async function verifyNisn(input: VerifyNisnInput) {
+  try {
+    const result = await verifyNisnFlow(input);
+    return { success: result.success, message: result.message };
+  } catch (error: any) {
+    console.error('Error in verifyNisn action:', error);
+    return { success: false, message: error.message || 'Gagal memverifikasi NISN.' };
+  }
 }

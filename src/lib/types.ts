@@ -16,6 +16,7 @@ export interface Student extends DocumentData {
   habits: Habit[];
   parentId?: string;
   parentName?: string;
+  linkedUserUid?: string;
 }
 
 export const HABIT_NAMES = [
@@ -35,6 +36,7 @@ export interface UserProfile {
   email: string | null;
   name: string;
   role: UserRole;
+  nisn?: string;
 }
 
 export interface HabitEntry {
