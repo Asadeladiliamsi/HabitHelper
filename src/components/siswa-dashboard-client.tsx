@@ -31,7 +31,7 @@ const habitIcons: { [key: string]: React.ReactNode } = {
 
 
 export function SiswaDashboardClient() {
-  const { userProfile, user } = useAuth();
+  const { user } = useAuth();
   const { students, loading: studentsLoading } = useStudent();
   const { language } = useLanguage();
   const t = translations[language]?.dashboardPage || translations.en.dashboardPage;
@@ -76,7 +76,7 @@ export function SiswaDashboardClient() {
   return (
     <>
       <header>
-        <h1 className="text-3xl font-bold tracking-tight">Halo, {userProfile?.name}!</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Halo, {studentData.name}!</h1>
         <p className="text-muted-foreground">Selamat datang di dasbor pribadimu. Pantau terus perkembanganmu!</p>
       </header>
 
@@ -123,3 +123,4 @@ export function SiswaDashboardClient() {
     </>
   );
 }
+
