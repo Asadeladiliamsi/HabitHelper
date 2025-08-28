@@ -97,13 +97,15 @@ export function ManageStudentsClient({ parentUsers, studentUsers }: ManageStuden
 
   return (
     <>
-      <StudentDialog 
-        isOpen={dialogOpen} 
-        onOpenChange={setDialogOpen} 
-        onSave={handleDialogSave}
-        student={selectedStudent} 
-        studentUsers={studentUsers}
-      />
+      {dialogOpen && (
+        <StudentDialog 
+          isOpen={dialogOpen} 
+          onOpenChange={setDialogOpen} 
+          onSave={handleDialogSave}
+          student={selectedStudent} 
+          studentUsers={studentUsers}
+        />
+      )}
       {selectedStudent && (
         <LinkParentDialog
             isOpen={linkParentDialogOpen}
