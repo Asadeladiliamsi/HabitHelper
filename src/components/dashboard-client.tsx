@@ -26,6 +26,12 @@ import { cn } from '@/lib/utils';
 import { useStudent } from '@/contexts/student-context';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 
 
 const habitIcons: { [key: string]: React.ReactNode } = {
@@ -37,6 +43,46 @@ const habitIcons: { [key: string]: React.ReactNode } = {
   'Bermasyarakat': <HandHelping className="h-5 w-5 text-orange-500" />,
   'Tidur Cepat': <Bed className="h-5 w-5 text-indigo-500" />,
 };
+
+// Mock data for class details
+const classDetailsData: Record<string, { className: string; score: number; trend: number }[]> = {
+    'Bangun Pagi': [
+        { className: 'IX A', score: 90, trend: 5 },
+        { className: 'IX B', score: 85, trend: -2 },
+        { className: 'IX C', score: 88, trend: 3 },
+    ],
+    'Taat Beribadah': [
+        { className: 'IX A', score: 95, trend: 2 },
+        { className: 'IX B', score: 90, trend: 1 },
+        { className: 'IX C', score: 89, trend: -1 },
+    ],
+    'Rajin Olahraga': [
+        { className: 'IX A', score: 82, trend: -5 },
+        { className: 'IX B', score: 88, trend: 1 },
+        { className: 'IX C', score: 85, trend: -3 },
+    ],
+    'Makan Sehat & Bergizi': [
+        { className: 'IX A', score: 96, trend: 4 },
+        { className: 'IX B', score: 94, trend: 3 },
+        { className: 'IX C', score: 95, trend: 5 },
+    ],
+    'Gemar Belajar': [
+        { className: 'IX A', score: 92, trend: 4 },
+        { className: 'IX B', score: 88, trend: 5 },
+        { className: 'IX C', score: 87, trend: 3 },
+    ],
+    'Bermasyarakat': [
+        { className: 'IX A', score: 90, trend: -3 },
+        { className: 'IX B', score: 94, trend: 2 },
+        { className: 'IX C', score: 89, trend: -1 },
+    ],
+    'Tidur Cepat': [
+        { className: 'IX A', score: 85, trend: -4 },
+        { className: 'IX B', score: 90, trend: 1 },
+        { className: 'IX C', score: 86, trend: -2 },
+    ],
+};
+
 
 export function DashboardClient() {
   const { students } = useStudent();
@@ -99,48 +145,94 @@ export function DashboardClient() {
           <CardTitle>{t.overallHabitProgress}</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t.habit}</TableHead>
-                <TableHead className="text-center">{t.lastWeek}</TableHead>
-                <TableHead>{t.thisWeek}</TableHead>
-                <TableHead className="text-center">{t.change}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {overallHabitData.map((habit) => {
-                const change = habit['Minggu Ini'] - habit['Minggu Lalu'];
-                const ChangeIcon = change > 0 ? ArrowUp : change < 0 ? ArrowDown : Minus;
-                const changeColor = change > 0 ? 'text-green-600' : change < 0 ? 'text-red-600' : 'text-muted-foreground';
-                const translatedName = habitTranslationMapping[habit.name] || habit.name;
-
-                return (
-                  <TableRow key={habit.name}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        {habitIcons[habit.name]}
-                        <span className="font-medium">{translatedName}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center font-mono">{habit['Minggu Lalu']}%</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Progress value={habit['Minggu Ini']} className="w-24 h-2" />
-                        <span className="font-mono text-sm">{habit['Minggu Ini']}%</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                       <div className={cn("flex items-center justify-center gap-1 font-mono text-sm", changeColor)}>
-                          <ChangeIcon className="h-4 w-4" />
-                          <span>{Math.abs(change)}%</span>
-                        </div>
-                    </TableCell>
+            <Accordion type="single" collapsible className="w-full">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[250px]">{t.habit}</TableHead>
+                    <TableHead className="text-center">{t.lastWeek}</TableHead>
+                    <TableHead>{t.thisWeek}</TableHead>
+                    <TableHead className="text-center w-[100px]">{t.change}</TableHead>
+                    <TableHead className="w-[48px]"></TableHead>
                   </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
+                </TableHeader>
+                <TableBody>
+                  {overallHabitData.map((habit) => {
+                    const change = habit['Minggu Ini'] - habit['Minggu Lalu'];
+                    const ChangeIcon = change > 0 ? ArrowUp : change < 0 ? ArrowDown : Minus;
+                    const changeColor = change > 0 ? 'text-green-600' : change < 0 ? 'text-red-600' : 'text-muted-foreground';
+                    const translatedName = habitTranslationMapping[habit.name] || habit.name;
+
+                    return (
+                        <AccordionItem value={habit.name} key={habit.name} className="border-b-0">
+                             <AccordionTrigger asChild>
+                                <TableRow className="cursor-pointer hover:bg-muted/50">
+                                    <TableCell>
+                                    <div className="flex items-center gap-3">
+                                        {habitIcons[habit.name]}
+                                        <span className="font-medium">{translatedName}</span>
+                                    </div>
+                                    </TableCell>
+                                    <TableCell className="text-center font-mono">{habit['Minggu Lalu']}%</TableCell>
+                                    <TableCell>
+                                    <div className="flex items-center gap-2">
+                                        <Progress value={habit['Minggu Ini']} className="w-24 h-2" />
+                                        <span className="font-mono text-sm">{habit['Minggu Ini']}%</span>
+                                    </div>
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                    <div className={cn("flex items-center justify-center gap-1 font-mono text-sm", changeColor)}>
+                                        <ChangeIcon className="h-4 w-4" />
+                                        <span>{Math.abs(change)}%</span>
+                                    </div>
+                                    </TableCell>
+                                    <TableCell className="px-1 text-right">
+                                       <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 text-muted-foreground group-data-[state=open]:rotate-180" />
+                                    </TableCell>
+                                </TableRow>
+                             </AccordionTrigger>
+                             <AccordionContent>
+                                <div className="bg-muted/50 p-4 -mx-6 -mt-1">
+                                    <h4 className="font-semibold text-sm mb-2 ml-2">Detail Performa per Kelas</h4>
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Kelas</TableHead>
+                                                <TableHead>Skor Rata-rata</TableHead>
+                                                <TableHead className="text-right">Tren Mingguan</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {classDetailsData[habit.name]?.map(detail => {
+                                                 const TrendIcon = detail.trend > 0 ? ArrowUp : detail.trend < 0 ? ArrowDown : Minus;
+                                                 const trendColor = detail.trend > 0 ? 'text-green-600' : detail.trend < 0 ? 'text-red-600' : 'text-muted-foreground';
+                                                return (
+                                                <TableRow key={detail.className} className="border-muted">
+                                                    <TableCell><Badge variant="secondary">{detail.className}</Badge></TableCell>
+                                                    <TableCell>
+                                                         <div className="flex items-center gap-2">
+                                                            <Progress value={detail.score} className="w-20 h-1.5" />
+                                                            <span className="font-mono text-xs">{detail.score}</span>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                         <div className={cn("flex items-center justify-end gap-1 font-mono text-xs", trendColor)}>
+                                                            <TrendIcon className="h-3 w-3" />
+                                                            <span>{Math.abs(detail.trend)}%</span>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            )})}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                             </AccordionContent>
+                        </AccordionItem>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </Accordion>
         </CardContent>
       </Card>
 
@@ -205,3 +297,21 @@ export function DashboardClient() {
     </>
   );
 }
+
+// Add ChevronDown icon to be used in the Accordion trigger
+const ChevronDown = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <path d="m6 9 6 6 6-6" />
+  </svg>
+);
