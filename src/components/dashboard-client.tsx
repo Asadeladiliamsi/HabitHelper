@@ -20,12 +20,19 @@ import {
   HandHelping,
   Church,
   Bed,
+  ChevronDown,
 } from 'lucide-react';
 import type { Student, Habit } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useStudent } from '@/contexts/student-context';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import React from 'react';
 
 
 const habitIcons: { [key: string]: React.ReactNode } = {
@@ -106,6 +113,7 @@ export function DashboardClient() {
                 <TableHead className="text-center">{t.lastWeek}</TableHead>
                 <TableHead>{t.thisWeek}</TableHead>
                 <TableHead className="text-center w-[100px]">{t.change}</TableHead>
+                <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -116,27 +124,79 @@ export function DashboardClient() {
                 const translatedName = habitTranslationMapping[habit.name] || habit.name;
 
                 return (
-                  <TableRow key={habit.name}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        {habitIcons[habit.name]}
-                        <span className="font-medium">{translatedName}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center font-mono">{habit['Minggu Lalu']}%</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Progress value={habit['Minggu Ini']} className="w-24 h-2" />
-                        <span className="font-mono text-sm">{habit['Minggu Ini']}%</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <div className={cn("flex items-center justify-center gap-1 font-mono text-sm", changeColor)}>
-                        <ChangeIcon className="h-4 w-4" />
-                        <span>{Math.abs(change)}%</span>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                  <Collapsible key={habit.name} asChild>
+                     <>
+                        <TableRow>
+                            <TableCell>
+                            <div className="flex items-center gap-3">
+                                {habitIcons[habit.name]}
+                                <span className="font-medium">{translatedName}</span>
+                            </div>
+                            </TableCell>
+                            <TableCell className="text-center font-mono">{habit['Minggu Lalu']}%</TableCell>
+                            <TableCell>
+                            <div className="flex items-center gap-2">
+                                <Progress value={habit['Minggu Ini']} className="w-24 h-2" />
+                                <span className="font-mono text-sm">{habit['Minggu Ini']}%</span>
+                            </div>
+                            </TableCell>
+                            <TableCell className="text-center">
+                            <div className={cn("flex items-center justify-center gap-1 font-mono text-sm", changeColor)}>
+                                <ChangeIcon className="h-4 w-4" />
+                                <span>{Math.abs(change)}%</span>
+                            </div>
+                            </TableCell>
+                             <TableCell className="text-right">
+                                <CollapsibleTrigger asChild>
+                                  <button>
+                                    <ChevronDown className="h-4 w-4 transition-transform data-[state=open]:rotate-180" />
+                                  </button>
+                                </CollapsibleTrigger>
+                              </TableCell>
+                        </TableRow>
+                        <CollapsibleContent asChild>
+                            <tr className="bg-muted/50">
+                                <td colSpan={5} className="p-0">
+                                <div className="p-4">
+                                    <h4 className="font-semibold mb-2 text-sm">Detail Performa Kelas untuk: {translatedName}</h4>
+                                     <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Kelas</TableHead>
+                                                <TableHead>Skor Rata-Rata</TableHead>
+                                                <TableHead>Tren</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            <TableRow>
+                                                <TableCell>IX A</TableCell>
+                                                <TableCell>3.8</TableCell>
+                                                <TableCell className="text-green-600 flex items-center">
+                                                    <ArrowUp className="h-4 w-4 mr-1" /> Meningkat
+                                                </TableCell>
+                                            </TableRow>
+                                            <TableRow>
+                                                <TableCell>IX B</TableCell>
+                                                <TableCell>3.5</TableCell>
+                                                <TableCell className="text-red-600 flex items-center">
+                                                    <ArrowDown className="h-4 w-4 mr-1" /> Menurun
+                                                </TableCell>
+                                            </TableRow>
+                                             <TableRow>
+                                                <TableCell>IX C</TableCell>
+                                                <TableCell>3.7</TableCell>
+                                                 <TableCell className="text-gray-500 flex items-center">
+                                                    <Minus className="h-4 w-4 mr-1" /> Stabil
+                                                </TableCell>
+                                            </TableRow>
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                                </td>
+                            </tr>
+                        </CollapsibleContent>
+                    </>
+                  </Collapsible>
                 )
               })}
             </TableBody>
