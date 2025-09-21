@@ -113,7 +113,6 @@ export function DashboardClient() {
                 <TableHead className="text-center">{t.lastWeek}</TableHead>
                 <TableHead>{t.thisWeek}</TableHead>
                 <TableHead className="text-center w-[100px]">{t.change}</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -125,14 +124,19 @@ export function DashboardClient() {
 
                 return (
                   <Collapsible key={habit.name} asChild>
-                     <>
-                        <TableRow>
-                            <TableCell>
-                            <div className="flex items-center gap-3">
-                                {habitIcons[habit.name]}
-                                <span className="font-medium">{translatedName}</span>
-                            </div>
-                            </TableCell>
+                     <React.Fragment>
+                        <TableRow className="cursor-pointer">
+                           <CollapsibleTrigger asChild>
+                             <TableCell className="w-auto">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        {habitIcons[habit.name]}
+                                        <span className="font-medium">{translatedName}</span>
+                                    </div>
+                                    <ChevronDown className="h-4 w-4 transition-transform data-[state=open]:rotate-180" />
+                                </div>
+                             </TableCell>
+                           </CollapsibleTrigger>
                             <TableCell className="text-center font-mono">{habit['Minggu Lalu']}%</TableCell>
                             <TableCell>
                             <div className="flex items-center gap-2">
@@ -146,13 +150,6 @@ export function DashboardClient() {
                                 <span>{Math.abs(change)}%</span>
                             </div>
                             </TableCell>
-                             <TableCell className="text-right">
-                                <CollapsibleTrigger asChild>
-                                  <button>
-                                    <ChevronDown className="h-4 w-4 transition-transform data-[state=open]:rotate-180" />
-                                  </button>
-                                </CollapsibleTrigger>
-                              </TableCell>
                         </TableRow>
                         <CollapsibleContent asChild>
                             <tr className="bg-muted/50">
@@ -163,7 +160,7 @@ export function DashboardClient() {
                                 </td>
                             </tr>
                         </CollapsibleContent>
-                    </>
+                    </React.Fragment>
                   </Collapsible>
                 )
               })}
