@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -153,11 +154,11 @@ export function DashboardClient() {
                   habitTranslationMapping[habit.name] || habit.name;
 
                 return (
-                  <Collapsible asChild key={habit.name}>
-                    <>
+                  <Collapsible asChild key={habit.name} >
+                     <React.Fragment>
                       <TableRow>
                         <TableCell>
-                          <CollapsibleTrigger className="flex w-full items-center justify-between">
+                          <CollapsibleTrigger className="flex w-full items-center justify-between group">
                             <div className="flex items-center gap-3">
                               {habitIcons[habit.name]}
                               <span className="font-medium">
@@ -194,15 +195,17 @@ export function DashboardClient() {
                         </TableCell>
                       </TableRow>
                       <CollapsibleContent asChild>
-                        <tr className="bg-muted/50">
-                          <td colSpan={4} className="p-6 text-center">
-                            <p className="text-sm text-muted-foreground">
-                              Detail performa kelas akan ditampilkan di sini.
-                            </p>
+                        <tr>
+                          <td colSpan={4} className="p-0">
+                            <div className="p-6 text-center bg-muted/50">
+                                <p className="text-sm text-muted-foreground">
+                                  Detail performa kelas akan ditampilkan di sini.
+                                </p>
+                            </div>
                           </td>
                         </tr>
                       </CollapsibleContent>
-                    </>
+                     </React.Fragment>
                   </Collapsible>
                 );
               })}
@@ -314,3 +317,5 @@ export function DashboardClient() {
     </>
   );
 }
+
+    
