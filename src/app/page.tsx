@@ -15,10 +15,8 @@ import {
   Bell,
   DownloadCloud,
 } from 'lucide-react';
-import { useLanguage } from '@/contexts/language-provider';
-import { translations } from '@/lib/translations';
+import { ThemeToggle } from '@/components/theme-toggle';
 
-// Menggunakan Lucide React sebagai pengganti Material Icons untuk konsistensi
 const metrics = [
   {
     icon: <CheckCircle className="h-12 w-12 text-primary" />,
@@ -88,17 +86,18 @@ export default function LandingPage() {
             <span className="font-bold text-xl">Kalih.Spensa id</span>
           </div>
           <div className="flex items-center space-x-4">
-            <Link href="/reports" className="text-primary font-medium hover:underline hidden sm:block">
-              Laporan
-            </Link>
             <Link href="#features" className="text-primary font-medium hover:underline hidden sm:block">
               Fitur
+            </Link>
+            <Link href="/reports" className="text-primary font-medium hover:underline hidden sm:block">
+              Laporan
             </Link>
             <Link href="/login">
                 <Button className="bg-primary hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-300">
                 Buka Dashboard
                 </Button>
             </Link>
+            <ThemeToggle />
           </div>
         </nav>
       </header>
