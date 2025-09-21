@@ -5,9 +5,9 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle, Sunrise, BookOpen, HeartPulse, Users, TrendingUp, Activity, ArrowRight, Utensils, HandHelping, Church, Bed } from 'lucide-react';
-import { Logo } from '@/components/icons/logo';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
+import Image from 'next/image';
 
 const habits = [
   {
@@ -103,12 +103,23 @@ export default function LandingPage() {
       </header>
 
       <main className="flex-1">
-        <section className="py-20 md:py-32">
-          <div className="container max-w-7xl text-center">
+        <section className="relative py-20 md:py-32">
+          <div className="absolute inset-0 z-0">
+             <Image 
+              src="https://storage.googleapis.com/project-twix-public-images/user-669f9e5be62270eda3c683b5/1721868352528.png"
+              alt="School background"
+              fill
+              style={{ objectFit: 'cover' }}
+              className="opacity-50"
+              priority
+             />
+             <div className="absolute inset-0 bg-background/60 backdrop-blur-sm"></div>
+          </div>
+          <div className="container relative z-10 max-w-7xl text-center">
             <h1 className="font-headline text-4xl font-bold tracking-tight text-primary sm:text-5xl md:text-6xl">
               {t.heroTitle}
             </h1>
-            <p className="mt-6 max-w-3xl mx-auto text-lg text-muted-foreground md:text-xl">
+            <p className="mt-6 max-w-3xl mx-auto text-lg text-foreground/80 md:text-xl">
               {t.heroSubtitle}
             </p>
             <div className="mt-10 flex justify-center gap-4">
