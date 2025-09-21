@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useAuth } from '@/contexts/auth-context';
@@ -84,6 +85,15 @@ export function OrangTuaDashboardClient() {
   
   const selectedStudentData = parentStudents.find(s => s.id === selectedStudentId);
 
+  const calculateOverallAverage = (student: Student) => {
+    const totalScore = student.habits.reduce((acc, h) => {
+      const subHabitTotal = h.subHabits.reduce((subAcc, sh) => subAcc + sh.score, 0);
+      const subHabitAverage = subHabitTotal / (h.subHabits.length || 1);
+      return acc + subHabitAverage;
+    }, 0);
+    return totalScore / (student.habits.length || 1);
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <header>
@@ -149,8 +159,8 @@ export function OrangTuaDashboardClient() {
                     <TableCell>Rata-rata Keseluruhan</TableCell>
                     <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                             <Progress value={( (selectedStudentData.habits.reduce((acc, h) => acc + (h.subHabits.reduce((subAcc, sh) => subAcc + sh.score, 0) / (h.subHabits.length || 1))), 0) / (selectedStudentData.habits.length || 1)) / 4) * 100} className="w-24 h-2" />
-                            <span className="font-mono text-sm">{ (selectedStudentData.habits.reduce((acc, h) => acc + (h.subHabits.reduce((subAcc, sh) => subAcc + sh.score, 0) / (h.subHabits.length || 1)), 0) / (selectedStudentData.habits.length || 1)).toFixed(1) }</span>
+                             <Progress value={(calculateOverallAverage(selectedStudentData) / 4) * 100} className="w-24 h-2" />
+                            <span className="font-mono text-sm">{ calculateOverallAverage(selectedStudentData).toFixed(1) }</span>
                         </div>
                     </TableCell>
                     </TableRow>
