@@ -154,7 +154,7 @@ export function DashboardClient() {
                   habitTranslationMapping[habit.name] || habit.name;
 
                 return (
-                  <Collapsible asChild key={habit.name} >
+                   <Collapsible key={habit.name} asChild>
                      <React.Fragment>
                       <TableRow>
                         <TableCell>
@@ -317,5 +317,3 @@ export function DashboardClient() {
     </>
   );
 }
-
-    
