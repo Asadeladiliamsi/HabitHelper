@@ -110,7 +110,7 @@ export default function LandingPage() {
               alt="School background"
               fill
               style={{ objectFit: 'cover' }}
-              className="opacity-50"
+              className="opacity-20"
               priority
              />
              <div className="absolute inset-0 bg-background/60 backdrop-blur-sm"></div>
