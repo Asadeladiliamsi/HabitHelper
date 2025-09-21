@@ -78,7 +78,7 @@ const features = [
 export default function LandingPage() {
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
-      <header className="py-6 px-4 sm:px-6 lg:px-8 border-b border-border/40">
+      <header className="absolute top-0 left-0 right-0 z-20 py-6 px-4 sm:px-6 lg:px-8">
         <nav className="flex justify-between items-center max-w-7xl mx-auto">
           <div className="flex items-center space-x-2">
             <span className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white font-bold text-lg">
@@ -87,10 +87,10 @@ export default function LandingPage() {
             <span className="font-bold text-xl">Kalih.Spensa id</span>
           </div>
           <div className="flex items-center space-x-4">
-            <Link href="#features" className="text-primary font-medium hover:underline hidden sm:block">
+            <Link href="#features" className="text-primary-foreground font-medium hover:underline hidden sm:block">
               Fitur
             </Link>
-            <Link href="/reports" className="text-primary font-medium hover:underline hidden sm:block">
+            <Link href="/reports" className="text-primary-foreground font-medium hover:underline hidden sm:block">
               Laporan
             </Link>
             <Link href="/login">
@@ -104,7 +104,7 @@ export default function LandingPage() {
       </header>
 
       <main className="flex-grow">
-        <section className="relative text-center py-20 lg:py-32 px-4 sm:px-6 lg:px-8 overflow-hidden">
+        <section className="relative text-center h-[60vh] min-h-[500px] flex items-center justify-center px-4 sm:px-6 lg:px-8 overflow-hidden">
           <div className="absolute inset-0">
               <Image
                   src="https://picsum.photos/seed/school/1920/1080"
