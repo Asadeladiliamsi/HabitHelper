@@ -6,7 +6,7 @@ import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, serve
 import { db } from '@/lib/firebase';
 import type { Student, HabitEntry } from '@/lib/types';
 import { useAuth } from './auth-context';
-import { HABIT_NAMES } from '@/lib/types';
+import { HABIT_DEFINITIONS } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
 
 interface StudentContextType {
@@ -15,7 +15,7 @@ interface StudentContextType {
   addStudent: (newStudent: Omit<Student, 'id' | 'habits' | 'avatarUrl'>) => Promise<void>;
   updateStudent: (studentId: string, updatedData: Partial<Omit<Student, 'id' | 'habits' | 'avatarUrl'>>) => Promise<void>;
   deleteStudent: (studentId: string) => Promise<void>;
-  updateHabitScore: (studentId: string, habitId: string, newScore: number) => Promise<void>;
+  updateHabitScore: (studentId: string, habitId: string, subHabitId: string, newScore: number) => Promise<void>;
   addHabitEntry: (data: Omit<HabitEntry, 'id' | 'timestamp' | 'recordedBy'>) => Promise<void>;
   linkParentToStudent: (studentId: string, parentId: string, parentName: string) => Promise<void>;
 }
@@ -96,10 +96,14 @@ export const StudentProvider = ({ children }: { children: React.ReactNode }) => 
       
       await setDoc(newDocRef, {
         ...newStudentData,
-        habits: HABIT_NAMES.map((name, index) => ({
-          id: `habit-${Date.now()}-${index}`, // More unique ID
-          name: name,
-          score: 4, // Default score
+        habits: Object.entries(HABIT_DEFINITIONS).map(([habitName, subHabitNames], habitIndex) => ({
+          id: `habit-${Date.now()}-${habitIndex}`,
+          name: habitName,
+          subHabits: subHabitNames.map((subHabitName, subHabitIndex) => ({
+            id: `subhabit-${Date.now()}-${habitIndex}-${subHabitIndex}`,
+            name: subHabitName,
+            score: 4,
+          })),
         })),
         avatarUrl: `https://placehold.co/100x100.png?text=${newStudentData.name.charAt(0)}`,
         createdBy: user.uid,
@@ -110,21 +114,8 @@ export const StudentProvider = ({ children }: { children: React.ReactNode }) => 
         const userDocRef = doc(db, 'users', newStudentData.linkedUserUid);
         await updateDoc(userDocRef, { nisn: newStudentData.nisn });
       }
-
-      // Auto-populate habit_entries for the new student for the last 3 days
-      const today = new Date();
-      for (let i = 0; i < 3; i++) {
-        const date = new Date(today);
-        date.setDate(today.getDate() - i);
-        for (const habitName of HABIT_NAMES) {
-           await addHabitEntry({
-              studentId: newDocRef.id,
-              habitName: habitName,
-              score: 4, // Default starting score
-              date: date,
-           });
-        }
-      }
+      
+      // No need to auto-populate habit_entries anymore as the structure has changed
 
     } catch (error) {
       console.error("Error adding student:", error);
@@ -170,13 +161,19 @@ export const StudentProvider = ({ children }: { children: React.ReactNode }) => 
     }
   };
 
-  const updateHabitScore = async (studentId: string, habitId: string, newScore: number) => {
+  const updateHabitScore = async (studentId: string, habitId: string, subHabitId: string, newScore: number) => {
     if (!user) throw new Error("Authentication required");
     const studentToUpdate = students.find(s => s.id === studentId);
     if (studentToUpdate) {
-      const updatedHabits = studentToUpdate.habits.map(habit =>
-        habit.id === habitId ? { ...habit, score: newScore } : habit
-      );
+      const updatedHabits = studentToUpdate.habits.map(habit => {
+        if (habit.id === habitId) {
+          const updatedSubHabits = habit.subHabits.map(subHabit => 
+            subHabit.id === subHabitId ? { ...subHabit, score: newScore } : subHabit
+          );
+          return { ...habit, subHabits: updatedSubHabits };
+        }
+        return habit;
+      });
       const studentDocRef = doc(db, 'students', studentId);
       try {
         await updateDoc(studentDocRef, { habits: updatedHabits });
@@ -189,21 +186,27 @@ export const StudentProvider = ({ children }: { children: React.ReactNode }) => 
   const addHabitEntry = async (data: Omit<HabitEntry, 'id' | 'timestamp' | 'recordedBy'>) => {
     if (!user) throw new Error("Authentication required");
     try {
+      // This function might need adjustment based on the new data structure.
+      // For now, let's assume we update the specific sub-habit score directly.
       const studentToUpdate = students.find(s => s.id === data.studentId);
-
-      if (studentToUpdate) {
-        const updatedHabits = studentToUpdate.habits.map(h => 
-            h.name === data.habitName ? { ...h, score: data.score } : h
-        );
-
+       if (studentToUpdate) {
+        const updatedHabits = studentToUpdate.habits.map(h => {
+          if (h.name === data.habitName) {
+            const updatedSubHabits = h.subHabits.map(sh => 
+              sh.name === data.subHabitName ? { ...sh, score: data.score } : sh
+            );
+            return { ...h, subHabits: updatedSubHabits };
+          }
+          return h;
+        });
         await updateDoc(doc(db, 'students', data.studentId), {
           habits: updatedHabits
         });
       }
 
-      // Create a unique ID for the entry to avoid duplicates for the same student/habit/date
+      // Create a unique ID for the entry to avoid duplicates for the same student/habit/subhabit/date
       const entryDate = data.date.toISOString().split('T')[0];
-      const entryId = `${data.studentId}-${data.habitName}-${entryDate}`;
+      const entryId = `${data.studentId}-${data.habitName}-${data.subHabitName.replace(/\s+/g, '-')}-${entryDate}`;
       const docRef = doc(db, 'habit_entries', entryId);
 
       await setDoc(docRef, {
