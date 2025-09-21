@@ -18,6 +18,7 @@ import {
   Church,
   Bed
 } from 'lucide-react';
+import type { Habit } from '@/lib/types';
 
 const habitIcons: { [key: string]: React.ReactNode } = {
   'Bangun Pagi': <Sunrise className="h-5 w-5 text-yellow-500" />,
@@ -71,7 +72,12 @@ export function SiswaDashboardClient() {
     );
   }
 
-  const averageScore = studentData.habits.reduce((acc, h) => acc + h.score, 0) / (studentData.habits.length || 1);
+  const totalScore = studentData.habits.reduce((acc, h) => {
+      const subHabitTotal = h.subHabits.reduce((subAcc, sh) => subAcc + sh.score, 0);
+      return acc + (subHabitTotal / (h.subHabits.length || 1));
+  }, 0);
+  const averageScore = totalScore / (studentData.habits.length || 1);
+
 
   return (
     <>
@@ -90,11 +96,13 @@ export function SiswaDashboardClient() {
             <TableHeader>
               <TableRow>
                 <TableHead>Kebiasaan</TableHead>
-                <TableHead className="text-right">Nilai</TableHead>
+                <TableHead className="text-right">Nilai Rata-rata</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {studentData.habits.map((habit) => (
+              {studentData.habits.map((habit) => {
+                const habitAverage = habit.subHabits.reduce((acc, sub) => acc + sub.score, 0) / (habit.subHabits.length || 1);
+                return (
                 <TableRow key={habit.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
@@ -103,10 +111,10 @@ export function SiswaDashboardClient() {
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    <span className="font-mono text-lg font-bold">{habit.score}</span>
+                    <span className="font-mono text-lg font-bold">{habitAverage.toFixed(1)}</span>
                   </TableCell>
                 </TableRow>
-              ))}
+              )})}
                <TableRow className="bg-muted/50 font-bold">
                   <TableCell>Rata-rata</TableCell>
                   <TableCell className="text-right">
@@ -123,4 +131,3 @@ export function SiswaDashboardClient() {
     </>
   );
 }
-

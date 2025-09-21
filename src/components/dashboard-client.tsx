@@ -61,19 +61,6 @@ export function DashboardClient() {
     'Tidur Cepat': tHabits.tidurCepat.name,
   };
   
-  const habitDetails = [
-    { title: 'Kepatuhan terhadap Waktu Tidur', description: 'Tidur sesuai dengan waktu yang telah ditentukan.' },
-    { title: 'Durasi Tidur yang Cukup', description: 'Mendapatkan durasi tidur yang cukup untuk usia mereka.' },
-    { title: 'Kualitas Tidur', description: 'Tidur dengan nyenyak dan tidak sering terbangun di malam hari.' },
-    { title: 'Aktivitas yang Mengganggu Tidur', description: 'Menghindari aktivitas yang mengganggu kualitas tidur, seperti menonton TV atau menggunakan perangkat elektronik sebelum tidur.' },
-    { title: 'Persiapan Tidur Sebelum Tidur', description: 'Memiliki rutinitas yang menenangkan sebelum tidur, seperti membaca atau berdoa.' },
-    { title: 'Kebiasaan Bangun', description: 'Bangun pagi dengan segar dan tidak merasa lelah.' },
-    { title: 'Menghindari Tidur Malam Terlalu Larut', description: 'Memiliki jadwal tidur yang konsisten setiap hari.' },
-    { title: 'Mengelola Waktu', description: 'Memilih untuk tidur lebih awal agar dapat bangun lebih pagi.' },
-    { title: 'Sikap Positif terhadap Tidur', description: 'Menunjukkan sikap positif terhadap tidur dan memahami pentingnya tidur yang cukup.' },
-    { title: 'Kesehatan dan Aktivitas', description: 'Menjaga kesehatan dan dapat menjalani aktivitas dengan baik setelah tidur yang cukup.' },
-  ];
-
   return (
     <>
       <header>
@@ -166,18 +153,10 @@ export function DashboardClient() {
                         </TableRow>
                         <CollapsibleContent asChild>
                             <tr className="bg-muted/50">
-                                <td colSpan={4} className="p-0">
-                                <div className="p-6 text-left">
-                                  <h4 className="font-bold text-base text-foreground mb-2">Aspek & Indikator Kebiasaan: {translatedName}</h4>
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
-                                      {habitDetails.map((detail, index) => (
-                                          <div key={index}>
-                                              <p className="font-semibold text-foreground">{detail.title}</p>
-                                              <p className="text-muted-foreground">{detail.description}</p>
-                                          </div>
-                                      ))}
-                                  </div>
-                                </div>
+                                <td colSpan={4} className="p-6 text-center">
+                                    <p className="text-sm text-muted-foreground">
+                                        Detail performa kelas akan ditampilkan di sini.
+                                    </p>
                                 </td>
                             </tr>
                         </CollapsibleContent>
@@ -215,7 +194,12 @@ export function DashboardClient() {
             </TableHeader>
             <TableBody>
               {students.map((student: Student) => {
-                const averageScore = student.habits.reduce((acc, h) => acc + h.score, 0) / (student.habits.length || 1);
+                const totalScore = student.habits.reduce((acc, h) => {
+                    const subHabitTotal = h.subHabits.reduce((subAcc, sh) => subAcc + sh.score, 0);
+                    return acc + (subHabitTotal / (h.subHabits.length || 1));
+                }, 0);
+                const averageScore = totalScore / (student.habits.length || 1);
+
                 return (
                   <TableRow key={student.id}>
                     <TableCell>
@@ -230,11 +214,13 @@ export function DashboardClient() {
                     <TableCell>
                       <Badge variant="secondary">{student.class}</Badge>
                     </TableCell>
-                    {student.habits.map((habit: Habit) => (
+                    {student.habits.map((habit: Habit) => {
+                      const habitAverage = habit.subHabits.reduce((acc, sub) => acc + sub.score, 0) / (habit.subHabits.length || 1);
+                      return (
                       <TableCell key={habit.id} className="text-center">
-                        <span className="font-mono">{habit.score}</span>
+                        <span className="font-mono">{habitAverage.toFixed(1)}</span>
                       </TableCell>
-                    ))}
+                    )})}
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Progress value={(averageScore / 4) * 100} className="w-24" />

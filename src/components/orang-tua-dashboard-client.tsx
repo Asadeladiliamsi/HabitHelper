@@ -118,36 +118,39 @@ export function OrangTuaDashboardClient() {
         <Card>
             <CardHeader>
             <CardTitle>Progres Kebiasaan {selectedStudentData.name}</CardTitle>
-            <CardDescription>Berikut adalah rekapitulasi nilai dari 7 kebiasaan inti yang dijalani oleh {selectedStudentData.name}.</CardDescription>
+            <CardDescription>Berikut adalah rekapitulasi nilai rata-rata dari 7 kebiasaan inti yang dijalani oleh {selectedStudentData.name}.</CardDescription>
             </CardHeader>
             <CardContent>
             <Table>
                 <TableHeader>
                 <TableRow>
                     <TableHead>Kebiasaan</TableHead>
-                    <TableHead className="text-right">Nilai Terakhir</TableHead>
+                    <TableHead className="text-right">Nilai Rata-rata Terakhir</TableHead>
                 </TableRow>
                 </TableHeader>
                 <TableBody>
-                {selectedStudentData.habits.map((habit) => (
-                    <TableRow key={habit.id}>
-                    <TableCell>
-                        <div className="flex items-center gap-3">
-                        {habitIcons[habit.name]}
-                        <span className="font-medium">{habitTranslationMapping[habit.name] || habit.name}</span>
-                        </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                        <span className="font-mono text-lg font-bold">{habit.score}</span>
-                    </TableCell>
-                    </TableRow>
-                ))}
+                {selectedStudentData.habits.map((habit) => {
+                    const habitAverage = habit.subHabits.reduce((acc, sub) => acc + sub.score, 0) / (habit.subHabits.length || 1);
+                    return (
+                        <TableRow key={habit.id}>
+                        <TableCell>
+                            <div className="flex items-center gap-3">
+                            {habitIcons[habit.name]}
+                            <span className="font-medium">{habitTranslationMapping[habit.name] || habit.name}</span>
+                            </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                            <span className="font-mono text-lg font-bold">{habitAverage.toFixed(1)}</span>
+                        </TableCell>
+                        </TableRow>
+                    )
+                })}
                 <TableRow className="bg-muted/50 font-bold">
                     <TableCell>Rata-rata Keseluruhan</TableCell>
                     <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                            <Progress value={( (selectedStudentData.habits.reduce((acc, h) => acc + h.score, 0) / (selectedStudentData.habits.length || 1)) / 4) * 100} className="w-24 h-2" />
-                            <span className="font-mono text-sm">{(selectedStudentData.habits.reduce((acc, h) => acc + h.score, 0) / (selectedStudentData.habits.length || 1)).toFixed(1)}</span>
+                             <Progress value={( (selectedStudentData.habits.reduce((acc, h) => acc + (h.subHabits.reduce((subAcc, sh) => subAcc + sh.score, 0) / (h.subHabits.length || 1))), 0) / (selectedStudentData.habits.length || 1)) / 4) * 100} className="w-24 h-2" />
+                            <span className="font-mono text-sm">{ (selectedStudentData.habits.reduce((acc, h) => acc + (h.subHabits.reduce((subAcc, sh) => subAcc + sh.score, 0) / (h.subHabits.length || 1)), 0) / (selectedStudentData.habits.length || 1)).toFixed(1) }</span>
                         </div>
                     </TableCell>
                     </TableRow>
