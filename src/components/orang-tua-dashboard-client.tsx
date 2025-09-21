@@ -86,7 +86,9 @@ export function OrangTuaDashboardClient() {
   const selectedStudentData = parentStudents.find(s => s.id === selectedStudentId);
 
   const calculateOverallAverage = (student: Student) => {
+    if (!student.habits) return 0;
     const totalScore = student.habits.reduce((acc, h) => {
+      if (!h.subHabits || h.subHabits.length === 0) return acc;
       const subHabitTotal = h.subHabits.reduce((subAcc, sh) => subAcc + sh.score, 0);
       const subHabitAverage = subHabitTotal / (h.subHabits.length || 1);
       return acc + subHabitAverage;
@@ -131,41 +133,45 @@ export function OrangTuaDashboardClient() {
             <CardDescription>Berikut adalah rekapitulasi nilai rata-rata dari 7 kebiasaan inti yang dijalani oleh {selectedStudentData.name}.</CardDescription>
             </CardHeader>
             <CardContent>
-            <Table>
-                <TableHeader>
-                <TableRow>
-                    <TableHead>Kebiasaan</TableHead>
-                    <TableHead className="text-right">Nilai Rata-rata Terakhir</TableHead>
-                </TableRow>
-                </TableHeader>
-                <TableBody>
-                {selectedStudentData.habits.map((habit) => {
-                    const habitAverage = habit.subHabits.reduce((acc, sub) => acc + sub.score, 0) / (habit.subHabits.length || 1);
-                    return (
-                        <TableRow key={habit.id}>
-                        <TableCell>
-                            <div className="flex items-center gap-3">
-                            {habitIcons[habit.name]}
-                            <span className="font-medium">{habitTranslationMapping[habit.name] || habit.name}</span>
-                            </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                            <span className="font-mono text-lg font-bold">{habitAverage.toFixed(1)}</span>
-                        </TableCell>
-                        </TableRow>
-                    )
-                })}
-                <TableRow className="bg-muted/50 font-bold">
-                    <TableCell>Rata-rata Keseluruhan</TableCell>
-                    <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                             <Progress value={(calculateOverallAverage(selectedStudentData) / 4) * 100} className="w-24 h-2" />
-                            <span className="font-mono text-sm">{ calculateOverallAverage(selectedStudentData).toFixed(1) }</span>
-                        </div>
-                    </TableCell>
-                    </TableRow>
-                </TableBody>
-            </Table>
+            {selectedStudentData.habits ? (
+              <Table>
+                  <TableHeader>
+                  <TableRow>
+                      <TableHead>Kebiasaan</TableHead>
+                      <TableHead className="text-right">Nilai Rata-rata Terakhir</TableHead>
+                  </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                  {selectedStudentData.habits.map((habit) => {
+                      const habitAverage = habit.subHabits.reduce((acc, sub) => acc + sub.score, 0) / (habit.subHabits.length || 1);
+                      return (
+                          <TableRow key={habit.id}>
+                          <TableCell>
+                              <div className="flex items-center gap-3">
+                              {habitIcons[habit.name]}
+                              <span className="font-medium">{habitTranslationMapping[habit.name] || habit.name}</span>
+                              </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                              <span className="font-mono text-lg font-bold">{habitAverage.toFixed(1)}</span>
+                          </TableCell>
+                          </TableRow>
+                      )
+                  })}
+                  <TableRow className="bg-muted/50 font-bold">
+                      <TableCell>Rata-rata Keseluruhan</TableCell>
+                      <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                              <Progress value={(calculateOverallAverage(selectedStudentData) / 4) * 100} className="w-24 h-2" />
+                              <span className="font-mono text-sm">{ calculateOverallAverage(selectedStudentData).toFixed(1) }</span>
+                          </div>
+                      </TableCell>
+                      </TableRow>
+                  </TableBody>
+              </Table>
+            ) : (
+              <p className="text-muted-foreground text-center">Data kebiasaan untuk siswa ini belum ada.</p>
+            )}
             </CardContent>
         </Card>
       ) : (

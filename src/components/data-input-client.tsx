@@ -92,9 +92,6 @@ export function DataInputClient({ studentId: lockedStudentId, allowedHabits }: D
   useEffect(() => {
     if (lockedStudentId) {
       form.setValue('studentId', lockedStudentId);
-      form.resetField('habitName');
-      form.resetField('subHabitName');
-      form.resetField('score', {defaultValue: 4});
     }
   }, [lockedStudentId, form]);
 
@@ -105,13 +102,7 @@ export function DataInputClient({ studentId: lockedStudentId, allowedHabits }: D
     const translatedHabitName = habitTranslationMapping[data.habitName] || data.habitName;
 
     try {
-      await addHabitEntry({
-        studentId: data.studentId,
-        habitName: data.habitName,
-        subHabitName: data.subHabitName,
-        score: data.score,
-        date: data.date,
-      });
+      await addHabitEntry(data);
 
       toast({
         title: t.toast.title,
@@ -162,7 +153,7 @@ export function DataInputClient({ studentId: lockedStudentId, allowedHabits }: D
       </CardHeader>
       <CardContent>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {!isStudentRole && !isParentRole && (
+          {!lockedStudentId && (
             <div className="space-y-2">
               <Label htmlFor="studentId">{t.selectStudent}</Label>
               <Controller

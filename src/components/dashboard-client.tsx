@@ -133,7 +133,7 @@ export function DashboardClient() {
                               {habitIcons[habit.name]}
                               <span className="font-medium">{translatedName}</span>
                             </div>
-                            <ChevronDown className="h-4 w-4 transition-transform data-[state=open]:rotate-180" />
+                            <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />
                           </CollapsibleTrigger>
                         </TableCell>
                         <TableCell className="text-center font-mono">{habit['Minggu Lalu']}%</TableCell>
@@ -178,7 +178,7 @@ export function DashboardClient() {
               <TableRow>
                 <TableHead>{t.student}</TableHead>
                 <TableHead>{t.class}</TableHead>
-                {students.length > 0 && students[0].habits.map((habit) => {
+                {students.length > 0 && students[0].habits?.map((habit) => {
                   const translatedHabitName = habitTranslationMapping[habit.name] || habit.name;
                   return (
                     <TableHead key={habit.id} className="text-center">
@@ -193,6 +193,7 @@ export function DashboardClient() {
             </TableHeader>
             <TableBody>
               {students.map((student: Student) => {
+                if (!student.habits) return null;
                 const totalScore = student.habits.reduce((acc, h) => {
                     const subHabitTotal = h.subHabits.reduce((subAcc, sh) => subAcc + sh.score, 0);
                     return acc + (subHabitTotal / (h.subHabits.length || 1));

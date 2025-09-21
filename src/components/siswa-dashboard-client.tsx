@@ -72,6 +72,19 @@ export function SiswaDashboardClient() {
     );
   }
 
+  if (!studentData.habits) {
+    return (
+       <Card>
+        <CardHeader>
+          <CardTitle>Data Kebiasaan Belum Ada</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p>Data kebiasaan untuk Anda belum diinisialisasi. Mohon hubungi guru atau admin sekolah.</p>
+        </CardContent>
+      </Card>
+    )
+  }
+
   const totalScore = studentData.habits.reduce((acc, h) => {
       const subHabitTotal = h.subHabits.reduce((subAcc, sh) => subAcc + sh.score, 0);
       return acc + (subHabitTotal / (h.subHabits.length || 1));
