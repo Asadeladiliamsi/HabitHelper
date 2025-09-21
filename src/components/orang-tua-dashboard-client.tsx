@@ -86,14 +86,14 @@ export function OrangTuaDashboardClient() {
   const selectedStudentData = parentStudents.find(s => s.id === selectedStudentId);
 
   const calculateOverallAverage = (student: Student) => {
-    if (!student.habits) return 0;
+    if (!student.habits || student.habits.length === 0) return 0;
     const totalScore = student.habits.reduce((acc, h) => {
       if (!h.subHabits || h.subHabits.length === 0) return acc;
       const subHabitTotal = h.subHabits.reduce((subAcc, sh) => subAcc + sh.score, 0);
-      const subHabitAverage = subHabitTotal / (h.subHabits.length || 1);
+      const subHabitAverage = subHabitTotal / h.subHabits.length;
       return acc + subHabitAverage;
     }, 0);
-    return totalScore / (student.habits.length || 1);
+    return totalScore / student.habits.length;
   };
 
   return (
@@ -143,6 +143,21 @@ export function OrangTuaDashboardClient() {
                   </TableHeader>
                   <TableBody>
                   {selectedStudentData.habits.map((habit) => {
+                      if (!habit.subHabits || habit.subHabits.length === 0) {
+                          return (
+                              <TableRow key={habit.id}>
+                                  <TableCell>
+                                      <div className="flex items-center gap-3">
+                                          {habitIcons[habit.name]}
+                                          <span className="font-medium">{habitTranslationMapping[habit.name] || habit.name}</span>
+                                      </div>
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                      <span className="font-mono text-lg font-bold">N/A</span>
+                                  </TableCell>
+                              </TableRow>
+                          );
+                      }
                       const habitAverage = habit.subHabits.reduce((acc, sub) => acc + sub.score, 0) / (habit.subHabits.length || 1);
                       return (
                           <TableRow key={habit.id}>

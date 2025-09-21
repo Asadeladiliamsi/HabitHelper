@@ -86,6 +86,7 @@ export function SiswaDashboardClient() {
   }
 
   const totalScore = studentData.habits.reduce((acc, h) => {
+      if (!h.subHabits || h.subHabits.length === 0) return acc;
       const subHabitTotal = h.subHabits.reduce((subAcc, sh) => subAcc + sh.score, 0);
       return acc + (subHabitTotal / (h.subHabits.length || 1));
   }, 0);
@@ -114,6 +115,21 @@ export function SiswaDashboardClient() {
             </TableHeader>
             <TableBody>
               {studentData.habits.map((habit) => {
+                if (!habit.subHabits || habit.subHabits.length === 0) {
+                    return (
+                        <TableRow key={habit.id}>
+                            <TableCell>
+                                <div className="flex items-center gap-3">
+                                {habitIcons[habit.name]}
+                                <span className="font-medium">{habitTranslationMapping[habit.name] || habit.name}</span>
+                                </div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                                <span className="font-mono text-lg font-bold">N/A</span>
+                            </TableCell>
+                        </TableRow>
+                    );
+                }
                 const habitAverage = habit.subHabits.reduce((acc, sub) => acc + sub.score, 0) / (habit.subHabits.length || 1);
                 return (
                 <TableRow key={habit.id}>
