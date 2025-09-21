@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useEffect } from 'react';
@@ -34,6 +35,7 @@ import { translations } from '@/lib/translations';
 import { useAuth } from '@/contexts/auth-context';
 import { StudentProvider } from '@/contexts/student-context';
 import { UserProvider } from '@/contexts/user-context';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function AppLayout({
   children,
@@ -157,6 +159,7 @@ export default function AppLayout({
                   </span>
                   <span className="text-sm text-muted-foreground ml-2">({user?.email})</span>
               </div>
+               <ThemeToggle />
             </header>
             <main className="flex-1 p-4 sm:p-6">{children}</main>
           </SidebarInset>
