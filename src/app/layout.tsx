@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Providers } from './providers';
 
 export const metadata: Metadata = {
-  title: 'HabitHelper',
+  title: 'Kaih.Spensa id',
   description: 'Website Monitoring 7 Kebiasaan Anak Indonesia Hebat',
 };
 

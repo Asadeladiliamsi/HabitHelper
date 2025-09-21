@@ -303,7 +303,7 @@ export const translations: Record<string, Translation> = {
     landingPage: {
       openDashboard: 'Buka Dashboard',
       heroTitle: 'Membentuk Karakter Hebat, Satu Kebiasaan Setiap Hari',
-      heroSubtitle: 'HabitHelper adalah platform digital untuk memantau program pembentukan karakter di sekolah, membantu guru dan orang tua membimbing siswa menjadi pribadi yang unggul.',
+      heroSubtitle: 'Kaih.Spensa id adalah platform digital untuk memantau program pembentukan karakter di sekolah, membantu guru dan orang tua membimbing siswa menjadi pribadi yang unggul.',
       viewDemo: 'Lihat Demo',
       habitsTitle: 'Kebiasaan Baik Harian',
       habitsSubtitle: 'Landasan untuk membangun karakter siswa yang disiplin, sehat, dan berwawasan luas.',
@@ -324,7 +324,7 @@ export const translations: Record<string, Translation> = {
         smartAINotifications: { name: 'Notifikasi AI Cerdas', description: 'Dapatkan pemberitahuan otomatis jika ada penurunan kebiasaan siswa.' },
         comprehensiveReports: { name: 'Laporan Komprehensif', description: 'Ekspor data perkembangan siswa untuk evaluasi dan pelaporan.' },
       },
-      footer: 'HabitHelper | Didukung oleh Teknologi AI. Hak Cipta Dilindungi.',
+      footer: 'Kaih.Spensa id | Didukung oleh Teknologi AI. Hak Cipta Dilindungi.',
     },
   },
   en: {
@@ -466,7 +466,7 @@ export const translations: Record<string, Translation> = {
     landingPage: {
       openDashboard: 'Open Dashboard',
       heroTitle: 'Building Great Character, One Habit at a Time',
-      heroSubtitle: 'HabitHelper is a digital platform to monitor character-building programs at school, helping teachers and parents guide students to become outstanding individuals.',
+      heroSubtitle: 'Kaih.Spensa id is a digital platform to monitor character-building programs at school, helping teachers and parents guide students to become outstanding individuals.',
       viewDemo: 'View Demo',
       habitsTitle: 'Daily Good Habits',
       habitsSubtitle: 'The foundation for building disciplined, healthy, and knowledgeable student character.',
@@ -487,7 +487,7 @@ export const translations: Record<string, Translation> = {
         smartAINotifications: { name: 'Smart AI Notifications', description: 'Get automatic notifications if there is a decline in a student\'s habits.' },
         comprehensiveReports: { name: 'Comprehensive Reports', description: 'Export student development data for evaluation and reporting.' },
       },
-      footer: 'HabitHelper | Powered by AI Technology. All rights reserved.',
+      footer: 'Kaih.Spensa id | Powered by AI Technology. All rights reserved.',
     },
   },
   es: {
@@ -629,7 +629,7 @@ export const translations: Record<string, Translation> = {
     landingPage: {
       openDashboard: 'Abrir Tablero',
       heroTitle: 'Construyendo un Gran Carácter, un Hábito a la Vez',
-      heroSubtitle: 'HabitHelper es una plataforma digital para monitorear programas de formación de carácter en la escuela, ayudando a maestros y padres a guiar a los estudiantes para que se conviertan en individuos excepcionales.',
+      heroSubtitle: 'Kaih.Spensa id es una plataforma digital para monitorear programas de formación de carácter en la escuela, ayudando a maestros y padres a guiar a los estudiantes para que se conviertan en individuos excepcionales.',
       viewDemo: 'Ver Demostración',
       habitsTitle: 'Buenos Hábitos Diarios',
       habitsSubtitle: 'La base para construir un carácter estudiantil disciplinado, saludable y conocedor.',
@@ -650,7 +650,7 @@ export const translations: Record<string, Translation> = {
         smartAINotifications: { name: 'Notificaciones Inteligentes de IA', description: 'Reciba notificaciones automáticas si hay una disminución en los hábitos de un estudiante.' },
         comprehensiveReports: { name: 'Informes Completos', description: 'Exporte los datos de desarrollo de los estudiantes para evaluación e informes.' },
       },
-      footer: 'HabitHelper | Impulsado por Tecnología de IA. Todos los derechos reservados.',
+      footer: 'Kaih.Spensa id | Impulsado por Tecnología de IA. Todos los derechos reservados.',
     },
   },
   fr: {
@@ -792,7 +792,7 @@ export const translations: Record<string, Translation> = {
      landingPage: {
       openDashboard: 'Ouvrir le Tableau de Bord',
       heroTitle: 'Forger un Grand Caractère, une Habitude à la Fois',
-      heroSubtitle: 'HabitHelper est une plateforme numérique pour suivre les programmes de développement du caractère à l\'école, aidant les enseignants et les parents à guider les élèves pour qu\'ils deviennent des individus exceptionnels.',
+      heroSubtitle: 'Kaih.Spensa id est une plateforme numérique pour suivre les programmes de développement du caractère à l\'école, aidant les enseignants et les parents à guider les élèves pour qu\'ils deviennent des individus exceptionnels.',
       viewDemo: 'Voir la Démo',
       habitsTitle: 'Bonnes Habitudes Quotidiennes',
       habitsSubtitle: 'La base pour forger un caractère d\'étudiant discipliné, sain et informé.',
@@ -813,7 +813,7 @@ export const translations: Record<string, Translation> = {
         smartAINotifications: { name: 'Notifications IA Intelligentes', description: 'Recevez des notifications automatiques en cas de déclin des habitudes d\'un élève.' },
         comprehensiveReports: { name: 'Rapports Complets', description: 'Exportez les données de développement des élèves pour évaluation et rapport.' },
       },
-      footer: 'HabitHelper | Propulsé par la Technologie IA. Tous droits réservés.',
+      footer: 'Kaih.Spensa id | Propulsé par la Technologie IA. Tous droits réservés.',
     },
   },
   de: {
@@ -955,7 +955,7 @@ export const translations: Record<string, Translation> = {
     landingPage: {
       openDashboard: 'Dashboard öffnen',
       heroTitle: 'Großen Charakter bilden, eine Gewohnheit nach der anderen',
-      heroSubtitle: 'HabitHelper ist eine digitale Plattform zur Überwachung von Charakterbildungsprogrammen in der Schule, die Lehrern und Eltern hilft, Schüler zu herausragenden Persönlichkeiten zu führen.',
+      heroSubtitle: 'Kaih.Spensa id ist eine digitale Plattform zur Überwachung von Charakterbildungsprogrammen in der Schule, die Lehrern und Eltern hilft, Schüler zu herausragenden Persönlichkeiten zu führen.',
       viewDemo: 'Demo ansehen',
       habitsTitle: 'Tägliche gute Gewohnheiten',
       habitsSubtitle: 'Die Grundlage für die Bildung eines disziplinierten, gesunden und kenntnisreichen Schülercharakters.',
@@ -976,7 +976,7 @@ export const translations: Record<string, Translation> = {
         smartAINotifications: { name: 'Intelligente KI-Benachrichtigungen', description: 'Erhalten Sie automatische Benachrichtigungen, wenn die Gewohnheiten eines Schülers nachlassen.' },
         comprehensiveReports: { name: 'Umfassende Berichte', description: 'Exportieren Sie Schülerentwicklungsdaten zur Auswertung und Berichterstattung.' },
       },
-      footer: 'HabitHelper | Unterstützt durch KI-Technologie. Alle Rechte vorbehalten.',
+      footer: 'Kaih.Spensa id | Unterstützt durch KI-Technologie. Alle Rechte vorbehalten.',
     },
   },
   ja: {
@@ -1118,7 +1118,7 @@ export const translations: Record<string, Translation> = {
      landingPage: {
       openDashboard: 'ダッシュボードを開く',
       heroTitle: '偉大な人格を築く、一日一習慣',
-      heroSubtitle: 'HabitHelperは、学校での人格形成プログラムを監視するためのデジタルプラットフォームであり、教師と保護者が生徒を優れた個人に導くのを支援します。',
+      heroSubtitle: 'Kaih.Spensa idは、学校での人格形成プログラムを監視するためのデジタルプラットフォームであり、教師と保護者が生徒を優れた個人に導くのを支援します。',
       viewDemo: 'デモを見る',
       habitsTitle: '毎日の良い習慣',
       habitsSubtitle: '規律正しく、健康で、知識豊富な生徒の人格を築くための基盤。',
@@ -1139,7 +1139,7 @@ export const translations: Record<string, Translation> = {
         smartAINotifications: { name: 'スマートAI通知', description: '生徒の習慣が低下した場合に自動通知を受け取ります。' },
         comprehensiveReports: { name: '包括的なレポート', description: '評価と報告のために生徒の発達データをエクスポートします。' },
       },
-      footer: 'HabitHelper | AI技術を搭載。無断複写・転載を禁じます。',
+      footer: 'Kaih.Spensa id | AI技術を搭載。無断複写・転載を禁じます。',
     },
   },
   pt: {
@@ -1281,7 +1281,7 @@ export const translations: Record<string, Translation> = {
       landingPage: {
       openDashboard: 'Abrir Painel',
       heroTitle: 'Construindo um Grande Caráter, um Hábito de Cada Vez',
-      heroSubtitle: 'HabitHelper é uma plataforma digital para monitorar programas de formação de caráter na escola, ajudando professores e pais a orientar os alunos para se tornarem indivíduos excepcionais.',
+      heroSubtitle: 'Kaih.Spensa id é uma plataforma digital para monitorar programas de formação de caráter na escola, ajudando professores e pais a orientar os alunos para se tornarem indivíduos excepcionais.',
       viewDemo: 'Ver Demonstração',
       habitsTitle: 'Bons Hábitos Diários',
       habitsSubtitle: 'A base para construir o caráter de um aluno disciplinado, saudável e conhecedor.',
@@ -1302,7 +1302,7 @@ export const translations: Record<string, Translation> = {
         smartAINotifications: { name: 'Notificações Inteligentes de IA', description: 'Receba notificações automáticas se houver um declínio nos hábitos de um aluno.' },
         comprehensiveReports: { name: 'Relatórios Abrangentes', description: 'Exporte os dados de desenvolvimento dos alunos para avaliação e relatórios.' },
       },
-      footer: 'HabitHelper | Desenvolvido com Tecnologia de IA. Todos os direitos reservados.',
+      footer: 'Kaih.Spensa id | Desenvolvido com Tecnologia de IA. Todos os direitos reservados.',
     },
   },
   ru: {
@@ -1444,7 +1444,7 @@ export const translations: Record<string, Translation> = {
       landingPage: {
       openDashboard: 'Открыть панель управления',
       heroTitle: 'Формирование великого характера, по одной привычке за раз',
-      heroSubtitle: 'HabitHelper - это цифровая платформа для мониторинга программ по формированию характера в школе, помогающая учителям и родителям направлять студентов на путь становления выдающимися личностями.',
+      heroSubtitle: 'Kaih.Spensa id - это цифровая платформа для мониторинга программ по формированию характера в школе, помогающая учителям и родителям направлять студентов на путь становления выдающимися личностями.',
       viewDemo: 'Посмотреть демо',
       habitsTitle: 'Ежедневные хорошие привычки',
       habitsSubtitle: 'Основа для формирования дисциплинированного, здорового и знающего характера студента.',
@@ -1465,7 +1465,7 @@ export const translations: Record<string, Translation> = {
         smartAINotifications: { name: 'Умные уведомления от ИИ', description: 'Получайте автоматические уведомления, если привычки учащегося ухудшаются.' },
         comprehensiveReports: { name: 'Комплексные отчеты', description: 'Экспортируйте данные о развитии учащихся для оценки и отчетности.' },
       },
-      footer: 'HabitHelper | Работает на основе технологии ИИ. Все права защищены.',
+      footer: 'Kaih.Spensa id | Работает на основе технологии ИИ. Все права защищены.',
     },
   },
   zh: {
@@ -1607,7 +1607,7 @@ export const translations: Record<string, Translation> = {
       landingPage: {
       openDashboard: '打开仪表板',
       heroTitle: '塑造伟大品格，一日一习惯',
-      heroSubtitle: 'HabitHelper是一个数字平台，用于监控学校的品格建设计划，帮助教师和家长指导学生成为杰出的人才。',
+      heroSubtitle: 'Kaih.Spensa id是一个数字平台，用于监控学校的品格建设计划，帮助教师和家长指导学生成为杰出的人才。',
       viewDemo: '查看演示',
       habitsTitle: '每日好习惯',
       habitsSubtitle: '培养纪律严明、健康、知识渊博的学生品格的基础。',
@@ -1628,7 +1628,7 @@ export const translations: Record<string, Translation> = {
         smartAINotifications: { name: '智能AI通知', description: '如果学生的习惯出现下降，将自动收到通知。' },
         comprehensiveReports: { name: '综合报告', description: '导出学生发展数据以供评估和报告。' },
       },
-      footer: 'HabitHelper | 由人工智能技术提供支持。版权所有。',
+      footer: 'Kaih.Spensa id | 由人工智能技术提供支持。版权所有。',
     },
   },
   hi: {
@@ -1770,7 +1770,7 @@ export const translations: Record<string, Translation> = {
       landingPage: {
       openDashboard: 'डैशबोर्ड खोलें',
       heroTitle: 'महान चरित्र का निर्माण, एक समय में एक आदत',
-      heroSubtitle: 'हैबिटहेल्पर स्कूल में चरित्र-निर्माण कार्यक्रमों की निगरानी के लिए एक डिजिटल प्लेटफॉर्म है, जो शिक्षकों और माता-पिता को छात्रों को उत्कृष्ट व्यक्ति बनने में मार्गदर्शन करने में मदद करता है।',
+      heroSubtitle: 'Kaih.Spensa id स्कूल में चरित्र-निर्माण कार्यक्रमों की निगरानी के लिए एक डिजिटल प्लेटफॉर्म है, जो शिक्षकों और माता-पिता को छात्रों को उत्कृष्ट व्यक्ति बनने में मार्गदर्शन करने में मदद करता है।',
       viewDemo: 'डेमो देखें',
       habitsTitle: 'दैनिक अच्छी आदतें',
       habitsSubtitle: 'अनुशासित, स्वस्थ और जानकार छात्र चरित्र के निर्माण की नींव।',
@@ -1791,7 +1791,7 @@ export const translations: Record<string, Translation> = {
         smartAINotifications: { name: 'स्मार्ट एआई सूचनाएं', description: 'यदि किसी छात्र की आदतों में गिरावट आती है तो स्वचालित सूचनाएं प्राप्त करें।' },
         comprehensiveReports: { name: 'व्यापक रिपोर्ट', description: 'मूल्यांकन और रिपोर्टिंग के لیے छात्र विकास डेटा निर्यात करें।' },
       },
-      footer: 'हैबिटहेल्पर | एआई प्रौद्योगिकी द्वारा संचालित। सर्वाधिकार सुरक्षित।',
+      footer: 'Kaih.Spensa id | एआई प्रौद्योगिकी द्वारा संचालित। सर्वाधिकार सुरक्षित।',
     },
   },
   ar: {
@@ -1933,7 +1933,7 @@ export const translations: Record<string, Translation> = {
       landingPage: {
       openDashboard: 'افتح لوحة التحكم',
       heroTitle: 'بناء شخصية عظيمة، عادة واحدة في كل مرة',
-      heroSubtitle: 'HabitHelper هي منصة رقمية لمراقبة برامج بناء الشخصية في المدرسة، مما يساعد المعلمين وأولياء الأمور على توجيه الطلاب ليصبحوا أفرادًا متميزين.',
+      heroSubtitle: 'Kaih.Spensa id هي منصة رقمية لمراقبة برامج بناء الشخصية في المدرسة، مما يساعد المعلمين وأولياء الأمور على توجيه الطلاب ليصبحوا أفرادًا متميزين.',
       viewDemo: 'عرض تجريبي',
       habitsTitle: 'العادات اليومية الجيدة',
       habitsSubtitle: 'أساس بناء شخصية طالب منضبط وصحي ومطلع.',
@@ -1954,7 +1954,7 @@ export const translations: Record<string, Translation> = {
         smartAINotifications: { name: 'إشعارات الذكاء الاصطناعي الذكية', description: 'احصل على إشعارات تلقائية إذا كان هناك انخفاض في عادات الطالب.' },
         comprehensiveReports: { name: 'تقارير شاملة', description: 'تصدير بيانات تطوير الطلاب للتقييم وإعداد التقارير.' },
       },
-      footer: 'HabitHelper | بدعم من تقنية الذكاء الاصطناعي. جميع الحقوق محفوظة.',
+      footer: 'Kaih.Spensa id | بدعم من تقنية الذكاء الاصطناعي. جميع الحقوق محفوظة.',
     },
   },
   ko: {
@@ -2096,7 +2096,7 @@ export const translations: Record<string, Translation> = {
       landingPage: {
       openDashboard: '대시보드 열기',
       heroTitle: '위대한 인격 형성, 한 번에 하나의 습관',
-      heroSubtitle: 'HabitHelper는 학교의 인격 형성 프로그램을 모니터링하기 위한 디지털 플랫폼으로, 교사와 학부모가 학생들이 뛰어난 개인으로 성장하도록 안내하는 데 도움을 줍니다.',
+      heroSubtitle: 'Kaih.Spensa id는 학교의 인격 형성 프로그램을 모니터링하기 위한 디지털 플랫폼으로, 교사와 학부모가 학생들이 뛰어난 개인으로 성장하도록 안내하는 데 도움을 줍니다.',
       viewDemo: '데모 보기',
       habitsTitle: '매일의 좋은 습관',
       habitsSubtitle: '규율 있고 건강하며 지식이 풍부한 학생 인격을 형성하기 위한 기초.',
@@ -2117,7 +2117,7 @@ export const translations: Record<string, Translation> = {
         smartAINotifications: { name: '스마트 AI 알림', description: '학생의 습관이 감소하면 자동 알림을 받습니다.' },
         comprehensiveReports: { name: '종합 보고서', description: '평가 및 보고를 위해 학생 발달 데이터를 내보냅니다.' },
       },
-      footer: 'HabitHelper | AI 기술 제공. 모든 권리 보유.',
+      footer: 'Kaih.Spensa id | AI 기술 제공. 모든 권리 보유.',
     },
   }
 };

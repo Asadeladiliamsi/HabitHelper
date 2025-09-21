@@ -97,7 +97,7 @@ export default function VerifyNisnPage() {
         <div className="mb-8 flex justify-center">
             <Link href="/" className="flex items-center gap-2">
                 <Logo />
-                <span className="font-bold text-xl text-primary">HabitHelper</span>
+                <span className="font-bold text-xl text-primary">Kaih.Spensa id</span>
             </Link>
         </div>
         <Card className="w-full max-w-sm">

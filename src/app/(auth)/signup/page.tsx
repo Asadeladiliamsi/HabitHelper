@@ -63,7 +63,7 @@ export default function SignupPage() {
     <Card>
       <CardHeader className="text-center">
         <CardTitle className="text-2xl">Buat Akun Siswa</CardTitle>
-        <CardDescription>Daftar untuk mulai menggunakan HabitHelper.</CardDescription>
+        <CardDescription>Daftar untuk mulai menggunakan Kaih.Spensa id.</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

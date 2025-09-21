@@ -1,6 +1,6 @@
-# HabitHelper
+# Kaih.Spensa id
 
-HabitHelper adalah platform digital yang dirancang untuk memantau program pembentukan karakter di sekolah. Aplikasi ini membantu para guru, siswa, dan orang tua dalam melacak dan membimbing pengembangan kebiasaan-kebiasaan positif, dengan tujuan untuk mencetak individu yang unggul dan berkarakter.
+Kaih.Spensa id adalah platform digital yang dirancang untuk memantau program pembentukan karakter di sekolah. Aplikasi ini membantu para guru, siswa, dan orang tua dalam melacak dan membimbing pengembangan kebiasaan-kebiasaan positif, dengan tujuan untuk mencetak individu yang unggul dan berkarakter.
 
 Aplikasi ini dibangun menggunakan Next.js, React, Tailwind CSS, dan Firebase, dengan fitur-fitur yang didukung oleh kecerdasan buatan (AI) dari Google.
 

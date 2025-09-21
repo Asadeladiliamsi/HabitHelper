@@ -50,7 +50,7 @@ const habitDeclineNotificationPrompt = ai.definePrompt({
   name: 'habitDeclineNotificationPrompt',
   input: {schema: HabitDeclineNotificationInputSchema},
   output: {schema: HabitDeclineNotificationOutputSchema},
-  prompt: `You are an AI assistant for "HabitHelper", a school app that helps teachers monitor student habits. Your role is to analyze student habit scores and provide insightful notifications for teachers.
+  prompt: `You are an AI assistant for "Kaih.Spensa id", a school app that helps teachers monitor student habits. Your role is to analyze student habit scores and provide insightful notifications for teachers.
 
 You will receive a student's ID, a specific habit being monitored, and their scores for that habit over the last three days. The scores are on a scale of 1 to 4.
 

@@ -90,7 +90,7 @@ export default function LandingPage() {
         <div className="container flex h-16 max-w-7xl items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <Logo />
-            <span className="font-bold text-xl text-primary">HabitHelper</span>
+            <span className="font-bold text-xl text-primary">Kaih.Spensa id</span>
           </Link>
           <Link href="/login">
             <Button>
