@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -44,7 +45,7 @@ const metrics = [
     description: 'Bandingkan kinerja kelas dan identifikasi strategi yang efektif.',
   },
   {
-    icon: <FileText className="h-12 w-12 text-primary" />,
+    icon: <FileText className="h-12 w_12 text-primary" />,
     title: 'Laporan yang Dapat Disesuaikan',
     description: 'Hasilkan laporan yang disesuaikan berdasarkan kebutuhan dan parameter spesifik.',
   },
@@ -103,24 +104,37 @@ export default function LandingPage() {
       </header>
 
       <main className="flex-grow">
-        <section className="text-center py-20 lg:py-32 px-4 sm:px-6 lg:px-8">
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight mb-6 text-primary">
-            Pantau Kemajuan Siswa dengan Mulus
-          </h1>
-          <p className="max-w-3xl mx-auto text-lg text-muted-foreground mb-10">
-            Kalih.Spensa id menyediakan alat yang kuat bagi para pendidik dan orang tua untuk melacak pengembangan karakter, mengidentifikasi tren, dan membina lingkungan belajar yang mendukung. Dapatkan wawasan berharga tentang kebiasaan dan kemajuan siswa.
-          </p>
-          <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-            <Link href="/reports">
-                <Button size="lg" className="bg-primary hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-transform transform hover:scale-105 duration-300 w-full sm:w-auto">
-                    Lihat Laporan Siswa
-                </Button>
-            </Link>
-            <Link href="#features">
-                <Button size="lg" variant="outline" className="bg-card hover:bg-muted text-foreground font-bold py-3 px-6 rounded-lg shadow-lg transition-colors duration-300 w-full sm:w-auto">
-                    Jelajahi Fitur
-                </Button>
-            </Link>
+        <section className="relative text-center py-20 lg:py-32 px-4 sm:px-6 lg:px-8 overflow-hidden">
+          <div className="absolute inset-0">
+              <Image
+                  src="https://picsum.photos/seed/school/1920/1080"
+                  alt="Suasana belajar di sekolah"
+                  fill
+                  style={{objectFit: 'cover'}}
+                  className="object-cover"
+                  data-ai-hint="classroom students"
+              />
+              <div className="absolute inset-0 bg-background/60 backdrop-blur-sm"></div>
+          </div>
+          <div className="relative z-10">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight mb-6 text-primary">
+              Pantau Kemajuan Siswa dengan Mulus
+            </h1>
+            <p className="max-w-3xl mx-auto text-lg text-foreground mb-10">
+              Kalih.Spensa id menyediakan alat yang kuat bagi para pendidik dan orang tua untuk melacak pengembangan karakter, mengidentifikasi tren, dan membina lingkungan belajar yang mendukung. Dapatkan wawasan berharga tentang kebiasaan dan kemajuan siswa.
+            </p>
+            <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+              <Link href="/reports">
+                  <Button size="lg" className="bg-primary hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-transform transform hover:scale-105 duration-300 w-full sm:w-auto">
+                      Lihat Laporan Siswa
+                  </Button>
+              </Link>
+              <Link href="#features">
+                  <Button size="lg" variant="outline" className="bg-card/80 hover:bg-muted/80 text-foreground font-bold py-3 px-6 rounded-lg shadow-lg transition-colors duration-300 w-full sm:w-auto">
+                      Jelajahi Fitur
+                  </Button>
+              </Link>
+            </div>
           </div>
         </section>
 
