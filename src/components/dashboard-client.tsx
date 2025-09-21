@@ -61,6 +61,19 @@ export function DashboardClient() {
     'Tidur Cepat': tHabits.tidurCepat.name,
   };
   
+  const habitDetails = [
+    { title: 'Kepatuhan terhadap Waktu Tidur', description: 'Tidur sesuai dengan waktu yang telah ditentukan.' },
+    { title: 'Durasi Tidur yang Cukup', description: 'Mendapatkan durasi tidur yang cukup untuk usia mereka.' },
+    { title: 'Kualitas Tidur', description: 'Tidur dengan nyenyak dan tidak sering terbangun di malam hari.' },
+    { title: 'Aktivitas yang Mengganggu Tidur', description: 'Menghindari aktivitas yang mengganggu kualitas tidur, seperti menonton TV atau menggunakan perangkat elektronik sebelum tidur.' },
+    { title: 'Persiapan Tidur Sebelum Tidur', description: 'Memiliki rutinitas yang menenangkan sebelum tidur, seperti membaca atau berdoa.' },
+    { title: 'Kebiasaan Bangun', description: 'Bangun pagi dengan segar dan tidak merasa lelah.' },
+    { title: 'Menghindari Tidur Malam Terlalu Larut', description: 'Memiliki jadwal tidur yang konsisten setiap hari.' },
+    { title: 'Mengelola Waktu', description: 'Memilih untuk tidur lebih awal agar dapat bangun lebih pagi.' },
+    { title: 'Sikap Positif terhadap Tidur', description: 'Menunjukkan sikap positif terhadap tidur dan memahami pentingnya tidur yang cukup.' },
+    { title: 'Kesehatan dan Aktivitas', description: 'Menjaga kesehatan dan dapat menjalani aktivitas dengan baik setelah tidur yang cukup.' },
+  ];
+
   return (
     <>
       <header>
@@ -125,9 +138,9 @@ export function DashboardClient() {
                 return (
                   <Collapsible key={habit.name} asChild>
                      <React.Fragment>
-                        <TableRow className="cursor-pointer">
-                           <CollapsibleTrigger asChild>
-                             <TableCell className="w-auto">
+                        <TableRow>
+                           <TableCell>
+                            <CollapsibleTrigger className='w-full'>
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         {habitIcons[habit.name]}
@@ -135,8 +148,8 @@ export function DashboardClient() {
                                     </div>
                                     <ChevronDown className="h-4 w-4 transition-transform data-[state=open]:rotate-180" />
                                 </div>
-                             </TableCell>
-                           </CollapsibleTrigger>
+                             </CollapsibleTrigger>
+                           </TableCell>
                             <TableCell className="text-center font-mono">{habit['Minggu Lalu']}%</TableCell>
                             <TableCell>
                             <div className="flex items-center gap-2">
@@ -153,9 +166,17 @@ export function DashboardClient() {
                         </TableRow>
                         <CollapsibleContent asChild>
                             <tr className="bg-muted/50">
-                                <td colSpan={5} className="p-0">
-                                <div className="p-6 text-center text-muted-foreground">
-                                    <p>Detail performa kelas akan ditampilkan di sini.</p>
+                                <td colSpan={4} className="p-0">
+                                <div className="p-6 text-left">
+                                  <h4 className="font-bold text-base text-foreground mb-2">Aspek & Indikator Kebiasaan: {translatedName}</h4>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
+                                      {habitDetails.map((detail, index) => (
+                                          <div key={index}>
+                                              <p className="font-semibold text-foreground">{detail.title}</p>
+                                              <p className="text-muted-foreground">{detail.description}</p>
+                                          </div>
+                                      ))}
+                                  </div>
                                 </div>
                                 </td>
                             </tr>
