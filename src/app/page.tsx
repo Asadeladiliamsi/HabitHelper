@@ -1,185 +1,203 @@
-
 'use client';
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, Sunrise, BookOpen, HeartPulse, Users, TrendingUp, Activity, ArrowRight, Utensils, HandHelping, Church, Bed } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+  TrendingUp,
+  CheckCircle,
+  AlertTriangle,
+  Award,
+  Users,
+  FileText,
+  LayoutDashboard,
+  BarChart2,
+  Bell,
+  DownloadCloud,
+} from 'lucide-react';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
-import Image from 'next/image';
 
-const habits = [
+// Menggunakan Lucide React sebagai pengganti Material Icons untuk konsistensi
+const metrics = [
   {
-    icon: <Sunrise className="h-8 w-8 text-accent" />,
-    name: 'Bangun Pagi',
-    description: 'Memulai hari lebih awal untuk produktivitas.',
-    translationKey: 'bangunPagi'
+    icon: <CheckCircle className="h-12 w-12 text-primary" />,
+    title: 'Habit Completion Rate',
+    description: 'Track the percentage of daily habits successfully completed by students.',
   },
   {
-    icon: <Church className="h-8 w-8 text-accent" />,
-    name: 'Taat Beribadah',
-    description: 'Menjalankan kewajiban spiritual dengan rutin.',
-    translationKey: 'taatBeribadah'
+    icon: <TrendingUp className="h-12 w-12 text-primary" />,
+    title: 'Progress Trends',
+    description: 'Visualize improvement over time with clear, actionable trend data.',
   },
   {
-    icon: <HeartPulse className="h-8 w-8 text-accent" />,
-    name: 'Rajin Olahraga',
-    description: 'Menjaga kesehatan dan kebugaran jasmani.',
-    translationKey: 'rajinOlahraga'
+    icon: <AlertTriangle className="h-12 w-12 text-primary" />,
+    title: 'Areas for Improvement',
+    description: 'Identify specific habits or areas where students may need extra support.',
   },
   {
-    icon: <Utensils className="h-8 w-8 text-accent" />,
-    name: 'Makan Sehat & Bergizi',
-    description: 'Mengonsumsi makanan yang baik untuk tubuh.',
-    translationKey: 'makanSehat'
+    icon: <Award className="h-12 w-12 text-primary" />,
+    title: 'Milestone Achievements',
+    description: 'Recognize and celebrate student achievements and progress milestones.',
   },
   {
-    icon: <BookOpen className="h-8 w-8 text-accent" />,
-    name: 'Gemar Belajar',
-    description: 'Memiliki semangat untuk terus menambah ilmu.',
-    translationKey: 'gemarBelajar'
+    icon: <Users className="h-12 w-12 text-primary" />,
+    title: 'Classroom Averages',
+    description: 'Compare class performance and identify effective strategies.',
   },
   {
-    icon: <HandHelping className="h-8 w-8 text-accent" />,
-    name: 'Bermasyarakat',
-    description: 'Berinteraksi dan berkontribusi di lingkungan sosial.',
-    translationKey: 'bermasyarakat'
-  },
-  {
-    icon: <Bed className="h-8 w-8 text-accent" />,
-    name: 'Tidur Cepat',
-    description: 'Istirahat yang cukup untuk pemulihan tubuh.',
-    translationKey: 'tidurCepat'
+    icon: <FileText className="h-12 w-12 text-primary" />,
+    title: 'Customizable Reports',
+    description: 'Generate tailored reports based on specific needs and parameters.',
   },
 ];
 
 const features = [
   {
-    name: 'Dashboard Monitoring',
-    description: 'Visualisasikan kemajuan siswa dengan grafik interaktif dan laporan ringkas.',
-    icon: <CheckCircle className="h-6 w-6 text-primary" />,
-    translationKey: 'monitoringDashboard'
+    icon: <LayoutDashboard className="h-10 w-10 text-primary flex-shrink-0" />,
+    title: 'Comprehensive Dashboard',
+    description: 'A central hub for all student progress, habit tracking, and performance analytics.',
   },
   {
-    name: 'Input Data Harian',
-    description: 'Guru dapat dengan mudah mencatat perkembangan kebiasaan siswa setiap hari.',
-    icon: <CheckCircle className="h-6 w-6 text-primary" />,
-    translationKey: 'dailyDataInput'
+    icon: <BarChart2 className="h-10 w-10 text-primary flex-shrink-0" />,
+    title: 'Detailed Analytics',
+    description: 'Dive deep into data with interactive charts and visual representations of student behavior.',
   },
   {
-    name: 'Notifikasi AI Cerdas',
-    description: 'Dapatkan pemberitahuan otomatis jika ada penurunan kebiasaan siswa.',
-    icon: <CheckCircle className="h-6 w-6 text-primary" />,
-    translationKey: 'smartAINotifications'
+    icon: <Bell className="h-10 w-10 text-primary flex-shrink-0" />,
+    title: 'Smart Notifications',
+    description: 'Receive alerts for significant changes or areas needing attention.',
   },
   {
-    name: 'Laporan Komprehensif',
-    description: 'Ekspor data perkembangan siswa untuk evaluasi dan pelaporan.',
-    icon: <CheckCircle className="h-6 w-6 text-primary" />,
-    translationKey: 'comprehensiveReports'
+    icon: <DownloadCloud className="h-10 w-10 text-primary flex-shrink-0" />,
+    title: 'Exportable Reports',
+    description: 'Easily download and share progress reports for meetings or personal records.',
   },
 ];
 
+
 export default function LandingPage() {
-  const { language } = useLanguage();
-  const t = translations[language]?.landingPage || translations.en.landingPage;
+  // const { language } = useLanguage();
+  // const t = translations[language]?.landingPage || translations.en.landingPage;
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
-      <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 max-w-7xl items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            
-            <span className="font-bold text-xl text-primary">Kaih.Spensa id</span>
-          </Link>
-          <Link href="/login">
-            <Button>
-              {t.openDashboard}
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </Link>
-        </div>
+      <header className="py-6 px-4 sm:px-6 lg:px-8 border-b border-border/40">
+        <nav className="flex justify-between items-center max-w-7xl mx-auto">
+          <div className="flex items-center space-x-2">
+            <span className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white font-bold text-lg">
+              K
+            </span>
+            <span className="font-bold text-xl">Kalih.Spensa id</span>
+          </div>
+          <div className="flex items-center space-x-4">
+            <Link href="/reports" className="text-primary font-medium hover:underline hidden sm:block">
+              Reports
+            </Link>
+            <Link href="/data-master" className="text-primary font-medium hover:underline hidden sm:block">
+              Features
+            </Link>
+            <Link href="/login">
+                <Button className="bg-primary hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-300">
+                Buka Dashboard
+                </Button>
+            </Link>
+          </div>
+        </nav>
       </header>
 
-      <main className="flex-1">
-        <section className="relative py-20 md:py-32">
-          <div className="absolute inset-0 z-0">
-             <Image 
-              src="https://storage.googleapis.com/project-twix-public-images/user-669f9e5be62270eda3c683b5/1721868352528.png"
-              alt="School background"
-              fill
-              style={{ objectFit: 'cover' }}
-              className="opacity-40"
-              priority
-             />
-             <div className="absolute inset-0 bg-background/60 backdrop-blur-sm"></div>
-          </div>
-          <div className="container relative z-10 max-w-7xl text-center">
-            <h1 className="font-headline text-4xl font-bold tracking-tight text-primary sm:text-5xl md:text-6xl">
-              {t.heroTitle}
-            </h1>
-            <p className="mt-6 max-w-3xl mx-auto text-lg text-foreground/80 md:text-xl">
-              {t.heroSubtitle}
-            </p>
-            <div className="mt-10 flex justify-center gap-4">
-               <Link href="/login">
-                  <Button size="lg">
-                    {t.openDashboard}
-                  </Button>
-                </Link>
-            </div>
+      <main className="flex-grow">
+        <section className="text-center py-20 lg:py-32 px-4 sm:px-6 lg:px-8">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight mb-6 text-primary">
+            Monitor Student Progress Seamlessly
+          </h1>
+          <p className="max-w-3xl mx-auto text-lg text-muted-foreground mb-10">
+            Kalih.Spensa id provides educators and parents with powerful tools to track character development, identify trends, and foster a supportive learning environment. Gain valuable insights into student habits and progress.
+          </p>
+          <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+            <Link href="/reports">
+                <Button size="lg" className="bg-primary hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-transform transform hover:scale-105 duration-300 w-full sm:w-auto">
+                    View Student Reports
+                </Button>
+            </Link>
+            <Link href="#features">
+                <Button size="lg" variant="outline" className="bg-card hover:bg-muted text-foreground font-bold py-3 px-6 rounded-lg shadow-lg transition-colors duration-300 w-full sm:w-auto">
+                    Explore Features
+                </Button>
+            </Link>
           </div>
         </section>
 
-        <section id="habits" className="py-20 md:py-24 bg-card border-y">
-          <div className="container max-w-7xl">
-            <div className="text-center mb-12">
-              <h2 className="font-headline text-3xl font-bold text-primary sm:text-4xl">{t.habitsTitle}</h2>
-              <p className="mt-4 text-lg text-muted-foreground">
-                {t.habitsSubtitle}
+        <section className="py-20 lg:py-24 bg-card">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl lg:text-4xl font-bold tracking-tight mb-4 text-primary">
+                Key Reporting Metrics
+              </h2>
+              <p className="max-w-3xl mx-auto text-lg text-muted-foreground">
+                Understand the core habits we track to build a holistic view of student character development.
               </p>
             </div>
-            <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-              {habits.map((habit) => (
-                <div key={habit.name} className="flex flex-col items-center text-center p-6 rounded-lg">
-                  {habit.icon}
-                  <h3 className="mt-4 font-bold text-xl text-primary">{t.habits[habit.translationKey].name}</h3>
-                  <p className="mt-2 text-muted-foreground">{t.habits[habit.translationKey].description}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+              {metrics.map((metric) => (
+                <div key={metric.title} className="bg-background p-8 rounded-lg shadow-md text-center flex flex-col items-center">
+                  {metric.icon}
+                  <h3 className="text-xl font-semibold mt-4 mb-2">{metric.title}</h3>
+                  <p className="text-muted-foreground">{metric.description}</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        <section id="features" className="py-20 md:py-24">
-          <div className="container max-w-7xl">
-            <div className="text-center mb-12">
-                <h2 className="font-headline text-3xl font-bold text-primary sm:text-4xl">{t.featuresTitle}</h2>
-                <p className="mt-4 text-lg text-muted-foreground">
-                    {t.featuresSubtitle}
-                </p>
+        <section id="features" className="py-20 lg:py-24">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl lg:text-4xl font-bold tracking-tight mb-4 text-primary">
+                Features for Educators & Parents
+              </h2>
+              <p className="max-w-3xl mx-auto text-lg text-muted-foreground">
+                Our platform is built to streamline the monitoring process and enhance communication between home and school.
+              </p>
             </div>
-            <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {features.map((feature) => (
-                <Card key={feature.name} className="p-6">
-                  <div className="flex items-start gap-4">
-                    {feature.icon}
-                    <div>
-                      <h3 className="font-bold text-xl text-primary">{t.features[feature.translationKey].name}</h3>
-                      <p className="mt-1 text-muted-foreground">{t.features[feature.translationKey].description}</p>
-                    </div>
+                <Card key={feature.title} className="p-8 flex items-center space-x-4">
+                  {feature.icon}
+                  <div>
+                    <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
+                    <p className="text-muted-foreground">{feature.description}</p>
                   </div>
                 </Card>
               ))}
             </div>
           </div>
         </section>
+
+        <section className="bg-primary text-primary-foreground py-20 lg:py-24">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 className="text-3xl lg:text-4xl font-bold mb-6">
+              Ready to Enhance Student Development?
+            </h2>
+            <p className="text-lg mb-10 opacity-90">
+              Join educators and parents who are leveraging Kalih.Spensa id to build a stronger foundation for student success.
+            </p>
+            <Link href="/login">
+                <Button
+                    variant="secondary"
+                    size="lg"
+                    className="bg-white hover:bg-gray-100 text-primary font-bold py-3 px-8 rounded-full shadow-xl transition-colors duration-300"
+                    >
+                    Get Started with Your Dashboard
+                </Button>
+            </Link>
+          </div>
+        </section>
       </main>
 
-      <footer className="border-t py-6">
-        <div className="container max-w-7xl text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} {t.footer}</p>
+      <footer className="bg-card py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto text-center text-muted-foreground">
+          <p>© {new Date().getFullYear()} Kalih.Spensa id | Empowering Character Development. All Rights Reserved.</p>
         </div>
       </footer>
     </div>
