@@ -97,7 +97,7 @@ export default function AppLayout({
           <Sidebar>
             <SidebarHeader>
               <div className="flex items-center gap-2 p-2">
-                <Logo />
+                
                 <span className="font-bold text-xl text-primary group-data-[collapsible=icon]:hidden">
                   Kaih.Spensa id
                 </span>
