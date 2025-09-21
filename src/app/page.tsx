@@ -110,10 +110,10 @@ export default function LandingPage() {
               alt="School background"
               fill
               style={{ objectFit: 'cover' }}
-              className="opacity-20"
+              className="opacity-25"
               priority
              />
-             <div className="absolute inset-0 bg-background/60 backdrop-blur-sm"></div>
+             <div className="absolute inset-0 bg-background/50 backdrop-blur-sm"></div>
           </div>
           <div className="container relative z-10 max-w-7xl text-center">
             <h1 className="font-headline text-4xl font-bold tracking-tight text-primary sm:text-5xl md:text-6xl">
