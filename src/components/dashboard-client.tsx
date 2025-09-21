@@ -33,18 +33,12 @@ import {
   HandHelping,
   Church,
   Bed,
-  ChevronDown,
 } from 'lucide-react';
 import type { Student, Habit } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useStudent } from '@/contexts/student-context';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
 import React from 'react';
 
 const habitIcons: { [key: string]: React.ReactNode } = {
@@ -154,59 +148,39 @@ export function DashboardClient() {
                   habitTranslationMapping[habit.name] || habit.name;
 
                 return (
-                   <Collapsible key={habit.name} asChild>
-                     <React.Fragment>
-                      <TableRow>
-                        <TableCell>
-                          <CollapsibleTrigger className="flex w-full items-center justify-between group">
-                            <div className="flex items-center gap-3">
-                              {habitIcons[habit.name]}
-                              <span className="font-medium">
-                                {translatedName}
-                              </span>
-                            </div>
-                            <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                          </CollapsibleTrigger>
-                        </TableCell>
-                        <TableCell className="text-center font-mono">
-                          {habit['Minggu Lalu']}%
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Progress
-                              value={habit['Minggu Ini']}
-                              className="h-2 w-24"
-                            />
-                            <span className="font-mono text-sm">
-                              {habit['Minggu Ini']}%
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div
-                            className={cn(
-                              'flex items-center justify-center gap-1 font-mono text-sm',
-                              changeColor
-                            )}
-                          >
-                            <ChangeIcon className="h-4 w-4" />
-                            <span>{Math.abs(change)}%</span>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                      <CollapsibleContent asChild>
-                        <tr>
-                          <td colSpan={4} className="p-0">
-                            <div className="p-6 text-center bg-muted/50">
-                                <p className="text-sm text-muted-foreground">
-                                  Detail performa kelas akan ditampilkan di sini.
-                                </p>
-                            </div>
-                          </td>
-                        </tr>
-                      </CollapsibleContent>
-                     </React.Fragment>
-                  </Collapsible>
+                  <TableRow key={habit.name}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        {habitIcons[habit.name]}
+                        <span className="font-medium">{translatedName}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center font-mono">
+                      {habit['Minggu Lalu']}%
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Progress
+                          value={habit['Minggu Ini']}
+                          className="h-2 w-24"
+                        />
+                        <span className="font-mono text-sm">
+                          {habit['Minggu Ini']}%
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div
+                        className={cn(
+                          'flex items-center justify-center gap-1 font-mono text-sm',
+                          changeColor
+                        )}
+                      >
+                        <ChangeIcon className="h-4 w-4" />
+                        <span>{Math.abs(change)}%</span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
             </TableBody>
@@ -317,3 +291,5 @@ export function DashboardClient() {
     </>
   );
 }
+
+    
