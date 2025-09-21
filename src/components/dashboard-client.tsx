@@ -124,46 +124,44 @@ export function DashboardClient() {
                 const translatedName = habitTranslationMapping[habit.name] || habit.name;
 
                 return (
-                  <Collapsible key={habit.name} asChild>
-                     <React.Fragment>
-                        <TableRow>
-                           <TableCell>
-                            <CollapsibleTrigger className='w-full'>
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        {habitIcons[habit.name]}
-                                        <span className="font-medium">{translatedName}</span>
-                                    </div>
-                                    <ChevronDown className="h-4 w-4 transition-transform data-[state=open]:rotate-180" />
-                                </div>
-                             </CollapsibleTrigger>
-                           </TableCell>
-                            <TableCell className="text-center font-mono">{habit['Minggu Lalu']}%</TableCell>
-                            <TableCell>
-                            <div className="flex items-center gap-2">
-                                <Progress value={habit['Minggu Ini']} className="w-24 h-2" />
-                                <span className="font-mono text-sm">{habit['Minggu Ini']}%</span>
+                  <Collapsible asChild key={habit.name}>
+                    <>
+                      <TableRow>
+                        <TableCell>
+                          <CollapsibleTrigger className="flex w-full items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              {habitIcons[habit.name]}
+                              <span className="font-medium">{translatedName}</span>
                             </div>
-                            </TableCell>
-                            <TableCell className="text-center">
-                            <div className={cn("flex items-center justify-center gap-1 font-mono text-sm", changeColor)}>
-                                <ChangeIcon className="h-4 w-4" />
-                                <span>{Math.abs(change)}%</span>
-                            </div>
-                            </TableCell>
-                        </TableRow>
-                        <CollapsibleContent asChild>
-                            <tr className="bg-muted/50">
-                                <td colSpan={4} className="p-6 text-center">
-                                    <p className="text-sm text-muted-foreground">
-                                        Detail performa kelas akan ditampilkan di sini.
-                                    </p>
-                                </td>
-                            </tr>
-                        </CollapsibleContent>
-                    </React.Fragment>
+                            <ChevronDown className="h-4 w-4 transition-transform data-[state=open]:rotate-180" />
+                          </CollapsibleTrigger>
+                        </TableCell>
+                        <TableCell className="text-center font-mono">{habit['Minggu Lalu']}%</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Progress value={habit['Minggu Ini']} className="h-2 w-24" />
+                            <span className="font-mono text-sm">{habit['Minggu Ini']}%</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className={cn('flex items-center justify-center gap-1 font-mono text-sm', changeColor)}>
+                            <ChangeIcon className="h-4 w-4" />
+                            <span>{Math.abs(change)}%</span>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                      <CollapsibleContent asChild>
+                        <tr className="bg-muted/50">
+                          <td colSpan={4} className="p-6 text-center">
+                            <p className="text-sm text-muted-foreground">
+                              Detail performa kelas akan ditampilkan di sini.
+                            </p>
+                          </td>
+                        </tr>
+                      </CollapsibleContent>
+                    </>
                   </Collapsible>
-                )
+                );
               })}
             </TableBody>
           </Table>
