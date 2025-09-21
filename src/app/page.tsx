@@ -22,64 +22,61 @@ import { translations } from '@/lib/translations';
 const metrics = [
   {
     icon: <CheckCircle className="h-12 w-12 text-primary" />,
-    title: 'Habit Completion Rate',
-    description: 'Track the percentage of daily habits successfully completed by students.',
+    title: 'Tingkat Penyelesaian Kebiasaan',
+    description: 'Lacak persentase kebiasaan harian yang berhasil diselesaikan oleh siswa.',
   },
   {
     icon: <TrendingUp className="h-12 w-12 text-primary" />,
-    title: 'Progress Trends',
-    description: 'Visualize improvement over time with clear, actionable trend data.',
+    title: 'Tren Kemajuan',
+    description: 'Visualisasikan peningkatan dari waktu ke waktu dengan data tren yang jelas dan dapat ditindaklanjuti.',
   },
   {
     icon: <AlertTriangle className="h-12 w-12 text-primary" />,
-    title: 'Areas for Improvement',
-    description: 'Identify specific habits or areas where students may need extra support.',
+    title: 'Area untuk Peningkatan',
+    description: 'Identifikasi kebiasaan atau area spesifik di mana siswa mungkin memerlukan dukungan ekstra.',
   },
   {
     icon: <Award className="h-12 w-12 text-primary" />,
-    title: 'Milestone Achievements',
-    description: 'Recognize and celebrate student achievements and progress milestones.',
+    title: 'Pencapaian Tonggak Sejarah',
+    description: 'Akui dan rayakan pencapaian serta tonggak kemajuan siswa.',
   },
   {
     icon: <Users className="h-12 w-12 text-primary" />,
-    title: 'Classroom Averages',
-    description: 'Compare class performance and identify effective strategies.',
+    title: 'Rata-rata Kelas',
+    description: 'Bandingkan kinerja kelas dan identifikasi strategi yang efektif.',
   },
   {
     icon: <FileText className="h-12 w-12 text-primary" />,
-    title: 'Customizable Reports',
-    description: 'Generate tailored reports based on specific needs and parameters.',
+    title: 'Laporan yang Dapat Disesuaikan',
+    description: 'Hasilkan laporan yang disesuaikan berdasarkan kebutuhan dan parameter spesifik.',
   },
 ];
 
 const features = [
   {
     icon: <LayoutDashboard className="h-10 w-10 text-primary flex-shrink-0" />,
-    title: 'Comprehensive Dashboard',
-    description: 'A central hub for all student progress, habit tracking, and performance analytics.',
+    title: 'Dasbor Komprehensif',
+    description: 'Pusat utama untuk semua kemajuan siswa, pelacakan kebiasaan, dan analitik kinerja.',
   },
   {
     icon: <BarChart2 className="h-10 w-10 text-primary flex-shrink-0" />,
-    title: 'Detailed Analytics',
-    description: 'Dive deep into data with interactive charts and visual representations of student behavior.',
+    title: 'Analitik Terperinci',
+    description: 'Selami data lebih dalam dengan bagan interaktif dan representasi visual dari perilaku siswa.',
   },
   {
     icon: <Bell className="h-10 w-10 text-primary flex-shrink-0" />,
-    title: 'Smart Notifications',
-    description: 'Receive alerts for significant changes or areas needing attention.',
+    title: 'Notifikasi Cerdas',
+    description: 'Terima peringatan untuk perubahan signifikan atau area yang memerlukan perhatian.',
   },
   {
     icon: <DownloadCloud className="h-10 w-10 text-primary flex-shrink-0" />,
-    title: 'Exportable Reports',
-    description: 'Easily download and share progress reports for meetings or personal records.',
+    title: 'Laporan yang Dapat Diekspor',
+    description: 'Unduh dan bagikan laporan kemajuan dengan mudah untuk rapat atau catatan pribadi.',
   },
 ];
 
 
 export default function LandingPage() {
-  // const { language } = useLanguage();
-  // const t = translations[language]?.landingPage || translations.en.landingPage;
-
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <header className="py-6 px-4 sm:px-6 lg:px-8 border-b border-border/40">
@@ -92,10 +89,10 @@ export default function LandingPage() {
           </div>
           <div className="flex items-center space-x-4">
             <Link href="/reports" className="text-primary font-medium hover:underline hidden sm:block">
-              Reports
+              Laporan
             </Link>
-            <Link href="/data-master" className="text-primary font-medium hover:underline hidden sm:block">
-              Features
+            <Link href="#features" className="text-primary font-medium hover:underline hidden sm:block">
+              Fitur
             </Link>
             <Link href="/login">
                 <Button className="bg-primary hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-300">
@@ -109,20 +106,20 @@ export default function LandingPage() {
       <main className="flex-grow">
         <section className="text-center py-20 lg:py-32 px-4 sm:px-6 lg:px-8">
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight mb-6 text-primary">
-            Monitor Student Progress Seamlessly
+            Pantau Kemajuan Siswa dengan Mulus
           </h1>
           <p className="max-w-3xl mx-auto text-lg text-muted-foreground mb-10">
-            Kalih.Spensa id provides educators and parents with powerful tools to track character development, identify trends, and foster a supportive learning environment. Gain valuable insights into student habits and progress.
+            Kalih.Spensa id menyediakan alat yang kuat bagi para pendidik dan orang tua untuk melacak pengembangan karakter, mengidentifikasi tren, dan membina lingkungan belajar yang mendukung. Dapatkan wawasan berharga tentang kebiasaan dan kemajuan siswa.
           </p>
           <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
             <Link href="/reports">
                 <Button size="lg" className="bg-primary hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-transform transform hover:scale-105 duration-300 w-full sm:w-auto">
-                    View Student Reports
+                    Lihat Laporan Siswa
                 </Button>
             </Link>
             <Link href="#features">
                 <Button size="lg" variant="outline" className="bg-card hover:bg-muted text-foreground font-bold py-3 px-6 rounded-lg shadow-lg transition-colors duration-300 w-full sm:w-auto">
-                    Explore Features
+                    Jelajahi Fitur
                 </Button>
             </Link>
           </div>
@@ -132,10 +129,10 @@ export default function LandingPage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
               <h2 className="text-3xl lg:text-4xl font-bold tracking-tight mb-4 text-primary">
-                Key Reporting Metrics
+                Metrik Pelaporan Utama
               </h2>
               <p className="max-w-3xl mx-auto text-lg text-muted-foreground">
-                Understand the core habits we track to build a holistic view of student character development.
+                Pahami kebiasaan inti yang kami lacak untuk membangun pandangan holistik tentang pengembangan karakter siswa.
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
@@ -154,10 +151,10 @@ export default function LandingPage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
               <h2 className="text-3xl lg:text-4xl font-bold tracking-tight mb-4 text-primary">
-                Features for Educators & Parents
+                Fitur untuk Pendidik & Orang Tua
               </h2>
               <p className="max-w-3xl mx-auto text-lg text-muted-foreground">
-                Our platform is built to streamline the monitoring process and enhance communication between home and school.
+                Platform kami dibuat untuk menyederhanakan proses pemantauan dan meningkatkan komunikasi antara rumah dan sekolah.
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -177,10 +174,10 @@ export default function LandingPage() {
         <section className="bg-primary text-primary-foreground py-20 lg:py-24">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h2 className="text-3xl lg:text-4xl font-bold mb-6">
-              Ready to Enhance Student Development?
+              Siap Meningkatkan Perkembangan Siswa?
             </h2>
             <p className="text-lg mb-10 opacity-90">
-              Join educators and parents who are leveraging Kalih.Spensa id to build a stronger foundation for student success.
+              Bergabunglah dengan para pendidik dan orang tua yang memanfaatkan Kalih.Spensa id untuk membangun fondasi yang lebih kuat bagi kesuksesan siswa.
             </p>
             <Link href="/login">
                 <Button
@@ -188,7 +185,7 @@ export default function LandingPage() {
                     size="lg"
                     className="bg-white hover:bg-gray-100 text-primary font-bold py-3 px-8 rounded-full shadow-xl transition-colors duration-300"
                     >
-                    Get Started with Your Dashboard
+                    Mulai dengan Dasbor Anda
                 </Button>
             </Link>
           </div>
@@ -197,7 +194,7 @@ export default function LandingPage() {
 
       <footer className="bg-card py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center text-muted-foreground">
-          <p>© {new Date().getFullYear()} Kalih.Spensa id | Empowering Character Development. All Rights Reserved.</p>
+          <p>© {new Date().getFullYear()} Kalih.Spensa id | Memberdayakan Pengembangan Karakter. Hak Cipta Dilindungi Undang-Undang.</p>
         </div>
       </footer>
     </div>
