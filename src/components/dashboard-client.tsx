@@ -157,40 +157,8 @@ export function DashboardClient() {
                         <CollapsibleContent asChild>
                             <tr className="bg-muted/50">
                                 <td colSpan={5} className="p-0">
-                                <div className="p-4">
-                                    <h4 className="font-semibold mb-2 text-sm">Detail Performa Kelas untuk: {translatedName}</h4>
-                                     <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Kelas</TableHead>
-                                                <TableHead>Skor Rata-Rata</TableHead>
-                                                <TableHead>Tren</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            <TableRow>
-                                                <TableCell>IX A</TableCell>
-                                                <TableCell>3.8</TableCell>
-                                                <TableCell className="text-green-600 flex items-center">
-                                                    <ArrowUp className="h-4 w-4 mr-1" /> Meningkat
-                                                </TableCell>
-                                            </TableRow>
-                                            <TableRow>
-                                                <TableCell>IX B</TableCell>
-                                                <TableCell>3.5</TableCell>
-                                                <TableCell className="text-red-600 flex items-center">
-                                                    <ArrowDown className="h-4 w-4 mr-1" /> Menurun
-                                                </TableCell>
-                                            </TableRow>
-                                             <TableRow>
-                                                <TableCell>IX C</TableCell>
-                                                <TableCell>3.7</TableCell>
-                                                 <TableCell className="text-gray-500 flex items-center">
-                                                    <Minus className="h-4 w-4 mr-1" /> Stabil
-                                                </TableCell>
-                                            </TableRow>
-                                        </TableBody>
-                                    </Table>
+                                <div className="p-6 text-center text-muted-foreground">
+                                    <p>Detail performa kelas akan ditampilkan di sini.</p>
                                 </div>
                                 </td>
                             </tr>
