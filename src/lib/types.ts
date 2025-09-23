@@ -28,9 +28,16 @@ export interface Student extends DocumentData {
 
 export const HABIT_DEFINITIONS: Record<string, string[]> = {
   'Bangun Pagi': [
-    'Bangun pagi dengan segar dan tidak merasa lelah.',
-    'Memiliki jadwal bangun yang konsisten setiap hari.',
-    'Memilih untuk tidur lebih awal agar dapat bangun lebih pagi.',
+    'Kedisiplinan Waktu',
+    'Kesiapan untuk Beraktivitas',
+    'Kebersihan Diri',
+    'Sikap Positif dan Enerjik',
+    'Konsistensi',
+    'Kesiapan untuk Sekolah',
+    'Tingkat Kesiapan Mental',
+    'Kemandirian',
+    'Aktivitas Positif Sebelum Berangkat Sekolah',
+    'Kebiasaan Membaca atau Berdoa',
   ],
   'Taat Beribadah': [
     'Kedisiplinan Waktu Ibadah',
