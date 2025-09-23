@@ -94,3 +94,4 @@ export interface HabitEntry {
   recordedBy: string; // UID of the teacher
   timestamp: Timestamp;
 }
+
