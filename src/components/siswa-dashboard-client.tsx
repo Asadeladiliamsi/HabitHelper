@@ -19,6 +19,7 @@ import {
   Bed
 } from 'lucide-react';
 import type { Habit } from '@/lib/types';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 const habitIcons: { [key: string]: React.ReactNode } = {
   'Bangun Pagi': <Sunrise className="h-5 w-5 text-yellow-500" />,
@@ -103,60 +104,64 @@ export function SiswaDashboardClient() {
       <Card>
         <CardHeader>
           <CardTitle>Progres Kebiasaanmu</CardTitle>
-          <CardDescription>Berikut adalah rekapitulasi nilai dari 7 kebiasaan inti yang kamu jalani.</CardDescription>
+          <CardDescription>
+              Berikut adalah rekapitulasi nilai dari 7 kebiasaan inti yang kamu jalani. Klik setiap kebiasaan untuk melihat rincian aspeknya.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Kebiasaan</TableHead>
-                <TableHead className="text-right">Nilai Rata-rata</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {studentData.habits.map((habit) => {
-                if (!habit.subHabits || habit.subHabits.length === 0) {
+          <div className="space-y-4">
+             <Accordion type="single" collapsible className="w-full">
+                {studentData.habits.map((habit) => {
+                    const habitAverage = (!habit.subHabits || habit.subHabits.length === 0) 
+                        ? 0 
+                        : habit.subHabits.reduce((acc, sub) => acc + sub.score, 0) / (habit.subHabits.length || 1);
+
                     return (
-                        <TableRow key={habit.id}>
-                            <TableCell>
-                                <div className="flex items-center gap-3">
-                                {habitIcons[habit.name]}
-                                <span className="font-medium">{habitTranslationMapping[habit.name] || habit.name}</span>
+                        <AccordionItem value={habit.id} key={habit.id}>
+                            <AccordionTrigger className="hover:no-underline">
+                                <div className="flex items-center gap-3 w-full">
+                                    {habitIcons[habit.name]}
+                                    <span className="font-medium flex-1 text-left">{habitTranslationMapping[habit.name] || habit.name}</span>
+                                    <div className="flex items-center gap-2 pr-2">
+                                        <Progress value={(habitAverage / 4) * 100} className="w-24 h-2" />
+                                        <span className="font-mono text-lg font-bold">{habitAverage.toFixed(1)}</span>
+                                    </div>
                                 </div>
-                            </TableCell>
-                            <TableCell className="text-right">
-                                <span className="font-mono text-lg font-bold">N/A</span>
-                            </TableCell>
-                        </TableRow>
-                    );
-                }
-                const habitAverage = habit.subHabits.reduce((acc, sub) => acc + sub.score, 0) / (habit.subHabits.length || 1);
-                return (
-                <TableRow key={habit.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      {habitIcons[habit.name]}
-                      <span className="font-medium">{habitTranslationMapping[habit.name] || habit.name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <span className="font-mono text-lg font-bold">{habitAverage.toFixed(1)}</span>
-                  </TableCell>
-                </TableRow>
-              )})}
-               <TableRow className="bg-muted/50 font-bold">
-                  <TableCell>Rata-rata</TableCell>
-                  <TableCell className="text-right">
-                     <div className="flex items-center justify-end gap-2">
-                        <Progress value={(averageScore / 4) * 100} className="w-24 h-2" />
-                        <span className="font-mono text-sm">{averageScore.toFixed(1)}</span>
-                      </div>
-                  </TableCell>
-                </TableRow>
-            </TableBody>
-          </Table>
+                            </AccordionTrigger>
+                            <AccordionContent>
+                                <div className="pl-8 pr-4 space-y-3">
+                                    {habit.subHabits && habit.subHabits.length > 0 ? (
+                                        habit.subHabits.map(subHabit => (
+                                            <div key={subHabit.id} className="flex items-center justify-between text-sm">
+                                                <p className="text-muted-foreground flex-1 pr-4">{subHabit.name}</p>
+                                                <div className="flex items-center gap-2 w-28">
+                                                    <Progress value={(subHabit.score / 4) * 100} className="w-16 h-1.5" />
+                                                    <span className="font-mono text-sm font-semibold">{subHabit.score}</span>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p className="text-sm text-muted-foreground">Tidak ada aspek yang tercatat untuk kebiasaan ini.</p>
+                                    )}
+                                </div>
+                            </AccordionContent>
+                        </AccordionItem>
+                    )
+                })}
+            </Accordion>
+            
+            <div className="flex justify-between items-center bg-muted/50 p-4 rounded-lg font-bold">
+                <span>Rata-rata Keseluruhan</span>
+                <div className="flex items-center justify-end gap-2">
+                    <Progress value={(averageScore / 4) * 100} className="w-24 h-2" />
+                    <span className="font-mono text-sm">{averageScore.toFixed(1)}</span>
+                </div>
+            </div>
+
+          </div>
         </CardContent>
       </Card>
     </>
   );
 }
+
