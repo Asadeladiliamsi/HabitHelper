@@ -53,9 +53,16 @@ export const HABIT_DEFINITIONS: Record<string, string[]> = {
     'Membaca buku atau sumber ilmu di luar pelajaran.',
   ],
   'Bermasyarakat': [
-    'Menyapa guru dan teman dengan sopan.',
-    'Ikut serta dalam kegiatan sosial atau kerja kelompok.',
-    'Menawarkan bantuan kepada teman yang membutuhkan.',
+    'Keterlibatan dalam Kegiatan Sosial',
+    'Sikap Gotong Royong',
+    'Tanggung Jawab Sosial',
+    'Sikap Empati',
+    'Sikap Toleransi',
+    'Kepedulian terhadap Lingkungan',
+    'Komunikasi yang Baik dengan Teman dan Masyarakat',
+    'Sikap Positif terhadap Aturan Sekolah dan Lingkungan',
+    'Partisipasi dalam Kegiatan Sekolah',
+    'Kepemimpinan dalam Kegiatan Sosial',
   ],
   'Tidur Cepat': [
     'Kepatuhan terhadap Waktu Tidur',
@@ -94,4 +101,3 @@ export interface HabitEntry {
   recordedBy: string; // UID of the teacher
   timestamp: Timestamp;
 }
-
