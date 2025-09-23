@@ -2,9 +2,9 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, serverTimestamp, getDocs, where, setDoc } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, serverTimestamp, getDocs, where, setDoc, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Student, HabitEntry } from '@/lib/types';
+import type { Student, Habit, SubHabit, HabitEntry } from '@/lib/types';
 import { useAuth } from './auth-context';
 import { HABIT_DEFINITIONS } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
@@ -22,7 +22,7 @@ interface StudentContextType {
 
 const StudentContext = createContext<StudentContextType | undefined>(undefined);
 
-export const StudentProvider = ({ children }: { children: React.ReactNode }) => {
+export const StudentProvider = ({ children }: { children: React.React.ReactNode }) => {
   const { user, userProfile, loading: authLoading } = useAuth();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,177 +71,154 @@ export const StudentProvider = ({ children }: { children: React.ReactNode }) => 
     return () => unsubscribe();
   }, [user, userProfile, authLoading]);
 
-  const addStudent = async (newStudentData: Omit<Student, 'id'| 'habits' | 'avatarUrl'>) => {
+ const addStudent = async (newStudentData: Omit<Student, 'id' | 'habits' | 'avatarUrl'>) => {
     if (!user) throw new Error("Authentication required");
 
     // Check for NISN uniqueness
     const nisnQuery = query(collection(db, 'students'), where('nisn', '==', newStudentData.nisn));
     const nisnSnapshot = await getDocs(nisnQuery);
     if (!nisnSnapshot.empty) {
-      throw new Error(`NISN ${newStudentData.nisn} sudah terdaftar untuk siswa lain.`);
+      throw new Error(`NISN ${newStudentData.nisn} sudah digunakan oleh siswa lain.`);
     }
 
-    // Check if user is already linked
-    if (newStudentData.linkedUserUid) {
-        const userQuery = query(collection(db, 'students'), where('linkedUserUid', '==', newStudentData.linkedUserUid));
-        const userSnapshot = await getDocs(userQuery);
-        if (!userSnapshot.empty) {
-            throw new Error(`Pengguna ini sudah tertaut dengan data siswa lain.`);
-        }
+    // Check if the user account is already linked to another student
+    const userLinkQuery = query(collection(db, 'students'), where('linkedUserUid', '==', newStudentData.linkedUserUid));
+    const userLinkSnapshot = await getDocs(userLinkQuery);
+    if (!userLinkSnapshot.empty) {
+        throw new Error(`Akun pengguna ini sudah ditautkan ke siswa lain.`);
     }
 
+    // Initialize habits and sub-habits with default score
+    const initialHabits: Habit[] = Object.entries(HABIT_DEFINITIONS).map(([habitName, subHabitNames], habitIndex) => ({
+      id: `${habitIndex + 1}`,
+      name: habitName,
+      subHabits: subHabitNames.map((subHabitName, subHabitIndex) => ({
+        id: `${habitIndex + 1}-${subHabitIndex + 1}`,
+        name: subHabitName,
+        score: 4, 
+      })),
+    }));
 
-    try {
-      const newDocRef = doc(collection(db, 'students'));
-      
-      await setDoc(newDocRef, {
-        ...newStudentData,
-        habits: Object.entries(HABIT_DEFINITIONS).map(([habitName, subHabitNames], habitIndex) => ({
-          id: `habit-${Date.now()}-${habitIndex}`,
-          name: habitName,
-          subHabits: subHabitNames.map((subHabitName, subHabitIndex) => ({
-            id: `subhabit-${Date.now()}-${habitIndex}-${subHabitIndex}`,
-            name: subHabitName,
-            score: 4,
-          })),
-        })),
-        avatarUrl: `https://placehold.co/100x100.png?text=${newStudentData.name.charAt(0)}`,
-        createdBy: user.uid,
-      });
-      
-      // also update the user document to link the nisn
-      if (newStudentData.linkedUserUid) {
-        const userDocRef = doc(db, 'users', newStudentData.linkedUserUid);
-        await updateDoc(userDocRef, { nisn: newStudentData.nisn });
-      }
-      
-      // No need to auto-populate habit_entries anymore as the structure has changed
-
-    } catch (error) {
-      console.error("Error adding student:", error);
-      throw error;
-    }
+    await addDoc(collection(db, 'students'), {
+      ...newStudentData,
+      habits: initialHabits,
+      createdAt: serverTimestamp(),
+    });
   };
-
-  const updateStudent = async (studentId: string, updatedData: Partial<Omit<Student, 'id' | 'habits' | 'avatarUrl'>>) => {
-    if (!user) throw new Error("Authentication required");
-
-    // Check for NISN uniqueness if NISN is being updated
+  
+   const updateStudent = async (studentId: string, updatedData: Partial<Omit<Student, 'id' | 'habits' | 'avatarUrl'>>) => {
+    if (!user || !['admin', 'guru'].includes(userProfile?.role || '')) throw new Error("Authentication required or insufficient permissions");
+    
+    // If NISN is being updated, check for uniqueness first
     if (updatedData.nisn) {
-      const nisnQuery = query(collection(db, 'students'), where('nisn', '==', updatedData.nisn));
-      const querySnapshot = await getDocs(nisnQuery);
-      const isOwnedByAnother = querySnapshot.docs.some(doc => doc.id !== studentId);
-      if (isOwnedByAnother) {
-        throw new Error(`NISN ${updatedData.nisn} sudah terdaftar untuk siswa lain.`);
+      const q = query(collection(db, 'students'), where('nisn', '==', updatedData.nisn));
+      const querySnapshot = await getDocs(q);
+      const isDuplicate = !querySnapshot.empty && querySnapshot.docs.some(doc => doc.id !== studentId);
+      if (isDuplicate) {
+        throw new Error(`NISN ${updatedData.nisn} sudah digunakan.`);
       }
     }
     
     const studentDocRef = doc(db, 'students', studentId);
-    try {
-      await updateDoc(studentDocRef, updatedData);
-    } catch (error) {
-      console.error("Error updating student:", error);
-      throw error;
-    }
+    await updateDoc(studentDocRef, {
+        ...updatedData,
+        updatedAt: serverTimestamp(),
+    });
   };
 
   const deleteStudent = async (studentId: string) => {
-    if (!user) throw new Error("Authentication required");
+    if (!user || userProfile?.role !== 'admin') throw new Error("Authentication required or insufficient permissions");
     const studentDocRef = doc(db, 'students', studentId);
-    try {
-      await deleteDoc(studentDocRef);
-       // Optional: also delete related habit_entries
-      const entriesQuery = query(collection(db, 'habit_entries'), where('studentId', '==', studentId));
-      const entriesSnapshot = await getDocs(entriesQuery);
-      const deletePromises = entriesSnapshot.docs.map(d => deleteDoc(d.ref));
-      await Promise.all(deletePromises);
-
-    } catch (error) {
-      console.error("Error deleting student:", error);
-    }
+    await deleteDoc(studentDocRef);
   };
+
+  const addHabitEntry = async (data: Omit<HabitEntry, 'id' | 'timestamp' | 'recordedBy'>) => {
+    if (!user) throw new Error("Authentication required.");
+
+    const studentDocRef = doc(db, 'students', data.studentId);
+    const studentToUpdate = students.find(s => s.id === data.studentId);
+
+    if (!studentToUpdate) {
+      throw new Error("Student not found.");
+    }
+    
+    // Deep copy habits to avoid direct state mutation
+    const updatedHabits = JSON.parse(JSON.stringify(studentToUpdate.habits || []));
+
+    const habitToUpdate = updatedHabits.find((h: Habit) => h.name === data.habitName);
+
+    if (habitToUpdate) {
+       if (!habitToUpdate.subHabits) {
+          habitToUpdate.subHabits = [];
+       }
+       
+       let subHabitFound = false;
+       habitToUpdate.subHabits = habitToUpdate.subHabits.map((sh: SubHabit) => {
+           if (sh.name === data.subHabitName) {
+               subHabitFound = true;
+               return { ...sh, score: data.score };
+           }
+           return sh;
+       });
+
+       // If sub-habit doesn't exist, create it (should not happen with new structure but good for safety)
+       if (!subHabitFound) {
+           const subHabitId = `${habitToUpdate.id}-${habitToUpdate.subHabits.length + 1}`;
+           habitToUpdate.subHabits.push({ id: subHabitId, name: data.subHabitName, score: data.score });
+       }
+    }
+
+    await updateDoc(studentDocRef, { habits: updatedHabits });
+};
+
 
   const updateHabitScore = async (studentId: string, habitId: string, subHabitId: string, newScore: number) => {
     if (!user) throw new Error("Authentication required");
+
     const studentToUpdate = students.find(s => s.id === studentId);
-    if (studentToUpdate) {
-      const updatedHabits = studentToUpdate.habits.map(habit => {
-        if (habit.id === habitId) {
-          const updatedSubHabits = habit.subHabits.map(subHabit => 
-            subHabit.id === subHabitId ? { ...subHabit, score: newScore } : subHabit
-          );
-          return { ...habit, subHabits: updatedSubHabits };
-        }
-        return habit;
-      });
-      const studentDocRef = doc(db, 'students', studentId);
-      try {
-        await updateDoc(studentDocRef, { habits: updatedHabits });
-      } catch (error) {
-        console.error("Error updating habit score:", error);
+    if (!studentToUpdate) throw new Error("Student not found");
+
+    const updatedHabits = studentToUpdate.habits.map(habit => {
+      if (habit.id === habitId) {
+        const updatedSubHabits = (habit.subHabits || []).map(subHabit => {
+          if (subHabit.id === subHabitId) {
+            return { ...subHabit, score: newScore };
+          }
+          return subHabit;
+        });
+        return { ...habit, subHabits: updatedSubHabits };
       }
-    }
+      return habit;
+    });
+
+    const studentDocRef = doc(db, 'students', studentId);
+    await updateDoc(studentDocRef, { habits: updatedHabits });
   };
   
-  const addHabitEntry = async (data: Omit<HabitEntry, 'id' | 'timestamp' | 'recordedBy'>) => {
-    if (!user) throw new Error("Authentication required");
-    try {
-      const studentToUpdate = students.find(s => s.id === data.studentId);
-       if (studentToUpdate) {
-        const updatedHabits = studentToUpdate.habits.map(h => {
-          if (h.name === data.habitName) {
-            const subHabits = h.subHabits || [];
-            const updatedSubHabits = subHabits.map(sh => 
-              sh.name === data.subHabitName ? { ...sh, score: data.score } : sh
-            );
-            return { ...h, subHabits: updatedSubHabits };
-          }
-          return h;
-        });
-        await updateDoc(doc(db, 'students', data.studentId), {
-          habits: updatedHabits
-        });
-      }
-
-      // Create a unique ID for the entry to avoid duplicates for the same student/habit/subhabit/date
-      const entryDate = data.date.toISOString().split('T')[0];
-      const entryId = `${data.studentId}-${data.habitName}-${data.subHabitName.replace(/\s+/g, '-')}-${entryDate}`;
-      const docRef = doc(db, 'habit_entries', entryId);
-
-      await setDoc(docRef, {
-        ...data,
-        recordedBy: user.uid,
-        timestamp: serverTimestamp(),
-      }, { merge: true }); // Use set with merge to create or overwrite
-
-    } catch (error) {
-      console.error("Error adding habit entry:", error);
-    }
-  };
-
   const linkParentToStudent = async (studentId: string, parentId: string, parentName: string) => {
-    if (!user || user.uid === parentId) throw new Error("Authentication required and cannot link to self");
+    if (!user || !['admin', 'guru'].includes(userProfile?.role || '')) throw new Error("Authentication required or insufficient permissions");
     const studentDocRef = doc(db, 'students', studentId);
-    try {
-      await updateDoc(studentDocRef, {
-        parentId: parentId,
-        parentName: parentName,
-      });
-    } catch (error) {
-      console.error("Error linking parent:", error);
-      throw error;
-    }
-  };
+    await updateDoc(studentDocRef, { parentId, parentName });
+  }
 
-   if (authLoading && loading) {
-     return (
+  if (authLoading || loading) {
+    return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }
 
-  const contextValue = { students, loading, addStudent, updateStudent, deleteStudent, updateHabitScore, addHabitEntry, linkParentToStudent };
+  const contextValue = {
+    students,
+    loading,
+    addStudent,
+    updateStudent,
+    deleteStudent,
+    updateHabitScore,
+    addHabitEntry,
+    linkParentToStudent
+  };
 
   return (
     <StudentContext.Provider value={contextValue}>
@@ -257,3 +234,4 @@ export const useStudent = () => {
   }
   return context;
 };
+
