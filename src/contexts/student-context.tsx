@@ -186,13 +186,12 @@ export const StudentProvider = ({ children }: { children: React.ReactNode }) => 
   const addHabitEntry = async (data: Omit<HabitEntry, 'id' | 'timestamp' | 'recordedBy'>) => {
     if (!user) throw new Error("Authentication required");
     try {
-      // This function might need adjustment based on the new data structure.
-      // For now, let's assume we update the specific sub-habit score directly.
       const studentToUpdate = students.find(s => s.id === data.studentId);
        if (studentToUpdate) {
         const updatedHabits = studentToUpdate.habits.map(h => {
           if (h.name === data.habitName) {
-            const updatedSubHabits = h.subHabits.map(sh => 
+            const subHabits = h.subHabits || [];
+            const updatedSubHabits = subHabits.map(sh => 
               sh.name === data.subHabitName ? { ...sh, score: data.score } : sh
             );
             return { ...h, subHabits: updatedSubHabits };
