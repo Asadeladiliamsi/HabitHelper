@@ -1,3 +1,4 @@
+
 import type { Timestamp, DocumentData } from 'firebase/firestore';
 
 export interface SubHabit {
@@ -57,9 +58,16 @@ export const HABIT_DEFINITIONS: Record<string, string[]> = {
     'Menawarkan bantuan kepada teman yang membutuhkan.',
   ],
   'Tidur Cepat': [
-    'Tidur sesuai dengan waktu yang telah ditentukan.',
-    'Tidak begadang untuk hal yang tidak perlu.',
-    'Menghindari penggunaan gawai sebelum tidur.',
+    'Kepatuhan terhadap Waktu Tidur',
+    'Durasi Tidur yang Cukup',
+    'Kualitas Tidur',
+    'Menghindari Aktivitas yang Mengganggu Tidur',
+    'Rutinitas Persiapan Tidur',
+    'Kebiasaan Bangun Pagi',
+    'Konsistensi Jadwal Tidur',
+    'Manajemen Waktu untuk Tidur',
+    'Sikap Positif terhadap Tidur',
+    'Dampak Tidur pada Aktivitas Harian',
   ]
 };
 
