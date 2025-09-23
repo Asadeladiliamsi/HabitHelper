@@ -50,9 +50,16 @@ export const HABIT_DEFINITIONS: Record<string, string[]> = {
     'Memahami pentingnya olahraga bagi kesehatan.',
   ],
   'Makan Sehat & Bergizi': [
-    'Mengonsumsi variasi makanan (sayur, buah, protein).',
-    'Menghindari makanan cepat saji berlebihan.',
-    'Minum air putih yang cukup.',
+    'Keteraturan Makan',
+    'Pemilihan Makanan',
+    'Keseimbangan Nutrisi',
+    'Hindari Makanan Tidak Sehat',
+    'Ukuran Porsi yang Sesuai',
+    'Kebiasaan Minum Air Putih',
+    'Konsumsi Buah dan Sayur',
+    'Kebersihan Saat Makan',
+    'Kesadaran Gizi',
+    'Kemandirian dalam Memilih Makanan',
   ],
   'Gemar Belajar': [
     'Keterlibatan dalam Pembelajaran',
@@ -83,12 +90,12 @@ export const HABIT_DEFINITIONS: Record<string, string[]> = {
     'Durasi Tidur yang Cukup',
     'Kualitas Tidur',
     'Menghindari Aktivitas yang Mengganggu Tidur',
-    'Rutinitas Persiapan Tidur',
-    'Kebiasaan Bangun Pagi',
-    'Konsistensi Jadwal Tidur',
-    'Manajemen Waktu untuk Tidur',
-    'Sikap Positif terhadap Tidur',
-    'Dampak Tidur pada Aktivitas Harian',
+    'Memiliki rutinitas yang menenangkan sebelum tidur, seperti membaca atau berdoa.',
+    'Bangun pagi dengan segar dan tidak merasa lelah.',
+    'Memiliki jadwal tidur yang konsisten setiap hari.',
+    'Memilih untuk tidur lebih awal agar dapat bangun lebih pagi.',
+    'Menunjukkan sikap positif terhadap tidur dan memahami pentingnya tidur yang cukup.',
+    'Menjaga kesehatan dan dapat menjalani aktivitas dengan baik setelah tidur yang cukup.',
   ]
 };
 
