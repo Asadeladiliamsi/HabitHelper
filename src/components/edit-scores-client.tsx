@@ -16,12 +16,13 @@ import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
 import { StudentSearchDialog } from './student-search-dialog';
+import { HABIT_DEFINITIONS } from '@/lib/types';
 
 
 const formSchema = z.object({
   studentId: z.string().min(1, 'Siswa harus dipilih.'),
-  habitId: z.string().min(1, 'Kebiasaan harus dipilih.'),
-  subHabitId: z.string().min(1, 'Aspek kebiasaan harus dipilih.'),
+  habitName: z.string().min(1, 'Kebiasaan harus dipilih.'),
+  subHabitName: z.string().min(1, 'Aspek kebiasaan harus dipilih.'),
   newScore: z.number().min(1).max(4),
 });
 
@@ -33,6 +34,7 @@ export function EditScoresClient() {
   const [selectedStudentData, setSelectedStudentData] = useState<Student | null>(null);
   const [selectedHabit, setSelectedHabit] = useState<Habit | null>(null);
   const [selectedSubHabit, setSelectedSubHabit] = useState<SubHabit | null>(null);
+  const [availableSubHabits, setAvailableSubHabits] = useState<string[]>([]);
   
   const { language } = useLanguage();
   const t = translations[language]?.editScoresPage || translations.en.editScoresPage;
@@ -52,54 +54,65 @@ export function EditScoresClient() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       studentId: '',
-      habitId: '',
-      subHabitId: '',
+      habitName: '',
+      subHabitName: '',
       newScore: 4,
     },
   });
 
   const { watch, setValue, handleSubmit, control, formState } = form;
   const studentId = watch('studentId');
-  const habitId = watch('habitId');
-  const subHabitId = watch('subHabitId');
+  const habitName = watch('habitName');
+  const subHabitName = watch('subHabitName');
   const newScoreValue = watch('newScore');
 
   useEffect(() => {
     const student = students.find((s) => s.id === studentId) || null;
     setSelectedStudentData(student);
-    setValue('habitId', '');
-    setValue('subHabitId', '');
+    setValue('habitName', '');
+    setValue('subHabitName', '');
     setSelectedHabit(null);
     setSelectedSubHabit(null);
   }, [studentId, students, setValue]);
   
-  useEffect(() => {
-    const habit = selectedStudentData?.habits.find(h => h.id === habitId) || null;
+   useEffect(() => {
+    const habit = selectedStudentData?.habits.find(h => h.name === habitName) || null;
     setSelectedHabit(habit);
-    setValue('subHabitId', '');
+    const subHabits = HABIT_DEFINITIONS[habitName] || [];
+    setAvailableSubHabits(subHabits);
+    setValue('subHabitName', '');
     setSelectedSubHabit(null);
-  }, [habitId, selectedStudentData, setValue]);
+  }, [habitName, selectedStudentData, setValue]);
 
   useEffect(() => {
-    const subHabit = selectedHabit?.subHabits.find(sh => sh.id === subHabitId) || null;
+    const subHabit = selectedHabit?.subHabits.find(sh => sh.name === subHabitName) || null;
     setSelectedSubHabit(subHabit);
     if (subHabit) {
       setValue('newScore', subHabit.score);
+    } else {
+      setValue('newScore', 4); // Default score if not found
     }
-  }, [subHabitId, selectedHabit, setValue]);
+  }, [subHabitName, selectedHabit, setValue]);
   
   const onSubmit = (data: FormValues) => {
-    updateHabitScore(data.studentId, data.habitId, data.subHabitId, data.newScore);
+    if (!selectedHabit || !selectedSubHabit) {
+        toast({
+            variant: "destructive",
+            title: "Data Tidak Lengkap",
+            description: "Aspek kebiasaan yang dipilih tidak ditemukan di data siswa.",
+        });
+        return;
+    }
+    updateHabitScore(data.studentId, selectedHabit.id, selectedSubHabit.id, data.newScore);
     const student = students.find((s) => s.id === data.studentId);
-    const habit = selectedHabit?.name || '';
-    const translatedHabitName = habit ? (habitTranslationMapping[habit] || habit) : '';
+    const translatedHabitName = data.habitName ? (habitTranslationMapping[data.habitName] || data.habitName) : '';
     toast({
       title: t.toast.title,
-      description: `Nilai aspek '${selectedSubHabit?.name}' untuk kebiasaan '${translatedHabitName}' pada siswa ${student?.name} telah diubah menjadi ${data.newScore}.`,
+      description: `Nilai aspek '${data.subHabitName}' untuk kebiasaan '${translatedHabitName}' pada siswa ${student?.name} telah diubah menjadi ${data.newScore}.`,
     });
   };
 
-  const isSliderDisabled = !subHabitId;
+  const isSliderDisabled = !subHabitName;
 
   const getScoreColor = (score: number) => {
     if (score <= 1) return 'text-red-600';
@@ -146,7 +159,7 @@ export function EditScoresClient() {
                 <Label>{t.selectHabit}</Label>
                 <Controller
                   control={control}
-                  name="habitId"
+                  name="habitName"
                   render={({ field }) => (
                     <Select
                       onValueChange={field.onChange}
@@ -158,7 +171,7 @@ export function EditScoresClient() {
                       </SelectTrigger>
                       <SelectContent>
                         {selectedStudentData?.habits.map((habit) => (
-                          <SelectItem key={habit.id} value={habit.id}>
+                          <SelectItem key={habit.id} value={habit.name}>
                             {habitTranslationMapping[habit.name] || habit.name}
                           </SelectItem>
                         ))}
@@ -166,9 +179,9 @@ export function EditScoresClient() {
                     </Select>
                   )}
                 />
-                {formState.errors.habitId && (
+                {formState.errors.habitName && (
                   <p className="text-sm text-destructive mt-1">
-                    {formState.errors.habitId.message}
+                    {formState.errors.habitName.message}
                   </p>
                 )}
               </div>
@@ -176,29 +189,29 @@ export function EditScoresClient() {
                 <Label>Pilih Aspek Kebiasaan</Label>
                 <Controller
                   control={control}
-                  name="subHabitId"
+                  name="subHabitName"
                   render={({ field }) => (
                     <Select
                       onValueChange={field.onChange}
                       value={field.value}
-                      disabled={!habitId}
+                      disabled={!habitName}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Pilih aspek..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {selectedHabit?.subHabits.map((subHabit) => (
-                          <SelectItem key={subHabit.id} value={subHabit.id}>
-                            {subHabit.name}
+                        {availableSubHabits.map((subHabitName) => (
+                          <SelectItem key={subHabitName} value={subHabitName}>
+                            {subHabitName}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   )}
                 />
-                {formState.errors.subHabitId && (
+                {formState.errors.subHabitName && (
                   <p className="text-sm text-destructive mt-1">
-                    {formState.errors.subHabitId.message}
+                    {formState.errors.subHabitName.message}
                   </p>
                 )}
               </div>
@@ -230,7 +243,7 @@ export function EditScoresClient() {
               </div>
             </div>
 
-            <Button type="submit" className="w-full" disabled={!form.formState.isValid}>
+            <Button type="submit" className="w-full" disabled={!formState.isValid}>
               {t.saveButton}
             </Button>
           </form>
