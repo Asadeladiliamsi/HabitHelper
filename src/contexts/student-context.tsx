@@ -33,6 +33,7 @@ export const StudentProvider = ({ children }: { children: React.React.ReactNode 
   const [habitEntries, setHabitEntries] = useState<HabitEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateLoading, setDateLoading] = useState(false);
+  const [lastFetchedDate, setLastFetchedDate] = useState<Date | null>(null);
 
   useEffect(() => {
     if (authLoading || !user) {
@@ -138,6 +139,58 @@ export const StudentProvider = ({ children }: { children: React.React.ReactNode 
     const studentDocRef = doc(db, 'students', studentId);
     await deleteDoc(studentDocRef);
   };
+  
+  const fetchHabitEntriesForDate = useCallback(async (date: Date) => {
+      if (!user) return;
+      
+      setDateLoading(true);
+      setLastFetchedDate(date); // Store the date being fetched
+      
+      const studentIds = students.map(s => s.id);
+      if (studentIds.length === 0) {
+        setDateLoading(false);
+        setHabitEntries([]);
+        return;
+      }
+      
+      const q = query(
+          collection(db, 'habit_entries'), 
+          where('studentId', 'in', studentIds),
+          where('date', '>=', startOfDay(date)),
+          where('date', '<=', endOfDay(date))
+      );
+
+      try {
+          // Use onSnapshot for real-time updates for the selected date
+          const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const entries: HabitEntry[] = [];
+            querySnapshot.forEach(doc => {
+                const data = doc.data();
+                entries.push({
+                    id: doc.id,
+                    ...data,
+                    date: (data.date as Timestamp).toDate(),
+                    timestamp: data.timestamp
+                } as HabitEntry);
+            });
+            setHabitEntries(entries);
+            setDateLoading(false);
+          }, (error) => {
+            console.error("Error fetching real-time habit entries:", error);
+            setHabitEntries([]);
+            setDateLoading(false);
+          });
+          
+          // The onSnapshot listener will handle updates. 
+          // We don't return unsubscribe here as this function is for one-off fetches triggered by date changes.
+          // For a live dashboard, you would manage this unsubscribe differently.
+          
+      } catch (error) {
+          console.error("Error setting up habit entry listener:", error);
+          setHabitEntries([]);
+          setDateLoading(false);
+      }
+  }, [user, students]);
 
   const addHabitEntry = async (data: Omit<HabitEntry, 'id' | 'timestamp' | 'recordedBy'>) => {
     if (!user) throw new Error("Authentication required.");
@@ -147,7 +200,13 @@ export const StudentProvider = ({ children }: { children: React.React.ReactNode 
       recordedBy: user.uid,
       timestamp: serverTimestamp()
     });
-};
+    
+    // After adding, if the new entry's date is the same as the last fetched date,
+    // re-fetch to update the dashboard UI.
+    if (lastFetchedDate && isSameDay(data.date, lastFetchedDate)) {
+        await fetchHabitEntriesForDate(lastFetchedDate);
+    }
+  };
 
 
   const updateHabitScore = async (studentId: string, habitId: string, subHabitId: string, newScore: number) => {
@@ -178,62 +237,19 @@ export const StudentProvider = ({ children }: { children: React.React.ReactNode 
     const studentDocRef = doc(db, 'students', studentId);
     await updateDoc(studentDocRef, { parentId, parentName });
   }
-
- const fetchHabitEntriesForDate = useCallback(async (date: Date) => {
-      if (!user) return;
-      
-      setDateLoading(true);
-      
-      // Always fetch for the specified date
-      const studentIds = students.map(s => s.id);
-      if (studentIds.length === 0) {
-        setDateLoading(false);
-        setHabitEntries([]);
-        return;
-      }
-      
-      const q = query(
-          collection(db, 'habit_entries'), 
-          where('studentId', 'in', studentIds),
-          where('date', '>=', startOfDay(date)),
-          where('date', '<=', endOfDay(date))
-      );
-
-      try {
-          const querySnapshot = await getDocs(q);
-          const entries: HabitEntry[] = [];
-          querySnapshot.forEach(doc => {
-              const data = doc.data();
-              entries.push({
-                  id: doc.id,
-                  ...data,
-                  date: (data.date as Timestamp).toDate(),
-                  timestamp: data.timestamp
-              } as HabitEntry);
-          });
-          setHabitEntries(entries);
-      } catch (error) {
-          console.error("Error fetching habit entries for date:", error);
-          setHabitEntries([]); // Clear entries on error
-      } finally {
-          setDateLoading(false);
-      }
-  }, [user, students]);
   
   const getHabitsForDate = useCallback((studentId: string, date: Date): Habit[] => {
       const student = students.find(s => s.id === studentId);
       if (!student) return [];
       
-      // Filter entries for the specific student and date from the currently loaded `habitEntries` state
       const relevantEntries = habitEntries.filter(entry => 
-        entry.studentId === studentId && isSameDay(entry.date, date)
+        entry.studentId === studentId
       );
       
       const habitsFromDefs: Habit[] = Object.entries(HABIT_DEFINITIONS).map(([habitName, subHabitNames], habitIndex) => ({
         id: `${habitIndex + 1}`,
         name: habitName,
         subHabits: subHabitNames.map((subHabitName, subHabitIndex) => {
-          // Find the most recent entry for that specific sub-habit on that day
           const entry = relevantEntries
               .filter(e => e.habitName === habitName && e.subHabitName === subHabitName)
               .sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis())[0];
@@ -241,7 +257,7 @@ export const StudentProvider = ({ children }: { children: React.React.ReactNode 
           return {
             id: `${habitIndex + 1}-${subHabitIndex + 1}`,
             name: subHabitName,
-            score: entry ? entry.score : 0, // Default to 0 if no entry found
+            score: entry ? entry.score : 0,
           };
         }),
       }));
@@ -286,4 +302,5 @@ export const useStudent = () => {
   }
   return context;
 };
+
 
