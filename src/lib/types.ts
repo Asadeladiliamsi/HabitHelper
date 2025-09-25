@@ -133,6 +133,6 @@ export interface HabitEntry {
   subHabitName: string; // Nama sub-kebiasaan/aspek
   score: number;
   date: Date;
-  recordedBy: string; // UID of the teacher
+  recordedBy: string; // UID of the teacher/user
   timestamp: Timestamp;
 }

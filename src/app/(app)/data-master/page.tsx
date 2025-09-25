@@ -1,3 +1,4 @@
+
 'use client';
 
 import { DataInputClient } from '@/components/data-input-client';
@@ -33,15 +34,12 @@ function DataMasterTabs() {
 
   return (
     <Tabs defaultValue="manage-students">
-      <TabsList className="grid w-full grid-cols-3">
+      <TabsList className="grid w-full grid-cols-2">
         <TabsTrigger value="data-input">
           {t.sidebar.dataInput}
         </TabsTrigger>
         <TabsTrigger value="manage-students">
           {t.sidebar.manageStudents}
-        </TabsTrigger>
-        <TabsTrigger value="edit-scores">
-          {t.sidebar.editScores}
         </TabsTrigger>
       </TabsList>
       <TabsContent value="data-input" className="mt-6">
@@ -49,9 +47,6 @@ function DataMasterTabs() {
       </TabsContent>
       <TabsContent value="manage-students" className="mt-6">
         <ManageStudentsClient parentUsers={parentUsers} studentUsers={unlinkedStudentUsers} />
-      </TabsContent>
-      <TabsContent value="edit-scores" className="mt-6">
-        <EditScoresClient />
       </TabsContent>
     </Tabs>
   )

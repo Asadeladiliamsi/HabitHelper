@@ -134,26 +134,31 @@ export const StudentProvider = ({ children }: { children: React.React.ReactNode 
 
   const addHabitEntry = async (data: Omit<HabitEntry, 'id' | 'timestamp' | 'recordedBy'>) => {
     if (!user) throw new Error("Authentication required.");
+    
+    const batch = writeBatch(db);
 
+    // 1. Create a new entry in the 'habit_entries' collection
+    const habitEntryRef = doc(collection(db, 'habit_entries'));
+    batch.set(habitEntryRef, {
+      ...data,
+      recordedBy: user.uid,
+      timestamp: serverTimestamp()
+    });
+
+    // 2. Update the latest score in the student's document for quick access
     const studentDocRef = doc(db, 'students', data.studentId);
     const studentToUpdate = students.find(s => s.id === data.studentId);
-
-    if (!studentToUpdate) {
-      throw new Error("Student not found.");
-    }
+    if (!studentToUpdate) throw new Error("Student not found.");
     
     // Deep copy habits to avoid direct state mutation
-    const updatedHabits = JSON.parse(JSON.stringify(studentToUpdate.habits || []));
-
-    const habitToUpdate = updatedHabits.find((h: Habit) => h.name === data.habitName);
+    const updatedHabits: Habit[] = JSON.parse(JSON.stringify(studentToUpdate.habits || []));
+    const habitToUpdate = updatedHabits.find(h => h.name === data.habitName);
 
     if (habitToUpdate) {
-       if (!habitToUpdate.subHabits) {
-          habitToUpdate.subHabits = [];
-       }
+       if (!habitToUpdate.subHabits) habitToUpdate.subHabits = [];
        
        let subHabitFound = false;
-       habitToUpdate.subHabits = habitToUpdate.subHabits.map((sh: SubHabit) => {
+       habitToUpdate.subHabits = habitToUpdate.subHabits.map(sh => {
            if (sh.name === data.subHabitName) {
                subHabitFound = true;
                return { ...sh, score: data.score };
@@ -161,18 +166,22 @@ export const StudentProvider = ({ children }: { children: React.React.ReactNode 
            return sh;
        });
 
-       // If sub-habit doesn't exist, create it (should not happen with new structure but good for safety)
        if (!subHabitFound) {
            const subHabitId = `${habitToUpdate.id}-${habitToUpdate.subHabits.length + 1}`;
            habitToUpdate.subHabits.push({ id: subHabitId, name: data.subHabitName, score: data.score });
        }
+
+       batch.update(studentDocRef, { habits: updatedHabits });
     }
 
-    await updateDoc(studentDocRef, { habits: updatedHabits });
+    // Commit both operations atomically
+    await batch.commit();
 };
 
 
   const updateHabitScore = async (studentId: string, habitId: string, subHabitId: string, newScore: number) => {
+     // This function is now less relevant as we add entries instead of just updating.
+     // For now, it will update the summary score in the student document.
     if (!user) throw new Error("Authentication required");
 
     const studentToUpdate = students.find(s => s.id === studentId);
