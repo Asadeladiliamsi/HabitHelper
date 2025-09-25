@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
@@ -32,7 +33,6 @@ export const StudentProvider = ({ children }: { children: React.React.ReactNode 
   const [habitEntries, setHabitEntries] = useState<HabitEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateLoading, setDateLoading] = useState(false);
-  const [lastFetchedDate, setLastFetchedDate] = useState<Date | null>(null);
 
   useEffect(() => {
     if (authLoading || !user) {
@@ -142,39 +142,11 @@ export const StudentProvider = ({ children }: { children: React.React.ReactNode 
   const addHabitEntry = async (data: Omit<HabitEntry, 'id' | 'timestamp' | 'recordedBy'>) => {
     if (!user) throw new Error("Authentication required.");
     
-    // Create a new entry in habit_entries
     await addDoc(collection(db, 'habit_entries'), {
       ...data,
       recordedBy: user.uid,
       timestamp: serverTimestamp()
     });
-
-    // Also update the main student doc with the latest score for summary views (optional but can be useful)
-     const studentDocRef = doc(db, 'students', data.studentId);
-     const studentToUpdate = students.find(s => s.id === data.studentId);
-     if (!studentToUpdate) throw new Error("Student not found.");
-    
-     const updatedHabits: Habit[] = JSON.parse(JSON.stringify(studentToUpdate.habits || []));
-     const habitToUpdate = updatedHabits.find(h => h.name === data.habitName);
-
-     if (habitToUpdate) {
-        if (!habitToUpdate.subHabits) habitToUpdate.subHabits = [];
-       
-        let subHabitFound = false;
-        habitToUpdate.subHabits = habitToUpdate.subHabits.map(sh => {
-            if (sh.name === data.subHabitName) {
-                subHabitFound = true;
-                return { ...sh, score: data.score };
-            }
-            return sh;
-        });
-
-       if (!subHabitFound) {
-           const subHabitId = `${habitToUpdate.id}-${habitToUpdate.subHabits.length + 1}`;
-           habitToUpdate.subHabits.push({ id: subHabitId, name: data.subHabitName, score: data.score });
-       }
-       await updateDoc(studentDocRef, { habits: updatedHabits });
-     }
 };
 
 
@@ -209,11 +181,10 @@ export const StudentProvider = ({ children }: { children: React.React.ReactNode 
 
  const fetchHabitEntriesForDate = useCallback(async (date: Date) => {
       if (!user) return;
-      // Prevent refetching if date is the same
-      if (lastFetchedDate && isSameDay(lastFetchedDate, date)) return;
-
+      
       setDateLoading(true);
       
+      // Always fetch for the specified date
       const studentIds = students.map(s => s.id);
       if (studentIds.length === 0) {
         setDateLoading(false);
@@ -237,30 +208,26 @@ export const StudentProvider = ({ children }: { children: React.React.ReactNode 
                   id: doc.id,
                   ...data,
                   date: (data.date as Timestamp).toDate(),
+                  timestamp: data.timestamp
               } as HabitEntry);
           });
           setHabitEntries(entries);
-          setLastFetchedDate(date);
       } catch (error) {
           console.error("Error fetching habit entries for date:", error);
+          setHabitEntries([]); // Clear entries on error
       } finally {
           setDateLoading(false);
       }
-  }, [user, students, lastFetchedDate]);
-
-
-  useEffect(() => {
-    // This effect can be triggered to pre-fetch today's data or when the student list changes
-    if (students.length > 0) {
-        fetchHabitEntriesForDate(new Date());
-    }
-  }, [students, fetchHabitEntriesForDate]);
+  }, [user, students]);
   
   const getHabitsForDate = useCallback((studentId: string, date: Date): Habit[] => {
       const student = students.find(s => s.id === studentId);
       if (!student) return [];
       
-      const relevantEntries = habitEntries.filter(entry => entry.studentId === studentId && isSameDay(entry.date, date));
+      // Filter entries for the specific student and date from the currently loaded `habitEntries` state
+      const relevantEntries = habitEntries.filter(entry => 
+        entry.studentId === studentId && isSameDay(entry.date, date)
+      );
       
       const habitsFromDefs: Habit[] = Object.entries(HABIT_DEFINITIONS).map(([habitName, subHabitNames], habitIndex) => ({
         id: `${habitIndex + 1}`,
@@ -319,3 +286,4 @@ export const useStudent = () => {
   }
   return context;
 };
+

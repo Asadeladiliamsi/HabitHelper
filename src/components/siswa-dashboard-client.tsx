@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useAuth } from '@/contexts/auth-context';
@@ -51,8 +52,10 @@ export function SiswaDashboardClient() {
   const studentData = students.find(s => s.email === user?.email);
   
   useEffect(() => {
-    fetchHabitEntriesForDate(selectedDate);
-  }, [selectedDate, fetchHabitEntriesForDate]);
+    if (studentData) {
+      fetchHabitEntriesForDate(selectedDate);
+    }
+  }, [selectedDate, studentData, fetchHabitEntriesForDate]);
 
   const habitsForSelectedDate = studentData ? getHabitsForDate(studentData.id, selectedDate) : [];
 
@@ -89,12 +92,15 @@ export function SiswaDashboardClient() {
   
   const calculateOverallAverage = (habits: Habit[]) => {
       if (!habits || habits.length === 0) return 0;
-      const totalScore = habits.reduce((acc, h) => {
-          if (!h.subHabits || h.subHabits.length === 0) return acc;
+      const validHabits = habits.filter(h => h.subHabits && h.subHabits.length > 0 && h.subHabits.some(sh => sh.score > 0));
+      if (validHabits.length === 0) return 0;
+
+      const totalScore = validHabits.reduce((acc, h) => {
           const subHabitTotal = h.subHabits.reduce((subAcc, sh) => subAcc + sh.score, 0);
-          return acc + (subHabitTotal / (h.subHabits.length || 1));
+          const subHabitAverage = subHabitTotal / (h.subHabits.length || 1);
+          return acc + subHabitAverage;
       }, 0);
-      const validHabits = habits.filter(h => h.subHabits && h.subHabits.length > 0);
+      
       return totalScore / (validHabits.length || 1);
   };
 
@@ -147,11 +153,11 @@ export function SiswaDashboardClient() {
              </div>
           ) : habitsForSelectedDate.length > 0 && habitsForSelectedDate.some(h => h.subHabits.some(sh => sh.score > 0)) ? (
             <div className="space-y-4">
-               <Accordion type="single" collapsible className="w-full">
+               <Accordion type="multiple" className="w-full">
                   {habitsForSelectedDate.map((habit) => {
-                      const habitAverage = (!habit.subHabits || habit.subHabits.length === 0) 
+                      const habitAverage = (!habit.subHabits || habit.subHabits.length === 0 || habit.subHabits.every(sh => sh.score === 0))
                           ? 0 
-                          : habit.subHabits.reduce((acc, sub) => acc + sub.score, 0) / (habit.subHabits.length || 1);
+                          : habit.subHabits.reduce((acc, sub) => acc + sub.score, 0) / (habit.subHabits.filter(sh => sh.score > 0).length || 1);
 
                       return (
                           <AccordionItem value={habit.id} key={habit.id}>
@@ -206,3 +212,4 @@ export function SiswaDashboardClient() {
     </>
   );
 }
+

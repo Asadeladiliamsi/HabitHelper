@@ -1,5 +1,6 @@
 
 
+
 'use client';
 
 import {
@@ -109,7 +110,7 @@ export function DashboardClient() {
   const calculateOverallAverage = (habits: Habit[]) => {
     if (!habits || habits.length === 0) return 0;
     
-    const validHabits = habits.filter(h => h.subHabits && h.subHabits.length > 0);
+    const validHabits = habits.filter(h => h.subHabits && h.subHabits.length > 0 && h.subHabits.some(sh => sh.score > 0));
     if (validHabits.length === 0) return 0;
 
     const totalScore = validHabits.reduce((acc, h) => {
@@ -364,9 +365,9 @@ export function DashboardClient() {
                         {studentHabitsOnDate.some(h => h.subHabits.some(sh => sh.score > 0)) ? (
                           <Accordion type="multiple" className="w-full space-y-1">
                             {studentHabitsOnDate.map((habit) => {
-                                const habitAverage = (!habit.subHabits || habit.subHabits.length === 0) 
-                                    ? 0 
-                                    : habit.subHabits.reduce((acc, sub) => acc + sub.score, 0) / (habit.subHabits.length || 1);
+                                const habitAverage = (!habit.subHabits || habit.subHabits.length === 0 || habit.subHabits.every(sh => sh.score === 0))
+                                    ? 0
+                                    : habit.subHabits.reduce((acc, sub) => acc + sub.score, 0) / (habit.subHabits.filter(sh => sh.score > 0).length || 1);
                                 return(
                                   <AccordionItem value={habit.id} key={habit.id}>
                                     <AccordionTrigger className="hover:no-underline text-sm py-2 rounded-md hover:bg-muted/50 px-2">
@@ -415,3 +416,4 @@ export function DashboardClient() {
     </>
   );
 }
+
