@@ -49,6 +49,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
+import { HABIT_DEFINITIONS } from '@/lib/types';
+
 
 const habitIcons: { [key: string]: React.ReactNode } = {
   'Bangun Pagi': <Sunrise className="h-5 w-5 text-yellow-500" />,
@@ -157,71 +159,45 @@ export function DashboardClient() {
       <Card>
         <CardHeader>
           <CardTitle>{t.overallHabitProgress}</CardTitle>
+          <CardDescription>Klik pada setiap kebiasaan untuk melihat rincian aspeknya.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[250px]">{t.habit}</TableHead>
-                <TableHead className="text-center">{t.lastWeek}</TableHead>
-                <TableHead>{t.thisWeek}</TableHead>
-                <TableHead className="text-center w-[100px]">
-                  {t.change}
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {overallHabitData.map(habit => {
-                const change = habit['Minggu Ini'] - habit['Minggu Lalu'];
-                const ChangeIcon =
-                  change > 0 ? ArrowUp : change < 0 ? ArrowDown : Minus;
-                const changeColor =
-                  change > 0
-                    ? 'text-green-600'
-                    : change < 0
-                    ? 'text-red-600'
-                    : 'text-muted-foreground';
-                const translatedName =
-                  habitTranslationMapping[habit.name] || habit.name;
+          <Accordion type="multiple" className="w-full space-y-2">
+            {overallHabitData.map(habit => {
+                const translatedName = habitTranslationMapping[habit.name] || habit.name;
+                const aspects = HABIT_DEFINITIONS[habit.name] || [];
 
                 return (
-                  <TableRow key={habit.name}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        {habitIcons[habit.name]}
-                        <span className="font-medium">{translatedName}</span>
+                  <AccordionItem value={habit.name} key={habit.name} className="border rounded-md px-4">
+                    <AccordionTrigger className="hover:no-underline py-3">
+                       <div className="flex items-center gap-3 w-full">
+                          {habitIcons[habit.name]}
+                          <span className="font-medium flex-1 text-left">{translatedName}</span>
+                           <div className="flex items-center gap-2 pr-2">
+                               <Progress
+                                value={habit['Minggu Ini']}
+                                className="w-24 h-2"
+                                />
+                               <span className="font-mono text-lg font-bold">
+                                {habit['Minggu Ini']}%
+                               </span>
+                           </div>
+                       </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="pl-8 pr-4 pt-2 pb-4 space-y-2">
+                        <h4 className="font-semibold text-sm mb-2 text-muted-foreground">Aspek yang dinilai:</h4>
+                        <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                          {aspects.map((aspect, index) => (
+                            <li key={index}>{aspect}</li>
+                          ))}
+                        </ul>
                       </div>
-                    </TableCell>
-                    <TableCell className="text-center font-mono">
-                      {habit['Minggu Lalu']}%
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Progress
-                          value={habit['Minggu Ini']}
-                          className="h-2 w-24"
-                        />
-                        <span className="font-mono text-sm">
-                          {habit['Minggu Ini']}%
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <div
-                        className={cn(
-                          'flex items-center justify-center gap-1 font-mono text-sm',
-                          changeColor
-                        )}
-                      >
-                        <ChangeIcon className="h-4 w-4" />
-                        <span>{Math.abs(change)}%</span>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                    </AccordionContent>
+                  </AccordionItem>
                 );
               })}
-            </TableBody>
-          </Table>
+          </Accordion>
         </CardContent>
       </Card>
 
@@ -331,5 +307,7 @@ export function DashboardClient() {
     </>
   );
 }
+
+    
 
     
