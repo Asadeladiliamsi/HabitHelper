@@ -15,12 +15,19 @@ import {
   Utensils,
   HandHelping,
   Church,
-  Bed
+  Bed,
+  Calendar as CalendarIcon,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import type { Student } from '@/lib/types';
+import type { Student, Habit } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Button } from './ui/button';
+import { Calendar } from './ui/calendar';
+import { format } from 'date-fns';
+import { id } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 const habitIcons: { [key: string]: React.ReactNode } = {
   'Bangun Pagi': <Sunrise className="h-5 w-5 text-yellow-500" />,
@@ -34,22 +41,27 @@ const habitIcons: { [key: string]: React.ReactNode } = {
 
 export function OrangTuaDashboardClient() {
   const { userProfile } = useAuth();
-  const { students, loading: studentsLoading } = useStudent();
+  const { students, loading: studentsLoading, getHabitsForDate, dateLoading, fetchHabitEntriesForDate } = useStudent();
   const { language } = useLanguage();
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
 
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
-
-  // Find all children linked to this parent
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  
   const parentStudents = students.filter(s => s.parentId === userProfile?.uid);
 
   useEffect(() => {
-    // Set the first child as selected by default
     if (parentStudents.length > 0 && !selectedStudentId) {
       setSelectedStudentId(parentStudents[0].id);
     }
   }, [parentStudents, selectedStudentId]);
 
+  useEffect(() => {
+    fetchHabitEntriesForDate(selectedDate);
+  }, [selectedDate, fetchHabitEntriesForDate]);
+  
+  const selectedStudentData = parentStudents.find(s => s.id === selectedStudentId);
+  const habitsForSelectedDate = selectedStudentData ? getHabitsForDate(selectedStudentData.id, selectedDate) : [];
 
   const habitTranslationMapping: Record<string, string> = {
     'Bangun Pagi': tHabits.bangunPagi.name,
@@ -82,18 +94,19 @@ export function OrangTuaDashboardClient() {
     );
   }
   
-  const selectedStudentData = parentStudents.find(s => s.id === selectedStudentId);
-
-  const calculateOverallAverage = (student: Student) => {
-    if (!student.habits || student.habits.length === 0) return 0;
-    const totalScore = student.habits.reduce((acc, h) => {
+  const calculateOverallAverage = (habits: Habit[]) => {
+    if (!habits || habits.length === 0) return 0;
+    const totalScore = habits.reduce((acc, h) => {
       if (!h.subHabits || h.subHabits.length === 0) return acc;
       const subHabitTotal = h.subHabits.reduce((subAcc, sh) => subAcc + sh.score, 0);
-      const subHabitAverage = subHabitTotal / h.subHabits.length;
+      const subHabitAverage = subHabitTotal / (h.subHabits.length || 1);
       return acc + subHabitAverage;
     }, 0);
-    return totalScore / student.habits.length;
+    const validHabits = habits.filter(h => h.subHabits && h.subHabits.length > 0);
+    return totalScore / (validHabits.length || 1);
   };
+  
+  const averageScore = calculateOverallAverage(habitsForSelectedDate);
 
   return (
     <div className="flex flex-col gap-6">
@@ -128,14 +141,44 @@ export function OrangTuaDashboardClient() {
       {selectedStudentData ? (
         <Card>
             <CardHeader>
-            <CardTitle>Progres Kebiasaan {selectedStudentData.name}</CardTitle>
-            <CardDescription>Klik setiap kebiasaan untuk melihat rincian aspek yang dinilai.</CardDescription>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <CardTitle>Progres Kebiasaan {selectedStudentData.name}</CardTitle>
+                  <CardDescription>Pilih tanggal untuk melihat progres pada hari itu.</CardDescription>
+                </div>
+                <Popover>
+                  <PopoverTrigger asChild>
+                      <Button
+                      variant={'outline'}
+                      className={cn(
+                          'w-full sm:w-[280px] justify-start text-left font-normal',
+                          !selectedDate && 'text-muted-foreground'
+                      )}
+                      >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {selectedDate ? format(selectedDate, 'PPP', { locale: id }) : <span>Pilih tanggal</span>}
+                      </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                      <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={(date) => setSelectedDate(date || new Date())}
+                      initialFocus
+                      />
+                  </PopoverContent>
+                </Popover>
+              </div>
             </CardHeader>
             <CardContent>
-            {selectedStudentData.habits ? (
+            {dateLoading ? (
+               <div className="flex h-48 items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+               </div>
+            ) : habitsForSelectedDate.length > 0 && habitsForSelectedDate.some(h => h.subHabits.some(sh => sh.score > 0)) ? (
               <div className="space-y-4">
                 <Accordion type="multiple" className="w-full">
-                  {selectedStudentData.habits.map((habit) => {
+                  {habitsForSelectedDate.map((habit) => {
                       const habitAverage = (!habit.subHabits || habit.subHabits.length === 0) 
                           ? 0 
                           : habit.subHabits.reduce((acc, sub) => acc + sub.score, 0) / (habit.subHabits.length || 1);
@@ -177,13 +220,16 @@ export function OrangTuaDashboardClient() {
               <div className="flex justify-between items-center bg-muted/50 p-4 rounded-lg font-bold">
                   <span>Rata-rata Keseluruhan</span>
                   <div className="flex items-center justify-end gap-2">
-                      <Progress value={(calculateOverallAverage(selectedStudentData) / 4) * 100} className="w-24 h-2" />
-                      <span className="font-mono text-sm">{ calculateOverallAverage(selectedStudentData).toFixed(1) }</span>
+                      <Progress value={(averageScore / 4) * 100} className="w-24 h-2" />
+                      <span className="font-mono text-sm">{ averageScore.toFixed(1) }</span>
                   </div>
               </div>
             </div>
             ) : (
-              <p className="text-muted-foreground text-center">Data kebiasaan untuk siswa ini belum ada.</p>
+               <div className="flex flex-col items-center justify-center h-48 border-2 border-dashed rounded-lg">
+                <p className="text-muted-foreground">Tidak ada data yang tercatat untuk tanggal ini.</p>
+                <p className="text-sm text-muted-foreground mt-1">Silakan pilih tanggal lain atau input data anak Anda.</p>
+            </div>
             )}
             </CardContent>
         </Card>

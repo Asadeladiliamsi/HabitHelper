@@ -8,7 +8,7 @@ import type { Student, Habit, SubHabit, HabitEntry } from '@/lib/types';
 import { useAuth } from './auth-context';
 import { HABIT_DEFINITIONS } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
-import { startOfDay, endOfDay } from 'date-fns';
+import { startOfDay, endOfDay, isSameDay } from 'date-fns';
 
 interface StudentContextType {
   students: Student[];
@@ -21,6 +21,7 @@ interface StudentContextType {
   addHabitEntry: (data: Omit<HabitEntry, 'id' | 'timestamp' | 'recordedBy'>) => Promise<void>;
   linkParentToStudent: (studentId: string, parentId: string, parentName: string) => Promise<void>;
   getHabitsForDate: (studentId: string, date: Date) => Habit[];
+  fetchHabitEntriesForDate: (date: Date) => Promise<void>;
 }
 
 const StudentContext = createContext<StudentContextType | undefined>(undefined);
@@ -141,43 +142,39 @@ export const StudentProvider = ({ children }: { children: React.React.ReactNode 
   const addHabitEntry = async (data: Omit<HabitEntry, 'id' | 'timestamp' | 'recordedBy'>) => {
     if (!user) throw new Error("Authentication required.");
     
-    const batch = writeBatch(db);
-
-    const habitEntryRef = doc(collection(db, 'habit_entries'));
-    batch.set(habitEntryRef, {
+    // Create a new entry in habit_entries
+    await addDoc(collection(db, 'habit_entries'), {
       ...data,
       recordedBy: user.uid,
       timestamp: serverTimestamp()
     });
 
-    const studentDocRef = doc(db, 'students', data.studentId);
-    const studentToUpdate = students.find(s => s.id === data.studentId);
-    if (!studentToUpdate) throw new Error("Student not found.");
+    // Also update the main student doc with the latest score for summary views (optional but can be useful)
+     const studentDocRef = doc(db, 'students', data.studentId);
+     const studentToUpdate = students.find(s => s.id === data.studentId);
+     if (!studentToUpdate) throw new Error("Student not found.");
     
-    const updatedHabits: Habit[] = JSON.parse(JSON.stringify(studentToUpdate.habits || []));
-    const habitToUpdate = updatedHabits.find(h => h.name === data.habitName);
+     const updatedHabits: Habit[] = JSON.parse(JSON.stringify(studentToUpdate.habits || []));
+     const habitToUpdate = updatedHabits.find(h => h.name === data.habitName);
 
-    if (habitToUpdate) {
-       if (!habitToUpdate.subHabits) habitToUpdate.subHabits = [];
+     if (habitToUpdate) {
+        if (!habitToUpdate.subHabits) habitToUpdate.subHabits = [];
        
-       let subHabitFound = false;
-       habitToUpdate.subHabits = habitToUpdate.subHabits.map(sh => {
-           if (sh.name === data.subHabitName) {
-               subHabitFound = true;
-               return { ...sh, score: data.score };
-           }
-           return sh;
-       });
+        let subHabitFound = false;
+        habitToUpdate.subHabits = habitToUpdate.subHabits.map(sh => {
+            if (sh.name === data.subHabitName) {
+                subHabitFound = true;
+                return { ...sh, score: data.score };
+            }
+            return sh;
+        });
 
        if (!subHabitFound) {
            const subHabitId = `${habitToUpdate.id}-${habitToUpdate.subHabits.length + 1}`;
            habitToUpdate.subHabits.push({ id: subHabitId, name: data.subHabitName, score: data.score });
        }
-
-       batch.update(studentDocRef, { habits: updatedHabits });
-    }
-
-    await batch.commit();
+       await updateDoc(studentDocRef, { habits: updatedHabits });
+     }
 };
 
 
@@ -210,38 +207,17 @@ export const StudentProvider = ({ children }: { children: React.React.ReactNode 
     await updateDoc(studentDocRef, { parentId, parentName });
   }
 
-  const getHabitsForDate = useCallback((studentId: string, date: Date): Habit[] => {
-      const student = students.find(s => s.id === studentId);
-      if (!student) return [];
-
-      const relevantEntries = habitEntries.filter(entry => entry.studentId === studentId && entry.date.toDateString() === date.toDateString());
-
-      const habitsFromDefs: Habit[] = Object.entries(HABIT_DEFINITIONS).map(([habitName, subHabitNames], habitIndex) => ({
-        id: `${habitIndex + 1}`,
-        name: habitName,
-        subHabits: subHabitNames.map((subHabitName, subHabitIndex) => {
-          const entry = relevantEntries.find(e => e.habitName === habitName && e.subHabitName === subHabitName);
-          return {
-            id: `${habitIndex + 1}-${subHabitIndex + 1}`,
-            name: subHabitName,
-            score: entry ? entry.score : 0, // Default to 0 if no entry found
-          };
-        }),
-      }));
-      return habitsFromDefs;
-
-  }, [students, habitEntries]);
-
-  const fetchHabitEntriesForDate = useCallback(async (date: Date) => {
+ const fetchHabitEntriesForDate = useCallback(async (date: Date) => {
       if (!user) return;
       // Prevent refetching if date is the same
-      if (lastFetchedDate && lastFetchedDate.toDateString() === date.toDateString()) return;
+      if (lastFetchedDate && isSameDay(lastFetchedDate, date)) return;
 
       setDateLoading(true);
       
       const studentIds = students.map(s => s.id);
       if (studentIds.length === 0) {
         setDateLoading(false);
+        setHabitEntries([]);
         return;
       }
       
@@ -280,6 +256,32 @@ export const StudentProvider = ({ children }: { children: React.React.ReactNode 
     }
   }, [students, fetchHabitEntriesForDate]);
   
+  const getHabitsForDate = useCallback((studentId: string, date: Date): Habit[] => {
+      const student = students.find(s => s.id === studentId);
+      if (!student) return [];
+      
+      const relevantEntries = habitEntries.filter(entry => entry.studentId === studentId && isSameDay(entry.date, date));
+      
+      const habitsFromDefs: Habit[] = Object.entries(HABIT_DEFINITIONS).map(([habitName, subHabitNames], habitIndex) => ({
+        id: `${habitIndex + 1}`,
+        name: habitName,
+        subHabits: subHabitNames.map((subHabitName, subHabitIndex) => {
+          // Find the most recent entry for that specific sub-habit on that day
+          const entry = relevantEntries
+              .filter(e => e.habitName === habitName && e.subHabitName === subHabitName)
+              .sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis())[0];
+
+          return {
+            id: `${habitIndex + 1}-${subHabitIndex + 1}`,
+            name: subHabitName,
+            score: entry ? entry.score : 0, // Default to 0 if no entry found
+          };
+        }),
+      }));
+      return habitsFromDefs;
+
+  }, [students, habitEntries]);
+
 
   if (authLoading || loading) {
     return (
@@ -300,6 +302,7 @@ export const StudentProvider = ({ children }: { children: React.React.ReactNode 
     addHabitEntry,
     linkParentToStudent,
     getHabitsForDate,
+    fetchHabitEntriesForDate,
   };
 
   return (

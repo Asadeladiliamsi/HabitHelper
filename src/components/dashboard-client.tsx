@@ -31,12 +31,13 @@ import {
   HandHelping,
   Church,
   Bed,
+  Calendar as CalendarIcon,
 } from 'lucide-react';
 import type { Student, Habit, SubHabit } from '@/lib/types';
 import { useStudent } from '@/contexts/student-context';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Select,
   SelectContent,
@@ -46,6 +47,13 @@ import {
 } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { HABIT_DEFINITIONS } from '@/lib/types';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Button } from './ui/button';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { id } from 'date-fns/locale';
+import { Calendar } from './ui/calendar';
+import { Loader2 } from 'lucide-react';
 
 const habitIcons: { [key: string]: React.ReactNode } = {
   'Bangun Pagi': <Sunrise className="h-5 w-5 text-yellow-500" />,
@@ -58,14 +66,19 @@ const habitIcons: { [key: string]: React.ReactNode } = {
 };
 
 export function DashboardClient() {
-  const { students } = useStudent();
+  const { students, getHabitsForDate, fetchHabitEntriesForDate, dateLoading } = useStudent();
   const { language } = useLanguage();
   const [selectedClass, setSelectedClass] = useState('all');
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   const t = translations[language]?.dashboardPage || translations.en.dashboardPage;
   const tHabits =
     translations[language]?.landingPage.habits ||
     translations.en.landingPage.habits;
+
+  useEffect(() => {
+    fetchHabitEntriesForDate(selectedDate);
+  }, [selectedDate, fetchHabitEntriesForDate]);
 
   const habitTranslationMapping: Record<string, string> = {
     'Bangun Pagi': tHabits.bangunPagi.name,
@@ -89,24 +102,8 @@ export function DashboardClient() {
     return students.filter(student => student.class === selectedClass);
   }, [students, selectedClass]);
   
-  const getHabitsWithDefaults = (studentHabits: Habit[] | undefined): Habit[] => {
-    return Object.keys(HABIT_DEFINITIONS).map((habitName, habitIndex) => {
-        const studentHabit = studentHabits?.find(h => h.name === habitName);
-        const subHabits: SubHabit[] = HABIT_DEFINITIONS[habitName].map((subHabitName, subHabitIndex) => {
-            const studentSubHabit = studentHabit?.subHabits?.find(sh => sh.name === subHabitName);
-            return {
-                id: `${habitIndex + 1}-${subHabitIndex + 1}`,
-                name: subHabitName,
-                score: studentSubHabit ? studentSubHabit.score : 0
-            };
-        });
-
-        return {
-            id: `${habitIndex + 1}`,
-            name: habitName,
-            subHabits: subHabits
-        };
-    });
+  const getHabitsForStudentOnDate = (studentId: string, date: Date): Habit[] => {
+    return getHabitsForDate(studentId, date);
   };
   
   const calculateOverallAverage = (habits: Habit[]) => {
@@ -117,7 +114,7 @@ export function DashboardClient() {
 
     const totalScore = validHabits.reduce((acc, h) => {
       const subHabitTotal = h.subHabits.reduce((subAcc, sh) => subAcc + sh.score, 0);
-      const subHabitAverage = subHabitTotal / h.subHabits.length;
+      const subHabitAverage = subHabitTotal / (h.subHabits.length || 1);
       return acc + subHabitAverage;
     }, 0);
 
@@ -132,7 +129,6 @@ export function DashboardClient() {
 
     const habitData: { [habitName: string]: { [subHabitName: string]: { total: number, count: number } } } = {};
 
-    // Initialize the structure from HABIT_DEFINITIONS to ensure all aspects are present
     Object.keys(HABIT_DEFINITIONS).forEach(habitName => {
         habitData[habitName] = {};
         HABIT_DEFINITIONS[habitName].forEach(subHabitName => {
@@ -140,25 +136,26 @@ export function DashboardClient() {
         });
     });
 
-    // Aggregate scores from all filtered students
     for (const student of filteredStudents) {
-      const studentHabitsWithDefaults = getHabitsWithDefaults(student.habits);
-      for (const habit of studentHabitsWithDefaults) {
+      const studentHabitsForDate = getHabitsForStudentOnDate(student.id, selectedDate);
+      for (const habit of studentHabitsForDate) {
         for (const subHabit of habit.subHabits) {
+          if(subHabit.score > 0) { // Only count scores that have been entered
             habitData[habit.name][subHabit.name].total += subHabit.score;
             habitData[habit.name][subHabit.name].count++;
+          }
         }
       }
     }
 
-    // Calculate averages
     const result = Object.entries(habitData).map(([habitName, subHabits]) => {
       const subHabitAverages = Object.entries(subHabits).map(([subHabitName, data]) => ({
         name: subHabitName,
         averageScore: data.count > 0 ? data.total / data.count : 0,
       }));
 
-      const overallHabitAverage = subHabitAverages.reduce((acc, curr) => acc + curr.averageScore, 0) / (subHabitAverages.length || 1);
+      const validSubHabits = subHabitAverages.filter(sh => sh.averageScore > 0);
+      const overallHabitAverage = validSubHabits.reduce((acc, curr) => acc + curr.averageScore, 0) / (validSubHabits.length || 1);
       
       return {
         name: habitName,
@@ -169,7 +166,7 @@ export function DashboardClient() {
 
     return result;
 
-  }, [filteredStudents]);
+  }, [filteredStudents, selectedDate, getHabitsForStudentOnDate]);
 
 
   return (
@@ -224,12 +221,43 @@ export function DashboardClient() {
 
        <Card>
         <CardHeader>
-          <CardTitle>Rata-rata Perkembangan Kebiasaan Umum</CardTitle>
-          <CardDescription>
-            Skor rata-rata untuk setiap aspek kebiasaan di seluruh siswa yang ditampilkan.
-          </CardDescription>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <CardTitle>Rata-rata Perkembangan Kebiasaan</CardTitle>
+              <CardDescription>
+                Skor rata-rata kebiasaan di seluruh siswa yang ditampilkan untuk tanggal yang dipilih.
+              </CardDescription>
+            </div>
+             <Popover>
+              <PopoverTrigger asChild>
+                  <Button
+                  variant={'outline'}
+                  className={cn(
+                      'w-full sm:w-[280px] justify-start text-left font-normal',
+                      !selectedDate && 'text-muted-foreground'
+                  )}
+                  >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {selectedDate ? format(selectedDate, 'PPP', { locale: id }) : <span>Pilih tanggal</span>}
+                  </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                  <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => setSelectedDate(date || new Date())}
+                  initialFocus
+                  />
+              </PopoverContent>
+            </Popover>
+          </div>
         </CardHeader>
         <CardContent>
+          {dateLoading ? (
+            <div className="flex h-64 items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
            <Accordion type="multiple" className="w-full space-y-2">
             {overallHabitAverages.map((habit, index) => (
               <AccordionItem value={habit.name} key={index} className="border rounded-md px-4">
@@ -267,6 +295,7 @@ export function DashboardClient() {
               </AccordionItem>
             ))}
            </Accordion>
+          )}
         </CardContent>
       </Card>
 
@@ -276,7 +305,7 @@ export function DashboardClient() {
             <div>
                 <CardTitle>{t.individualProgress}</CardTitle>
                 <CardDescription>
-                  Klik pada siswa untuk melihat rincian progres kebiasaan.
+                  Progres siswa untuk tanggal: {format(selectedDate, 'PPP', { locale: id })}.
                 </CardDescription>
             </div>
             <Select value={selectedClass} onValueChange={setSelectedClass}>
@@ -294,10 +323,15 @@ export function DashboardClient() {
           </div>
         </CardHeader>
         <CardContent>
+          {dateLoading ? (
+            <div className="flex h-64 items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
            <Accordion type="multiple" className="w-full space-y-2">
             {filteredStudents.map((student: Student) => {
-              const studentHabitsWithDefaults = getHabitsWithDefaults(student.habits);
-              const overallAverage = calculateOverallAverage(studentHabitsWithDefaults);
+              const studentHabitsOnDate = getHabitsForStudentOnDate(student.id, selectedDate);
+              const overallAverage = calculateOverallAverage(studentHabitsOnDate);
 
               return (
                 <AccordionItem value={student.id} key={student.id} className="border rounded-md px-4">
@@ -327,50 +361,55 @@ export function DashboardClient() {
                    <AccordionContent>
                       <div className="pl-12 pr-4 pt-2 pb-2 space-y-3">
                         <h4 className="font-semibold text-sm mb-2">Rincian Kebiasaan:</h4>
-                        <Accordion type="multiple" className="w-full space-y-1">
-                          {studentHabitsWithDefaults.map((habit) => {
-                              const habitAverage = (!habit.subHabits || habit.subHabits.length === 0) 
-                                  ? 0 
-                                  : habit.subHabits.reduce((acc, sub) => acc + sub.score, 0) / (habit.subHabits.length || 1);
-                              return(
-                                <AccordionItem value={habit.id} key={habit.id}>
-                                  <AccordionTrigger className="hover:no-underline text-sm py-2 rounded-md hover:bg-muted/50 px-2">
-                                      <div className="flex items-center gap-3 w-full">
-                                          {habitIcons[habit.name]}
-                                          <span className="font-medium flex-1 text-left">{habitTranslationMapping[habit.name] || habit.name}</span>
-                                          <div className="flex items-center gap-2 pr-2">
-                                              <Progress value={(habitAverage / 4) * 100} className="w-20 h-1.5" />
-                                              <span className="font-mono text-sm font-semibold">{habitAverage.toFixed(1)}</span>
-                                          </div>
-                                      </div>
-                                  </AccordionTrigger>
-                                   <AccordionContent className="pt-2">
-                                       <div className="pl-8 pr-4 space-y-2">
-                                          {habit.subHabits && habit.subHabits.length > 0 ? (
-                                              habit.subHabits.map(subHabit => (
-                                                  <div key={subHabit.id} className="flex items-center justify-between text-xs">
-                                                      <p className="text-muted-foreground flex-1 pr-4">{subHabit.name}</p>
-                                                      <div className="flex items-center gap-2 w-24">
-                                                          <Progress value={(subHabit.score / 4) * 100} className="w-16 h-1" />
-                                                          <span className="font-mono text-xs font-semibold">{subHabit.score}</span>
-                                                      </div>
-                                                  </div>
-                                              ))
-                                          ) : (
-                                              <p className="text-xs text-muted-foreground">Tidak ada aspek yang tercatat.</p>
-                                          )}
-                                      </div>
-                                  </AccordionContent>
-                                </AccordionItem>
-                              )
-                            })}
-                        </Accordion>
+                        {studentHabitsOnDate.some(h => h.subHabits.some(sh => sh.score > 0)) ? (
+                          <Accordion type="multiple" className="w-full space-y-1">
+                            {studentHabitsOnDate.map((habit) => {
+                                const habitAverage = (!habit.subHabits || habit.subHabits.length === 0) 
+                                    ? 0 
+                                    : habit.subHabits.reduce((acc, sub) => acc + sub.score, 0) / (habit.subHabits.length || 1);
+                                return(
+                                  <AccordionItem value={habit.id} key={habit.id}>
+                                    <AccordionTrigger className="hover:no-underline text-sm py-2 rounded-md hover:bg-muted/50 px-2">
+                                        <div className="flex items-center gap-3 w-full">
+                                            {habitIcons[habit.name]}
+                                            <span className="font-medium flex-1 text-left">{habitTranslationMapping[habit.name] || habit.name}</span>
+                                            <div className="flex items-center gap-2 pr-2">
+                                                <Progress value={(habitAverage / 4) * 100} className="w-20 h-1.5" />
+                                                <span className="font-mono text-sm font-semibold">{habitAverage.toFixed(1)}</span>
+                                            </div>
+                                        </div>
+                                    </AccordionTrigger>
+                                     <AccordionContent className="pt-2">
+                                         <div className="pl-8 pr-4 space-y-2">
+                                            {habit.subHabits && habit.subHabits.length > 0 ? (
+                                                habit.subHabits.map(subHabit => (
+                                                    <div key={subHabit.id} className="flex items-center justify-between text-xs">
+                                                        <p className="text-muted-foreground flex-1 pr-4">{subHabit.name}</p>
+                                                        <div className="flex items-center gap-2 w-24">
+                                                            <Progress value={(subHabit.score / 4) * 100} className="w-16 h-1" />
+                                                            <span className="font-mono text-xs font-semibold">{subHabit.score}</span>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <p className="text-xs text-muted-foreground">Tidak ada aspek yang tercatat.</p>
+                                            )}
+                                        </div>
+                                    </AccordionContent>
+                                  </AccordionItem>
+                                )
+                              })}
+                          </Accordion>
+                        ) : (
+                          <p className="text-sm text-muted-foreground text-center py-4">Tidak ada data tercatat untuk siswa ini pada tanggal yang dipilih.</p>
+                        )}
                       </div>
                    </AccordionContent>
                 </AccordionItem>
               );
             })}
            </Accordion>
+          )}
         </CardContent>
       </Card>
     </>

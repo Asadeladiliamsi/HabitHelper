@@ -19,7 +19,7 @@ import {
   Calendar as CalendarIcon,
 } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar } from './ui/calendar';
@@ -42,13 +42,18 @@ const habitIcons: { [key: string]: React.ReactNode } = {
 
 export function SiswaDashboardClient() {
   const { user } = useAuth();
-  const { students, loading: studentsLoading, getHabitsForDate, dateLoading } = useStudent();
+  const { students, loading: studentsLoading, getHabitsForDate, fetchHabitEntriesForDate, dateLoading } = useStudent();
   const { language } = useLanguage();
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   const studentData = students.find(s => s.email === user?.email);
+  
+  useEffect(() => {
+    fetchHabitEntriesForDate(selectedDate);
+  }, [selectedDate, fetchHabitEntriesForDate]);
+
   const habitsForSelectedDate = studentData ? getHabitsForDate(studentData.id, selectedDate) : [];
 
   const habitTranslationMapping: Record<string, string> = {
@@ -89,7 +94,8 @@ export function SiswaDashboardClient() {
           const subHabitTotal = h.subHabits.reduce((subAcc, sh) => subAcc + sh.score, 0);
           return acc + (subHabitTotal / (h.subHabits.length || 1));
       }, 0);
-      return totalScore / (habits.length || 1);
+      const validHabits = habits.filter(h => h.subHabits && h.subHabits.length > 0);
+      return totalScore / (validHabits.length || 1);
   };
 
   const averageScore = calculateOverallAverage(habitsForSelectedDate);
@@ -139,7 +145,7 @@ export function SiswaDashboardClient() {
              <div className="flex h-48 items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
              </div>
-          ) : habitsForSelectedDate.length > 0 ? (
+          ) : habitsForSelectedDate.length > 0 && habitsForSelectedDate.some(h => h.subHabits.some(sh => sh.score > 0)) ? (
             <div className="space-y-4">
                <Accordion type="single" collapsible className="w-full">
                   {habitsForSelectedDate.map((habit) => {
