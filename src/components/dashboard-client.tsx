@@ -4,6 +4,7 @@
 
 
 
+
 'use client';
 
 import {
@@ -41,7 +42,7 @@ import type { Student, Habit, SubHabit } from '@/lib/types';
 import { useStudent } from '@/contexts/student-context';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Select,
   SelectContent,
@@ -90,7 +91,11 @@ export function DashboardClient() {
   useEffect(() => {
     const unsubscribe = fetchHabitEntriesForDate(selectedDate);
     return () => unsubscribe();
-  }, [selectedDate, fetchHabitEntriesForDate, filteredStudents]); // Re-fetch when filter changes
+  }, [selectedDate, fetchHabitEntriesForDate]); // Only refetch when date changes
+
+  const getHabitsForStudentOnDate = useCallback((studentId: string, date: Date): Habit[] => {
+    return getHabitsForDate(studentId, date);
+  }, [getHabitsForDate]);
 
   const habitTranslationMapping: Record<string, string> = {
     'Bangun Pagi': tHabits.bangunPagi.name,
@@ -107,11 +112,6 @@ export function DashboardClient() {
     return ['all', ...Array.from(classes).sort()];
   }, [students]);
 
-  
-  const getHabitsForStudentOnDate = (studentId: string, date: Date): Habit[] => {
-    return getHabitsForDate(studentId, date);
-  };
-  
   const calculateOverallAverage = (habits: Habit[]) => {
     if (!habits || habits.length === 0) return 0;
     

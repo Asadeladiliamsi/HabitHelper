@@ -18,7 +18,7 @@ interface StudentContextType {
   addStudent: (newStudent: Omit<Student, 'id' | 'habits' | 'avatarUrl'>) => Promise<void>;
   updateStudent: (studentId: string, updatedData: Partial<Omit<Student, 'id' | 'habits' | 'avatarUrl'>>) => Promise<void>;
   deleteStudent: (studentId: string) => Promise<void>;
-  addHabitEntry: (data: Omit<HabitEntry, 'id' | 'timestamp' | 'recordedBy'>) => Promise<void>;
+  addHabitEntry: (data: Omit<HabitEntry, 'id' | 'timestamp' | 'recordedBy'>, onComplete: () => void) => Promise<void>;
   linkParentToStudent: (studentId: string, parentId: string, parentName: string) => Promise<void>;
   getHabitsForDate: (studentId: string, date: Date) => Habit[];
   fetchHabitEntriesForDate: (date: Date) => () => void;
@@ -26,7 +26,7 @@ interface StudentContextType {
 
 const StudentContext = createContext<StudentContextType | undefined>(undefined);
 
-export const StudentProvider = ({ children }: { children: React.React.ReactNode }) => {
+export const StudentProvider = ({ children }: { children: React.React.Node }) => {
   const { user, userProfile, loading: authLoading } = useAuth();
   const [students, setStudents] = useState<Student[]>([]);
   const [habitEntries, setHabitEntries] = useState<HabitEntry[]>([]);
@@ -147,7 +147,6 @@ export const StudentProvider = ({ children }: { children: React.React.ReactNode 
     
     setDateLoading(true);
     
-    // Filter students based on role
     const studentIds = students.map(s => s.id);
     if (studentIds.length === 0) {
         setHabitEntries([]);
@@ -166,19 +165,19 @@ export const StudentProvider = ({ children }: { children: React.React.ReactNode 
       const entries: HabitEntry[] = [];
       querySnapshot.forEach(doc => {
         const data = doc.data();
-        entries.push({
-          id: doc.id,
-          ...data,
-          date: (data.date as Timestamp).toDate(),
-          timestamp: data.timestamp,
-        } as HabitEntry);
+        if (data.date && data.timestamp) {
+            entries.push({
+            id: doc.id,
+            ...data,
+            date: (data.date as Timestamp).toDate(),
+            timestamp: data.timestamp,
+            } as HabitEntry);
+        }
       });
       setHabitEntries(entries);
       setDateLoading(false);
     }, (error) => {
       console.error("Error fetching real-time habit entries:", error);
-      // Firebase will require an index for this query. If it fails, log it.
-      // The user can create the index using the link in the console.
       setHabitEntries([]);
       setDateLoading(false);
     });
@@ -187,7 +186,7 @@ export const StudentProvider = ({ children }: { children: React.React.ReactNode 
   }, [user, students]);
 
 
-  const addHabitEntry = async (data: Omit<HabitEntry, 'id' | 'timestamp' | 'recordedBy'>) => {
+  const addHabitEntry = async (data: Omit<HabitEntry, 'id' | 'timestamp' | 'recordedBy'>, onComplete: () => void) => {
     if (!user) throw new Error("Authentication required.");
     
     await addDoc(collection(db, 'habit_entries'), {
@@ -195,6 +194,7 @@ export const StudentProvider = ({ children }: { children: React.React.ReactNode 
       recordedBy: user.uid,
       timestamp: serverTimestamp()
     });
+    onComplete();
   };
   
   const linkParentToStudent = async (studentId: string, parentId: string, parentName: string) => {
@@ -231,7 +231,7 @@ export const StudentProvider = ({ children }: { children: React.React.ReactNode 
   }, [students, habitEntries]);
 
 
-  if (authLoading || loading) {
+  if (authLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -266,5 +266,3 @@ export const useStudent = () => {
   }
   return context;
 };
-
-

@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -52,7 +52,7 @@ interface DataInputClientProps {
 export function DataInputClient({ studentId: lockedStudentId, allowedHabits }: DataInputClientProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const { students, addHabitEntry } = useStudent();
+  const { students, addHabitEntry, fetchHabitEntriesForDate } = useStudent();
   const { userProfile } = useAuth();
   const { language } = useLanguage();
   const t = translations[language]?.dataInputClient || translations.en.dataInputClient;
@@ -79,6 +79,13 @@ export function DataInputClient({ studentId: lockedStudentId, allowedHabits }: D
   });
   
   const selectedHabitName = form.watch('habitName');
+  const selectedDate = form.watch('date');
+
+  // This callback function will be passed to addHabitEntry
+  const onSaveComplete = useCallback(() => {
+    fetchHabitEntriesForDate(selectedDate);
+  }, [fetchHabitEntriesForDate, selectedDate]);
+
 
   useEffect(() => {
     if (selectedHabitName) {
@@ -102,7 +109,7 @@ export function DataInputClient({ studentId: lockedStudentId, allowedHabits }: D
     const translatedHabitName = habitTranslationMapping[data.habitName] || data.habitName;
 
     try {
-      await addHabitEntry(data);
+      await addHabitEntry(data, onSaveComplete);
 
       toast({
         title: t.toast.title,
