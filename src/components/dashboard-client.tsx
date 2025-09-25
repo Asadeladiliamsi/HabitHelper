@@ -44,6 +44,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
+import { HABIT_DEFINITIONS } from '@/lib/types';
 
 const habitIcons: { [key: string]: React.ReactNode } = {
   'Bangun Pagi': <Sunrise className="h-5 w-5 text-yellow-500" />,
@@ -105,20 +106,21 @@ export function DashboardClient() {
 
     const habitData: { [habitName: string]: { [subHabitName: string]: { total: number, count: number } } } = {};
 
-    // Initialize the structure
-    filteredStudents[0].habits.forEach(habit => {
-      habitData[habit.name] = {};
-      habit.subHabits.forEach(subHabit => {
-        habitData[habit.name][subHabit.name] = { total: 0, count: 0 };
-      });
+    // Initialize the structure from HABIT_DEFINITIONS to ensure all 10 aspects are present
+    Object.keys(HABIT_DEFINITIONS).forEach(habitName => {
+        habitData[habitName] = {};
+        HABIT_DEFINITIONS[habitName].forEach(subHabitName => {
+            habitData[habitName][subHabitName] = { total: 0, count: 0 };
+        });
     });
 
-    // Aggregate scores
+    // Aggregate scores from all filtered students
     for (const student of filteredStudents) {
       if (!student.habits) continue;
       for (const habit of student.habits) {
         if (!habit.subHabits) continue;
         for (const subHabit of habit.subHabits) {
+          // Check if the habit and subHabit from student data exist in our initialized structure
           if (habitData[habit.name] && habitData[habit.name][subHabit.name]) {
             habitData[habit.name][subHabit.name].total += subHabit.score;
             habitData[habit.name][subHabit.name].count++;
