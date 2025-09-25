@@ -43,7 +43,9 @@ function DataMasterTabs() {
         </TabsTrigger>
       </TabsList>
       <TabsContent value="data-input" className="mt-6">
-        <DataInputClient />
+        <StudentProvider>
+          <DataInputClient />
+        </StudentProvider>
       </TabsContent>
       <TabsContent value="manage-students" className="mt-6">
         <ManageStudentsClient parentUsers={parentUsers} studentUsers={unlinkedStudentUsers} />
