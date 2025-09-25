@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -31,7 +32,7 @@ import {
   Church,
   Bed,
 } from 'lucide-react';
-import type { Student, Habit } from '@/lib/types';
+import type { Student, Habit, SubHabit } from '@/lib/types';
 import { useStudent } from '@/contexts/student-context';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
@@ -88,16 +89,41 @@ export function DashboardClient() {
     return students.filter(student => student.class === selectedClass);
   }, [students, selectedClass]);
   
-  const calculateOverallAverage = (student: Student) => {
-    if (!student.habits || student.habits.length === 0) return 0;
-    const totalScore = student.habits.reduce((acc, h) => {
-      if (!h.subHabits || h.subHabits.length === 0) return acc;
+  const getHabitsWithDefaults = (studentHabits: Habit[] | undefined): Habit[] => {
+    return Object.keys(HABIT_DEFINITIONS).map((habitName, habitIndex) => {
+        const studentHabit = studentHabits?.find(h => h.name === habitName);
+        const subHabits: SubHabit[] = HABIT_DEFINITIONS[habitName].map((subHabitName, subHabitIndex) => {
+            const studentSubHabit = studentHabit?.subHabits?.find(sh => sh.name === subHabitName);
+            return {
+                id: `${habitIndex + 1}-${subHabitIndex + 1}`,
+                name: subHabitName,
+                score: studentSubHabit ? studentSubHabit.score : 0
+            };
+        });
+
+        return {
+            id: `${habitIndex + 1}`,
+            name: habitName,
+            subHabits: subHabits
+        };
+    });
+  };
+  
+  const calculateOverallAverage = (habits: Habit[]) => {
+    if (!habits || habits.length === 0) return 0;
+    
+    const validHabits = habits.filter(h => h.subHabits && h.subHabits.length > 0);
+    if (validHabits.length === 0) return 0;
+
+    const totalScore = validHabits.reduce((acc, h) => {
       const subHabitTotal = h.subHabits.reduce((subAcc, sh) => subAcc + sh.score, 0);
       const subHabitAverage = subHabitTotal / h.subHabits.length;
       return acc + subHabitAverage;
     }, 0);
-    return totalScore / student.habits.length;
+
+    return totalScore / validHabits.length;
   };
+
 
   const overallHabitAverages = useMemo(() => {
     if (filteredStudents.length === 0) {
@@ -106,7 +132,7 @@ export function DashboardClient() {
 
     const habitData: { [habitName: string]: { [subHabitName: string]: { total: number, count: number } } } = {};
 
-    // Initialize the structure from HABIT_DEFINITIONS to ensure all 10 aspects are present
+    // Initialize the structure from HABIT_DEFINITIONS to ensure all aspects are present
     Object.keys(HABIT_DEFINITIONS).forEach(habitName => {
         habitData[habitName] = {};
         HABIT_DEFINITIONS[habitName].forEach(subHabitName => {
@@ -116,15 +142,11 @@ export function DashboardClient() {
 
     // Aggregate scores from all filtered students
     for (const student of filteredStudents) {
-      if (!student.habits) continue;
-      for (const habit of student.habits) {
-        if (!habit.subHabits) continue;
+      const studentHabitsWithDefaults = getHabitsWithDefaults(student.habits);
+      for (const habit of studentHabitsWithDefaults) {
         for (const subHabit of habit.subHabits) {
-          // Check if the habit and subHabit from student data exist in our initialized structure
-          if (habitData[habit.name] && habitData[habit.name][subHabit.name]) {
             habitData[habit.name][subHabit.name].total += subHabit.score;
             habitData[habit.name][subHabit.name].count++;
-          }
         }
       }
     }
@@ -274,8 +296,8 @@ export function DashboardClient() {
         <CardContent>
            <Accordion type="multiple" className="w-full space-y-2">
             {filteredStudents.map((student: Student) => {
-              if (!student.habits) return null;
-              const overallAverage = calculateOverallAverage(student);
+              const studentHabitsWithDefaults = getHabitsWithDefaults(student.habits);
+              const overallAverage = calculateOverallAverage(studentHabitsWithDefaults);
 
               return (
                 <AccordionItem value={student.id} key={student.id} className="border rounded-md px-4">
@@ -306,7 +328,7 @@ export function DashboardClient() {
                       <div className="pl-12 pr-4 pt-2 pb-2 space-y-3">
                         <h4 className="font-semibold text-sm mb-2">Rincian Kebiasaan:</h4>
                         <Accordion type="multiple" className="w-full space-y-1">
-                          {(student.habits).map((habit) => {
+                          {studentHabitsWithDefaults.map((habit) => {
                               const habitAverage = (!habit.subHabits || habit.subHabits.length === 0) 
                                   ? 0 
                                   : habit.subHabits.reduce((acc, sub) => acc + sub.score, 0) / (habit.subHabits.length || 1);
