@@ -1,6 +1,6 @@
 'use client';
 
-import *a as React from 'react';
+import * as React from 'react';
 import { addDays, format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Calendar as CalendarIcon } from 'lucide-react';
