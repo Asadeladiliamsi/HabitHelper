@@ -1,10 +1,4 @@
 
-
-
-
-
-
-
 'use client';
 
 import {
@@ -38,7 +32,7 @@ import {
   Bed,
   Calendar as CalendarIcon,
 } from 'lucide-react';
-import type { Student, Habit, SubHabit } from '@/lib/types';
+import type { Student, Habit, SubHabit, HabitEntry } from '@/lib/types';
 import { useStudent } from '@/contexts/student-context';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
@@ -55,10 +49,22 @@ import { HABIT_DEFINITIONS } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, startOfDay, eachDayOfInterval, subDays } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Calendar } from './ui/calendar';
 import { Loader2 } from 'lucide-react';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts';
+import { DateRange } from 'react-day-picker';
+import { DateRangePicker } from './ui/date-range-picker';
 
 const habitIcons: { [key: string]: React.ReactNode } = {
   'Bangun Pagi': <Sunrise className="h-5 w-5 text-yellow-500" />,
@@ -70,11 +76,28 @@ const habitIcons: { [key: string]: React.ReactNode } = {
   'Tidur Cepat': <Bed className="h-5 w-5 text-indigo-500" />,
 };
 
+const habitColors: { [key: string]: string } = {
+    'Bangun Pagi': 'hsl(var(--chart-1))',
+    'Taat Beribadah': 'hsl(var(--chart-2))',
+    'Rajin Olahraga': 'hsl(var(--chart-3))',
+    'Makan Sehat & Bergizi': 'hsl(var(--chart-4))',
+    'Gemar Belajar': 'hsl(var(--chart-5))',
+    'Bermasyarakat': '#8B5CF6',
+    'Tidur Cepat': '#10B981',
+};
+
+
 export function DashboardClient() {
-  const { students, getHabitsForDate, fetchHabitEntriesForDate, dateLoading } = useStudent();
+  const { students, getHabitsForDate, habitEntries, fetchHabitEntriesForRange, dateLoading } = useStudent();
   const { language } = useLanguage();
   const [selectedClass, setSelectedClass] = useState('all');
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: subDays(new Date(), 6),
+    to: new Date(),
+  });
+
+  const [singleDate, setSingleDate] = useState<Date>(new Date());
 
   const t = translations[language]?.dashboardPage || translations.en.dashboardPage;
   const tHabits =
@@ -88,10 +111,15 @@ export function DashboardClient() {
     return students.filter(student => student.class === selectedClass);
   }, [students, selectedClass]);
   
-  useEffect(() => {
-    const unsubscribe = fetchHabitEntriesForDate(selectedDate);
+   useEffect(() => {
+    const unsubscribe = fetchHabitEntriesForRange({from: singleDate, to: singleDate});
     return () => unsubscribe();
-  }, [selectedDate, fetchHabitEntriesForDate]); // Only refetch when date changes
+  }, [singleDate, fetchHabitEntriesForRange]);
+
+  useEffect(() => {
+    const unsubscribe = fetchHabitEntriesForRange(dateRange);
+    return () => unsubscribe();
+  }, [dateRange, fetchHabitEntriesForRange]);
 
   const getHabitsForStudentOnDate = useCallback((studentId: string, date: Date): Habit[] => {
     return getHabitsForDate(studentId, date);
@@ -128,53 +156,43 @@ export function DashboardClient() {
     return totalScore / validHabits.length;
   };
 
+  const chartData = useMemo(() => {
+    if (!dateRange?.from || filteredStudents.length === 0) return [];
+    
+    const toDate = dateRange.to || dateRange.from;
+    const intervalDays = eachDayOfInterval({ start: dateRange.from, end: toDate });
+    
+    const dataByDate = intervalDays.map(day => {
+      const formattedDate = format(day, 'dd/MM');
+      const dailyScores: { [habitName: string]: { total: number, count: number } } = {};
 
-  const overallHabitAverages = useMemo(() => {
-    if (filteredStudents.length === 0) {
-      return [];
-    }
-
-    const habitData: { [habitName: string]: { [subHabitName: string]: { total: number, count: number } } } = {};
-
-    Object.entries(HABIT_DEFINITIONS).forEach(([habitName, subHabitNames]) => {
-        habitData[habitName] = {};
-        subHabitNames.forEach(subHabitName => {
-            habitData[habitName][subHabitName] = { total: 0, count: 0 };
-        });
-    });
-
-    for (const student of filteredStudents) {
-      const studentHabitsForDate = getHabitsForStudentOnDate(student.id, selectedDate);
-      for (const habit of studentHabitsForDate) {
-        for (const subHabit of habit.subHabits) {
-          if(subHabit.score > 0) { // Only count scores that have been entered
-            habitData[habit.name][subHabit.name].total += subHabit.score;
-            habitData[habit.name][subHabit.name].count++;
+      for (const student of filteredStudents) {
+          const habitsForDay = getHabitsForDate(student.id, day);
+          for (const habit of habitsForDay) {
+              if (!dailyScores[habit.name]) {
+                  dailyScores[habit.name] = { total: 0, count: 0 };
+              }
+              const validSubHabits = habit.subHabits.filter(sh => sh.score > 0);
+              if (validSubHabits.length > 0) {
+                  const habitAvg = validSubHabits.reduce((sum, sh) => sum + sh.score, 0) / validSubHabits.length;
+                  dailyScores[habit.name].total += habitAvg;
+                  dailyScores[habit.name].count += 1;
+              }
           }
-        }
       }
-    }
 
-    const result = Object.entries(habitData).map(([habitName, subHabits]) => {
-      const subHabitAverages = Object.entries(subHabits).map(([subHabitName, data]) => ({
-        name: subHabitName,
-        averageScore: data.count > 0 ? data.total / data.count : 0,
-      }));
-
-      const validSubHabits = subHabitAverages.filter(sh => sh.averageScore > 0);
-      const overallHabitAverage = validSubHabits.reduce((acc, curr) => acc + curr.averageScore, 0) / (validSubHabits.length || 1);
+      const result: { date: string, [key: string]: any } = { date: formattedDate };
+      Object.keys(HABIT_DEFINITIONS).forEach(habitName => {
+        const data = dailyScores[habitName];
+        result[habitName] = data && data.count > 0 ? (data.total / data.count) : 0;
+      });
       
-      return {
-        name: habitName,
-        averageScore: overallHabitAverage,
-        subHabits: subHabitAverages,
-      };
+      return result;
     });
 
-    return result;
+    return dataByDate;
 
-  }, [filteredStudents, selectedDate, getHabitsForStudentOnDate]);
-
+  }, [dateRange, filteredStudents, habitEntries, getHabitsForDate]);
 
   return (
     <>
@@ -230,78 +248,59 @@ export function DashboardClient() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <CardTitle>Rata-rata Perkembangan Kebiasaan</CardTitle>
+              <CardTitle>Grafik Perkembangan Kebiasaan</CardTitle>
               <CardDescription>
-                Skor rata-rata kebiasaan di seluruh siswa yang ditampilkan untuk tanggal yang dipilih.
+                Visualisasikan tren rata-rata skor kebiasaan berdasarkan rentang tanggal yang dipilih.
               </CardDescription>
             </div>
-             <Popover>
-              <PopoverTrigger asChild>
-                  <Button
-                  variant={'outline'}
-                  className={cn(
-                      'w-full sm:w-[280px] justify-start text-left font-normal',
-                      !selectedDate && 'text-muted-foreground'
-                  )}
-                  >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {selectedDate ? format(selectedDate, 'PPP', { locale: id }) : <span>Pilih tanggal</span>}
-                  </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                  <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={(date) => setSelectedDate(date || new Date())}
-                  initialFocus
-                  />
-              </PopoverContent>
-            </Popover>
+             <DateRangePicker date={dateRange} onDateChange={setDateRange} />
           </div>
         </CardHeader>
         <CardContent>
           {dateLoading ? (
-            <div className="flex h-64 items-center justify-center">
+            <div className="flex h-80 items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : (
-           <Accordion type="multiple" className="w-full space-y-2">
-            {overallHabitAverages.map((habit, index) => (
-              <AccordionItem value={habit.name} key={index} className="border rounded-md px-4">
-                 <AccordionTrigger className="hover:no-underline py-3">
-                    <div className="flex items-center gap-3 w-full">
-                       {habitIcons[habit.name]}
-                      <div className="flex-1 text-left">
-                        <span className="font-medium">{habitTranslationMapping[habit.name] || habit.name}</span>
-                      </div>
-                      <div className="flex items-center gap-2 pr-2">
-                         <span className='text-sm text-muted-foreground'>Rata-rata Kelas:</span>
-                         <Progress value={(habit.averageScore / 4) * 100} className="w-24 h-2" />
-                         <span className="font-mono text-lg font-bold">{habit.averageScore.toFixed(1)}</span>
-                      </div>
-                    </div>
-                 </AccordionTrigger>
-                 <AccordionContent>
-                    <div className="pl-8 pr-4 pt-2 pb-4 space-y-3">
-                      <h4 className="font-semibold text-sm mb-2">Rincian Rata-rata Aspek:</h4>
-                      {habit.subHabits && habit.subHabits.length > 0 ? (
-                          habit.subHabits.map(subHabit => (
-                              <div key={subHabit.name} className="flex items-center justify-between text-xs">
-                                  <p className="text-muted-foreground flex-1 pr-4">{subHabit.name}</p>
-                                  <div className="flex items-center gap-2 w-28">
-                                      <Progress value={(subHabit.averageScore / 4) * 100} className="w-16 h-1.5" />
-                                      <span className="font-mono text-xs font-semibold">{subHabit.averageScore.toFixed(2)}</span>
-                                  </div>
-                              </div>
-                          ))
-                      ) : (
-                          <p className="text-xs text-muted-foreground">Tidak ada aspek yang tercatat.</p>
-                      )}
-                    </div>
-                 </AccordionContent>
-              </AccordionItem>
-            ))}
-           </Accordion>
+            <div className="h-80 w-full">
+               <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                        data={chartData}
+                        margin={{
+                            top: 5,
+                            right: 20,
+                            left: -10,
+                            bottom: 5,
+                        }}
+                    >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="date" fontSize={12} tickLine={false} axisLine={false} />
+                        <YAxis domain={[0, 4]} fontSize={12} tickLine={false} axisLine={false} />
+                        <Tooltip
+                            contentStyle={{
+                                background: 'hsl(var(--background))',
+                                border: '1px solid hsl(var(--border))',
+                                borderRadius: 'var(--radius)',
+                            }}
+                        />
+                        <Legend
+                          formatter={(value) => (
+                              <span className="text-muted-foreground">{habitTranslationMapping[value] || value}</span>
+                          )}
+                        />
+                        {Object.keys(HABIT_DEFINITIONS).map((habitName) => (
+                            <Line
+                                key={habitName}
+                                type="monotone"
+                                dataKey={habitName}
+                                stroke={habitColors[habitName] || '#8884d8'}
+                                strokeWidth={2}
+                                dot={false}
+                            />
+                        ))}
+                    </LineChart>
+                </ResponsiveContainer>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -312,21 +311,45 @@ export function DashboardClient() {
             <div>
                 <CardTitle>{t.individualProgress}</CardTitle>
                 <CardDescription>
-                  Progres siswa untuk tanggal: {format(selectedDate, 'PPP', { locale: id })}.
+                  Progres siswa untuk tanggal: {format(singleDate, 'PPP', { locale: id })}.
                 </CardDescription>
             </div>
-            <Select value={selectedClass} onValueChange={setSelectedClass}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Pilih kelas..." />
-              </SelectTrigger>
-              <SelectContent>
-                {classList.map(className => (
-                  <SelectItem key={className} value={className}>
-                    {className === 'all' ? 'Semua Kelas' : `Kelas ${className}`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className='flex gap-2'>
+              <Popover>
+                <PopoverTrigger asChild>
+                    <Button
+                    variant={'outline'}
+                    className={cn(
+                        'w-[240px] justify-start text-left font-normal',
+                        !singleDate && 'text-muted-foreground'
+                    )}
+                    >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {singleDate ? format(singleDate, 'PPP', { locale: id }) : <span>Pilih tanggal</span>}
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                    <Calendar
+                    mode="single"
+                    selected={singleDate}
+                    onSelect={(date) => setSingleDate(date || new Date())}
+                    initialFocus
+                    />
+                </PopoverContent>
+              </Popover>
+              <Select value={selectedClass} onValueChange={setSelectedClass}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Pilih kelas..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {classList.map(className => (
+                    <SelectItem key={className} value={className}>
+                      {className === 'all' ? 'Semua Kelas' : `Kelas ${className}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -337,7 +360,7 @@ export function DashboardClient() {
           ) : (
            <Accordion type="multiple" className="w-full space-y-2">
             {filteredStudents.map((student: Student) => {
-              const studentHabitsOnDate = getHabitsForStudentOnDate(student.id, selectedDate);
+              const studentHabitsOnDate = getHabitsForStudentOnDate(student.id, singleDate);
               const overallAverage = calculateOverallAverage(studentHabitsOnDate);
 
               return (
@@ -423,7 +446,3 @@ export function DashboardClient() {
     </>
   );
 }
-
-
-
-    

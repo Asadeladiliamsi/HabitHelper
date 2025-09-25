@@ -10,6 +10,7 @@ import { useAuth } from './auth-context';
 import { HABIT_DEFINITIONS } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
 import { startOfDay, endOfDay, isSameDay } from 'date-fns';
+import { DateRange } from 'react-day-picker';
 
 interface StudentContextType {
   students: Student[];
@@ -21,7 +22,8 @@ interface StudentContextType {
   addHabitEntry: (data: Omit<HabitEntry, 'id' | 'timestamp' | 'recordedBy'>) => Promise<void>;
   linkParentToStudent: (studentId: string, parentId: string, parentName: string) => Promise<void>;
   getHabitsForDate: (studentId: string, date: Date) => Habit[];
-  fetchHabitEntriesForDate: (date: Date) => () => void;
+  fetchHabitEntriesForRange: (dateRange: DateRange | undefined) => () => void;
+  habitEntries: HabitEntry[];
 }
 
 const StudentContext = createContext<StudentContextType | undefined>(undefined);
@@ -138,19 +140,21 @@ export const StudentProvider = ({ children }: { children: React.React.Node }) =>
     await deleteDoc(studentDocRef);
   };
   
-  const fetchHabitEntriesForDate = useCallback((date: Date): (() => void) => {
-    if (!user) {
+  const fetchHabitEntriesForRange = useCallback((dateRange: DateRange | undefined): (() => void) => {
+    if (!user || !dateRange?.from) {
       setHabitEntries([]);
       return () => {};
     }
     
     setDateLoading(true);
     
-    // Simplified query to only filter by date, avoiding the composite index error.
+    const from = startOfDay(dateRange.from);
+    const to = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
+
     const q = query(
       collection(db, 'habit_entries'), 
-      where('date', '>=', startOfDay(date)),
-      where('date', '<=', endOfDay(date))
+      where('date', '>=', from),
+      where('date', '<=', to)
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -167,7 +171,6 @@ export const StudentProvider = ({ children }: { children: React.React.Node }) =>
         }
       });
       
-      // Filter by relevant students on the client side
       const studentIds = new Set(students.map(s => s.id));
       const filteredEntries = entries.filter(entry => studentIds.has(entry.studentId));
 
@@ -186,8 +189,6 @@ export const StudentProvider = ({ children }: { children: React.React.Node }) =>
   const addHabitEntry = async (data: Omit<HabitEntry, 'id' | 'timestamp' | 'recordedBy'>) => {
     if (!user) throw new Error("Authentication required.");
     
-    // This function now just adds the document.
-    // The onSnapshot listener in fetchHabitEntriesForDate will automatically update the state.
     await addDoc(collection(db, 'habit_entries'), {
       ...data,
       recordedBy: user.uid,
@@ -215,7 +216,7 @@ export const StudentProvider = ({ children }: { children: React.React.Node }) =>
         subHabits: subHabitNames.map((subHabitName, subHabitIndex) => {
           const entry = relevantEntries
               .filter(e => e.habitName === habitName && e.subHabitName === subHabitName)
-              .sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis())[0];
+              .sort((a, b) => (b.timestamp as Timestamp).toMillis() - (a.timestamp as Timestamp).toMillis())[0];
 
           return {
             id: `${habitIndex + 1}-${subHabitIndex + 1}`,
@@ -247,7 +248,8 @@ export const StudentProvider = ({ children }: { children: React.React.Node }) =>
     addHabitEntry,
     linkParentToStudent,
     getHabitsForDate,
-    fetchHabitEntriesForDate,
+    fetchHabitEntriesForRange,
+    habitEntries,
   };
 
   return (
