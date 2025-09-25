@@ -5,7 +5,6 @@ import { useAuth } from '@/contexts/auth-context';
 import { useStudent } from '@/contexts/student-context';
 import { Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
@@ -21,6 +20,7 @@ import {
 import { useState, useEffect } from 'react';
 import type { Student } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 
 const habitIcons: { [key: string]: React.ReactNode } = {
   'Bangun Pagi': <Sunrise className="h-5 w-5 text-yellow-500" />,
@@ -36,7 +36,6 @@ export function OrangTuaDashboardClient() {
   const { userProfile } = useAuth();
   const { students, loading: studentsLoading } = useStudent();
   const { language } = useLanguage();
-  const t = translations[language]?.dashboardPage || translations.en.dashboardPage;
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
 
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
@@ -130,60 +129,59 @@ export function OrangTuaDashboardClient() {
         <Card>
             <CardHeader>
             <CardTitle>Progres Kebiasaan {selectedStudentData.name}</CardTitle>
-            <CardDescription>Berikut adalah rekapitulasi nilai rata-rata dari 7 kebiasaan inti yang dijalani oleh {selectedStudentData.name}.</CardDescription>
+            <CardDescription>Klik setiap kebiasaan untuk melihat rincian aspek yang dinilai.</CardDescription>
             </CardHeader>
             <CardContent>
             {selectedStudentData.habits ? (
-              <Table>
-                  <TableHeader>
-                  <TableRow>
-                      <TableHead>Kebiasaan</TableHead>
-                      <TableHead className="text-right">Nilai Rata-rata Terakhir</TableHead>
-                  </TableRow>
-                  </TableHeader>
-                  <TableBody>
+              <div className="space-y-4">
+                <Accordion type="multiple" className="w-full">
                   {selectedStudentData.habits.map((habit) => {
-                      if (!habit.subHabits || habit.subHabits.length === 0) {
-                          return (
-                              <TableRow key={habit.id}>
-                                  <TableCell>
-                                      <div className="flex items-center gap-3">
-                                          {habitIcons[habit.name]}
-                                          <span className="font-medium">{habitTranslationMapping[habit.name] || habit.name}</span>
-                                      </div>
-                                  </TableCell>
-                                  <TableCell className="text-right">
-                                      <span className="font-mono text-lg font-bold">N/A</span>
-                                  </TableCell>
-                              </TableRow>
-                          );
-                      }
-                      const habitAverage = habit.subHabits.reduce((acc, sub) => acc + sub.score, 0) / (habit.subHabits.length || 1);
+                      const habitAverage = (!habit.subHabits || habit.subHabits.length === 0) 
+                          ? 0 
+                          : habit.subHabits.reduce((acc, sub) => acc + sub.score, 0) / (habit.subHabits.length || 1);
+
                       return (
-                          <TableRow key={habit.id}>
-                          <TableCell>
-                              <div className="flex items-center gap-3">
-                              {habitIcons[habit.name]}
-                              <span className="font-medium">{habitTranslationMapping[habit.name] || habit.name}</span>
-                              </div>
-                          </TableCell>
-                          <TableCell className="text-right">
-                              <span className="font-mono text-lg font-bold">{habitAverage.toFixed(1)}</span>
-                          </TableCell>
-                          </TableRow>
+                          <AccordionItem value={habit.id} key={habit.id}>
+                              <AccordionTrigger className="hover:no-underline">
+                                  <div className="flex items-center gap-3 w-full">
+                                      {habitIcons[habit.name]}
+                                      <span className="font-medium flex-1 text-left">{habitTranslationMapping[habit.name] || habit.name}</span>
+                                      <div className="flex items-center gap-2 pr-2">
+                                          <Progress value={(habitAverage / 4) * 100} className="w-24 h-2" />
+                                          <span className="font-mono text-lg font-bold">{habitAverage.toFixed(1)}</span>
+                                      </div>
+                                  </div>
+                              </AccordionTrigger>
+                              <AccordionContent>
+                                  <div className="pl-8 pr-4 space-y-3">
+                                      {habit.subHabits && habit.subHabits.length > 0 ? (
+                                          habit.subHabits.map(subHabit => (
+                                              <div key={subHabit.id} className="flex items-center justify-between text-sm">
+                                                  <p className="text-muted-foreground flex-1 pr-4">{subHabit.name}</p>
+                                                  <div className="flex items-center gap-2 w-28">
+                                                      <Progress value={(subHabit.score / 4) * 100} className="w-16 h-1.5" />
+                                                      <span className="font-mono text-sm font-semibold">{subHabit.score}</span>
+                                                  </div>
+                                              </div>
+                                          ))
+                                      ) : (
+                                          <p className="text-sm text-muted-foreground">Tidak ada aspek yang tercatat untuk kebiasaan ini.</p>
+                                      )}
+                                  </div>
+                              </AccordionContent>
+                          </AccordionItem>
                       )
                   })}
-                  <TableRow className="bg-muted/50 font-bold">
-                      <TableCell>Rata-rata Keseluruhan</TableCell>
-                      <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                              <Progress value={(calculateOverallAverage(selectedStudentData) / 4) * 100} className="w-24 h-2" />
-                              <span className="font-mono text-sm">{ calculateOverallAverage(selectedStudentData).toFixed(1) }</span>
-                          </div>
-                      </TableCell>
-                      </TableRow>
-                  </TableBody>
-              </Table>
+              </Accordion>
+              
+              <div className="flex justify-between items-center bg-muted/50 p-4 rounded-lg font-bold">
+                  <span>Rata-rata Keseluruhan</span>
+                  <div className="flex items-center justify-end gap-2">
+                      <Progress value={(calculateOverallAverage(selectedStudentData) / 4) * 100} className="w-24 h-2" />
+                      <span className="font-mono text-sm">{ calculateOverallAverage(selectedStudentData).toFixed(1) }</span>
+                  </div>
+              </div>
+            </div>
             ) : (
               <p className="text-muted-foreground text-center">Data kebiasaan untuk siswa ini belum ada.</p>
             )}
@@ -191,9 +189,11 @@ export function OrangTuaDashboardClient() {
         </Card>
       ) : (
          <div className="flex h-48 items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin" />
+            <p className="text-muted-foreground">Silakan pilih anak untuk melihat progres.</p>
         </div>
       )}
     </div>
   );
 }
+
+    

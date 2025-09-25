@@ -48,6 +48,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 
 const habitIcons: { [key: string]: React.ReactNode } = {
   'Bangun Pagi': <Sunrise className="h-5 w-5 text-yellow-500" />,
@@ -90,6 +91,17 @@ export function DashboardClient() {
     }
     return students.filter(student => student.class === selectedClass);
   }, [students, selectedClass]);
+  
+  const calculateOverallAverage = (student: Student) => {
+    if (!student.habits || student.habits.length === 0) return 0;
+    const totalScore = student.habits.reduce((acc, h) => {
+      if (!h.subHabits || h.subHabits.length === 0) return acc;
+      const subHabitTotal = h.subHabits.reduce((subAcc, sh) => subAcc + sh.score, 0);
+      const subHabitAverage = subHabitTotal / h.subHabits.length;
+      return acc + subHabitAverage;
+    }, 0);
+    return totalScore / student.habits.length;
+  };
 
 
   return (
@@ -219,7 +231,7 @@ export function DashboardClient() {
             <div>
                 <CardTitle>{t.individualProgress}</CardTitle>
                 <CardDescription>
-                  Menampilkan progres individu untuk siswa di kelas yang dipilih.
+                  Klik pada siswa untuk melihat rincian progres kebiasaan.
                 </CardDescription>
             </div>
             <Select value={selectedClass} onValueChange={setSelectedClass}>
@@ -237,46 +249,15 @@ export function DashboardClient() {
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t.student}</TableHead>
-                <TableHead>{t.class}</TableHead>
-                {students.length > 0 &&
-                  students[0].habits?.map(habit => {
-                    const translatedHabitName =
-                      habitTranslationMapping[habit.name] || habit.name;
-                    return (
-                      <TableHead key={habit.id} className="text-center">
-                        <div
-                          className="flex justify-center"
-                          title={translatedHabitName}
-                        >
-                          {habitIcons[habit.name]}
-                        </div>
-                      </TableHead>
-                    );
-                  })}
-                <TableHead>{t.average}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredStudents.map((student: Student) => {
-                if (!student.habits) return null;
-                const totalScore = student.habits.reduce((acc, h) => {
-                  if (!h.subHabits || h.subHabits.length === 0) return acc;
-                  const subHabitTotal = h.subHabits.reduce(
-                    (subAcc, sh) => subAcc + sh.score,
-                    0
-                  );
-                  return acc + subHabitTotal / (h.subHabits.length || 1);
-                }, 0);
-                const averageScore = totalScore / (student.habits.length || 1);
+           <Accordion type="multiple" className="w-full space-y-2">
+            {filteredStudents.map((student: Student) => {
+              if (!student.habits) return null;
+              const overallAverage = calculateOverallAverage(student);
 
-                return (
-                  <TableRow key={student.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
+              return (
+                <AccordionItem value={student.id} key={student.id} className="border rounded-md px-4">
+                   <AccordionTrigger className="hover:no-underline py-3">
+                      <div className="flex items-center gap-3 w-full">
                         <Avatar>
                           <AvatarImage
                             src={student.avatarUrl}
@@ -287,51 +268,68 @@ export function DashboardClient() {
                             {student.name.charAt(0)}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="font-medium">{student.name}</span>
+                        <div className="flex-1 text-left">
+                          <span className="font-medium">{student.name}</span>
+                           <Badge variant="secondary" className="ml-2">{student.class}</Badge>
+                        </div>
+                        <div className="flex items-center gap-2 pr-2">
+                           <span className='text-sm text-muted-foreground'>Rata-rata:</span>
+                           <Progress value={(overallAverage / 4) * 100} className="w-24 h-2" />
+                           <span className="font-mono text-lg font-bold">{overallAverage.toFixed(1)}</span>
+                        </div>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{student.class}</Badge>
-                    </TableCell>
-                    {student.habits.map((habit: Habit) => {
-                      if (!habit.subHabits || habit.subHabits.length === 0) {
-                        return (
-                          <TableCell key={habit.id} className="text-center">
-                            <span className="font-mono">N/A</span>
-                          </TableCell>
-                        );
-                      }
-                      const habitAverage =
-                        habit.subHabits.reduce(
-                          (acc, sub) => acc + sub.score,
-                          0
-                        ) / (habit.subHabits.length || 1);
-                      return (
-                        <TableCell key={habit.id} className="text-center">
-                          <span className="font-mono">
-                            {habitAverage.toFixed(1)}
-                          </span>
-                        </TableCell>
-                      );
-                    })}
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Progress
-                          value={(averageScore / 4) * 100}
-                          className="w-24"
-                        />
-                        <span className="font-mono text-sm text-muted-foreground">
-                          {averageScore.toFixed(1)}
-                        </span>
+                   </AccordionTrigger>
+                   <AccordionContent>
+                      <div className="pl-12 pr-4 pt-2 pb-2 space-y-3">
+                        <h4 className="font-semibold text-sm mb-2">Rincian Kebiasaan:</h4>
+                        <Accordion type="multiple" className="w-full space-y-1">
+                          {(student.habits).map((habit) => {
+                              const habitAverage = (!habit.subHabits || habit.subHabits.length === 0) 
+                                  ? 0 
+                                  : habit.subHabits.reduce((acc, sub) => acc + sub.score, 0) / (habit.subHabits.length || 1);
+                              return(
+                                <AccordionItem value={habit.id} key={habit.id}>
+                                  <AccordionTrigger className="hover:no-underline text-sm py-2 rounded-md hover:bg-muted/50 px-2">
+                                      <div className="flex items-center gap-3 w-full">
+                                          {habitIcons[habit.name]}
+                                          <span className="font-medium flex-1 text-left">{habitTranslationMapping[habit.name] || habit.name}</span>
+                                          <div className="flex items-center gap-2 pr-2">
+                                              <Progress value={(habitAverage / 4) * 100} className="w-20 h-1.5" />
+                                              <span className="font-mono text-sm font-semibold">{habitAverage.toFixed(1)}</span>
+                                          </div>
+                                      </div>
+                                  </AccordionTrigger>
+                                   <AccordionContent className="pt-2">
+                                       <div className="pl-8 pr-4 space-y-2">
+                                          {habit.subHabits && habit.subHabits.length > 0 ? (
+                                              habit.subHabits.map(subHabit => (
+                                                  <div key={subHabit.id} className="flex items-center justify-between text-xs">
+                                                      <p className="text-muted-foreground flex-1 pr-4">{subHabit.name}</p>
+                                                      <div className="flex items-center gap-2 w-24">
+                                                          <Progress value={(subHabit.score / 4) * 100} className="w-16 h-1" />
+                                                          <span className="font-mono text-xs font-semibold">{subHabit.score}</span>
+                                                      </div>
+                                                  </div>
+                                              ))
+                                          ) : (
+                                              <p className="text-xs text-muted-foreground">Tidak ada aspek yang tercatat.</p>
+                                          )}
+                                      </div>
+                                  </AccordionContent>
+                                </AccordionItem>
+                              )
+                            })}
+                        </Accordion>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                   </AccordionContent>
+                </AccordionItem>
+              );
+            })}
+           </Accordion>
         </CardContent>
       </Card>
     </>
   );
 }
+
+    
