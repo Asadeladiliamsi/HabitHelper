@@ -105,13 +105,18 @@ export function SiswaDashboardClient() {
       
       const result: { date: string, [key: string]: any } = { date: formattedDate };
       
-      habitsForDay.forEach(habit => {
-        const validSubHabits = habit.subHabits.filter(sh => sh.score > 0);
-        if (validSubHabits.length > 0) {
-          const habitAvg = validSubHabits.reduce((sum, sh) => sum + sh.score, 0) / validSubHabits.length;
-          result[habit.name] = habitAvg;
+      Object.keys(HABIT_DEFINITIONS).forEach(habitName => {
+        const habit = habitsForDay.find(h => h.name === habitName);
+        if (habit) {
+          const validSubHabits = habit.subHabits.filter(sh => sh.score > 0);
+          if (validSubHabits.length > 0) {
+            const habitAvg = validSubHabits.reduce((sum, sh) => sum + sh.score, 0) / validSubHabits.length;
+            result[habitName] = habitAvg;
+          } else {
+            result[habitName] = 0;
+          }
         } else {
-          result[habit.name] = 0;
+          result[habitName] = 0;
         }
       });
       return result;
@@ -318,3 +323,5 @@ export function SiswaDashboardClient() {
     </>
   );
 }
+
+    
