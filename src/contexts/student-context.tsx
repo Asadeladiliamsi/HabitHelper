@@ -18,7 +18,6 @@ interface StudentContextType {
   addStudent: (newStudent: Omit<Student, 'id' | 'habits' | 'avatarUrl'>) => Promise<void>;
   updateStudent: (studentId: string, updatedData: Partial<Omit<Student, 'id' | 'habits' | 'avatarUrl'>>) => Promise<void>;
   deleteStudent: (studentId: string) => Promise<void>;
-  updateHabitScore: (studentId: string, habitId: string, subHabitId: string, newScore: number) => Promise<void>;
   addHabitEntry: (data: Omit<HabitEntry, 'id' | 'timestamp' | 'recordedBy'>) => Promise<void>;
   linkParentToStudent: (studentId: string, parentId: string, parentName: string) => Promise<void>;
   getHabitsForDate: (studentId: string, date: Date) => Habit[];
@@ -149,6 +148,12 @@ export const StudentProvider = ({ children }: { children: React.React.ReactNode 
     setDateLoading(true);
     
     const studentIds = students.map(s => s.id);
+    if (studentIds.length === 0) {
+        setHabitEntries([]);
+        setDateLoading(false);
+        return () => {};
+    }
+    
     const q = query(
       collection(db, 'habit_entries'), 
       where('studentId', 'in', studentIds),
@@ -171,6 +176,8 @@ export const StudentProvider = ({ children }: { children: React.React.ReactNode 
       setDateLoading(false);
     }, (error) => {
       console.error("Error fetching real-time habit entries:", error);
+      // Firebase will require an index for this query. If it fails, log it.
+      // The user can create the index using the link in the console.
       setHabitEntries([]);
       setDateLoading(false);
     });
@@ -187,30 +194,6 @@ export const StudentProvider = ({ children }: { children: React.React.ReactNode 
       recordedBy: user.uid,
       timestamp: serverTimestamp()
     });
-  };
-
-
-  const updateHabitScore = async (studentId: string, habitId: string, subHabitId: string, newScore: number) => {
-    if (!user) throw new Error("Authentication required");
-
-    const studentToUpdate = students.find(s => s.id === studentId);
-    if (!studentToUpdate) throw new Error("Student not found");
-
-    const updatedHabits = studentToUpdate.habits.map(habit => {
-      if (habit.id === habitId) {
-        const updatedSubHabits = (habit.subHabits || []).map(subHabit => {
-          if (subHabit.id === subHabitId) {
-            return { ...subHabit, score: newScore };
-          }
-          return subHabit;
-        });
-        return { ...habit, subHabits: updatedSubHabits };
-      }
-      return habit;
-    });
-
-    const studentDocRef = doc(db, 'students', studentId);
-    await updateDoc(studentDocRef, { habits: updatedHabits });
   };
   
   const linkParentToStudent = async (studentId: string, parentId: string, parentName: string) => {
@@ -262,7 +245,6 @@ export const StudentProvider = ({ children }: { children: React.React.ReactNode 
     addStudent,
     updateStudent,
     deleteStudent,
-    updateHabitScore,
     addHabitEntry,
     linkParentToStudent,
     getHabitsForDate,
@@ -284,7 +266,3 @@ export const useStudent = () => {
   return context;
 };
 
-
-
-
-    

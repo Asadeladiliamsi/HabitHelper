@@ -2,6 +2,7 @@
 
 
 
+
 'use client';
 
 import {
@@ -78,10 +79,17 @@ export function DashboardClient() {
     translations[language]?.landingPage.habits ||
     translations.en.landingPage.habits;
 
+  const filteredStudents = useMemo(() => {
+    if (selectedClass === 'all') {
+      return students;
+    }
+    return students.filter(student => student.class === selectedClass);
+  }, [students, selectedClass]);
+  
   useEffect(() => {
     const unsubscribe = fetchHabitEntriesForDate(selectedDate);
     return () => unsubscribe();
-  }, [selectedDate, fetchHabitEntriesForDate]);
+  }, [selectedDate, fetchHabitEntriesForDate, filteredStudents]); // Re-fetch when filter changes
 
   const habitTranslationMapping: Record<string, string> = {
     'Bangun Pagi': tHabits.bangunPagi.name,
@@ -98,12 +106,6 @@ export function DashboardClient() {
     return ['all', ...Array.from(classes).sort()];
   }, [students]);
 
-  const filteredStudents = useMemo(() => {
-    if (selectedClass === 'all') {
-      return students;
-    }
-    return students.filter(student => student.class === selectedClass);
-  }, [students, selectedClass]);
   
   const getHabitsForStudentOnDate = (studentId: string, date: Date): Habit[] => {
     return getHabitsForDate(studentId, date);
@@ -116,8 +118,9 @@ export function DashboardClient() {
     if (validHabits.length === 0) return 0;
 
     const totalScore = validHabits.reduce((acc, h) => {
-      const subHabitTotal = h.subHabits.reduce((subAcc, sh) => subAcc + sh.score, 0);
-      const subHabitAverage = subHabitTotal / (h.subHabits.length || 1);
+      const subHabitsWithScores = h.subHabits.filter(sh => sh.score > 0);
+      const subHabitTotal = subHabitsWithScores.reduce((subAcc, sh) => subAcc + sh.score, 0);
+      const subHabitAverage = subHabitTotal / (subHabitsWithScores.length || 1);
       return acc + subHabitAverage;
     }, 0);
 
@@ -132,9 +135,9 @@ export function DashboardClient() {
 
     const habitData: { [habitName: string]: { [subHabitName: string]: { total: number, count: number } } } = {};
 
-    Object.keys(HABIT_DEFINITIONS).forEach(habitName => {
+    Object.entries(HABIT_DEFINITIONS).forEach(([habitName, subHabitNames]) => {
         habitData[habitName] = {};
-        HABIT_DEFINITIONS[habitName].forEach(subHabitName => {
+        subHabitNames.forEach(subHabitName => {
             habitData[habitName][subHabitName] = { total: 0, count: 0 };
         });
     });
@@ -367,9 +370,10 @@ export function DashboardClient() {
                         {studentHabitsOnDate.some(h => h.subHabits.some(sh => sh.score > 0)) ? (
                           <Accordion type="multiple" className="w-full space-y-1">
                             {studentHabitsOnDate.map((habit) => {
-                                const habitAverage = (!habit.subHabits || habit.subHabits.length === 0 || habit.subHabits.every(sh => sh.score === 0))
+                                const subHabitsWithScores = habit.subHabits.filter(sh => sh.score > 0);
+                                const habitAverage = subHabitsWithScores.length === 0
                                     ? 0
-                                    : habit.subHabits.reduce((acc, sub) => acc + sub.score, 0) / (habit.subHabits.filter(sh => sh.score > 0).length || 1);
+                                    : subHabitsWithScores.reduce((acc, sub) => acc + sub.score, 0) / (subHabitsWithScores.length || 1);
                                 return(
                                   <AccordionItem value={habit.id} key={habit.id}>
                                     <AccordionTrigger className="hover:no-underline text-sm py-2 rounded-md hover:bg-muted/50 px-2">
