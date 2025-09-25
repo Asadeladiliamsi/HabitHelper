@@ -147,6 +147,7 @@ export const StudentProvider = ({ children }: { children: React.React.ReactNode 
     
     setDateLoading(true);
     
+    // Filter students based on role
     const studentIds = students.map(s => s.id);
     if (studentIds.length === 0) {
         setHabitEntries([]);
@@ -207,7 +208,7 @@ export const StudentProvider = ({ children }: { children: React.React.ReactNode 
       if (!student) return [];
       
       const relevantEntries = habitEntries.filter(entry => 
-        entry.studentId === studentId
+        entry.studentId === studentId && isSameDay(entry.date, date)
       );
       
       const habitsFromDefs: Habit[] = Object.entries(HABIT_DEFINITIONS).map(([habitName, subHabitNames], habitIndex) => ({
@@ -265,4 +266,5 @@ export const useStudent = () => {
   }
   return context;
 };
+
 

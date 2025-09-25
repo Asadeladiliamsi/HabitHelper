@@ -1,6 +1,7 @@
 
 
 
+
 'use client';
 
 import { useAuth } from '@/contexts/auth-context';
@@ -98,8 +99,9 @@ export function SiswaDashboardClient() {
       if (validHabits.length === 0) return 0;
 
       const totalScore = validHabits.reduce((acc, h) => {
-          const subHabitTotal = h.subHabits.reduce((subAcc, sh) => subAcc + sh.score, 0);
-          const subHabitAverage = subHabitTotal / (h.subHabits.length || 1);
+          const subHabitsWithScores = h.subHabits.filter(sh => sh.score > 0);
+          const subHabitTotal = subHabitsWithScores.reduce((subAcc, sh) => subAcc + sh.score, 0);
+          const subHabitAverage = subHabitTotal / (subHabitsWithScores.length || 1);
           return acc + subHabitAverage;
       }, 0);
       
