@@ -1,7 +1,3 @@
-
-
-
-
 'use client';
 
 import { useAuth } from '@/contexts/auth-context';
@@ -22,14 +18,18 @@ import {
   Calendar as CalendarIcon,
 } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from './ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar } from './ui/calendar';
-import { format } from 'date-fns';
+import { format, subDays, eachDayOfInterval } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import type { Habit } from '@/lib/types';
+import { DateRange } from 'react-day-picker';
+import { DateRangePicker } from './ui/date-range-picker';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { HABIT_DEFINITIONS } from '@/lib/types';
 
 
 const habitIcons: { [key: string]: React.ReactNode } = {
@@ -42,23 +42,44 @@ const habitIcons: { [key: string]: React.ReactNode } = {
   'Tidur Cepat': <Bed className="h-5 w-5 text-indigo-500" />,
 };
 
+const habitColors: { [key: string]: string } = {
+    'Bangun Pagi': 'hsl(var(--chart-1))',
+    'Taat Beribadah': 'hsl(var(--chart-2))',
+    'Rajin Olahraga': 'hsl(var(--chart-3))',
+    'Makan Sehat & Bergizi': 'hsl(var(--chart-4))',
+    'Gemar Belajar': 'hsl(var(--chart-5))',
+    'Bermasyarakat': '#8B5CF6',
+    'Tidur Cepat': '#10B981',
+};
+
 
 export function SiswaDashboardClient() {
   const { user } = useAuth();
-  const { students, loading: studentsLoading, getHabitsForDate, fetchHabitEntriesForDate, dateLoading } = useStudent();
+  const { students, loading: studentsLoading, getHabitsForDate, fetchHabitEntriesForRange, dateLoading, habitEntries } = useStudent();
   const { language } = useLanguage();
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: subDays(new Date(), 6),
+    to: new Date(),
+  });
 
   const studentData = students.find(s => s.email === user?.email);
   
   useEffect(() => {
     if (studentData) {
-      const unsubscribe = fetchHabitEntriesForDate(selectedDate);
-      return () => unsubscribe();
+      // Fetch for single day view
+      const unsubscribeDaily = fetchHabitEntriesForRange({ from: selectedDate, to: selectedDate });
+      // Fetch for date range chart
+      const unsubscribeRange = fetchHabitEntriesForRange(dateRange);
+
+      return () => {
+        unsubscribeDaily();
+        unsubscribeRange();
+      };
     }
-  }, [selectedDate, studentData, fetchHabitEntriesForDate]);
+  }, [selectedDate, dateRange, studentData, fetchHabitEntriesForRange]);
 
   const habitsForSelectedDate = studentData ? getHabitsForDate(studentData.id, selectedDate) : [];
 
@@ -71,6 +92,34 @@ export function SiswaDashboardClient() {
     'Bermasyarakat': tHabits.bermasyarakat.name,
     'Tidur Cepat': tHabits.tidurCepat.name,
   };
+
+  const chartData = useMemo(() => {
+    if (!dateRange?.from || !studentData) return [];
+
+    const toDate = dateRange.to || dateRange.from;
+    const intervalDays = eachDayOfInterval({ start: dateRange.from, end: toDate });
+
+    const dataByDate = intervalDays.map(day => {
+      const formattedDate = format(day, 'dd/MM');
+      const habitsForDay = getHabitsForDate(studentData.id, day);
+      
+      const result: { date: string, [key: string]: any } = { date: formattedDate };
+      
+      habitsForDay.forEach(habit => {
+        const validSubHabits = habit.subHabits.filter(sh => sh.score > 0);
+        if (validSubHabits.length > 0) {
+          const habitAvg = validSubHabits.reduce((sum, sh) => sum + sh.score, 0) / validSubHabits.length;
+          result[habit.name] = habitAvg;
+        } else {
+          result[habit.name] = 0;
+        }
+      });
+      return result;
+    });
+    
+    return dataByDate;
+
+  }, [dateRange, studentData, habitEntries, getHabitsForDate]);
 
   if (studentsLoading) {
     return (
@@ -117,11 +166,64 @@ export function SiswaDashboardClient() {
         <p className="text-muted-foreground">Selamat datang di dasbor pribadimu. Pantau terus perkembanganmu!</p>
       </header>
       
+      <Card>
+          <CardHeader>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+              <CardTitle>Grafik Perkembangan Kebiasaanmu</CardTitle>
+              <CardDescription>
+                  Visualisasikan tren skormu pada rentang tanggal yang dipilih.
+              </CardDescription>
+              </div>
+              <DateRangePicker date={dateRange} onDateChange={setDateRange} />
+          </div>
+          </CardHeader>
+          <CardContent>
+          {dateLoading && !chartData.length ? (
+              <div className="flex h-80 items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+          ) : (
+              <div className="h-80 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                      data={chartData}
+                      margin={{ top: 5, right: 20, left: -10, bottom: 5 }}
+                  >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" fontSize={12} tickLine={false} axisLine={false} />
+                      <YAxis domain={[0, 4]} fontSize={12} tickLine={false} axisLine={false} />
+                      <Tooltip
+                          contentStyle={{
+                              background: 'hsl(var(--background))',
+                              border: '1px solid hsl(var(--border))',
+                              borderRadius: 'var(--radius)',
+                          }}
+                      />
+                      <Legend formatter={(value) => (<span className="text-muted-foreground">{habitTranslationMapping[value] || value}</span>)} />
+                      {Object.keys(HABIT_DEFINITIONS).map((habitName) => (
+                          <Line
+                              key={habitName}
+                              type="monotone"
+                              dataKey={habitName}
+                              stroke={habitColors[habitName] || '#8884d8'}
+                              strokeWidth={2}
+                              dot={false}
+                          />
+                      ))}
+                  </LineChart>
+              </ResponsiveContainer>
+              </div>
+          )}
+          </CardContent>
+      </Card>
+
+
        <Card>
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <CardTitle>Progres Kebiasaanmu</CardTitle>
+              <CardTitle>Rincian Progres Harianmu</CardTitle>
               <CardDescription>
                   Pilih tanggal untuk melihat progres kebiasaanmu pada hari itu.
               </CardDescription>
@@ -151,7 +253,7 @@ export function SiswaDashboardClient() {
           </div>
         </CardHeader>
         <CardContent>
-          {dateLoading ? (
+          {dateLoading && habitsForSelectedDate.length === 0 ? (
              <div className="flex h-48 items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
              </div>
@@ -216,7 +318,3 @@ export function SiswaDashboardClient() {
     </>
   );
 }
-
-
-
-    
