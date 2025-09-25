@@ -1,5 +1,6 @@
 
 
+
 'use client';
 
 import { useAuth } from '@/contexts/auth-context';
@@ -58,9 +59,9 @@ export function OrangTuaDashboardClient() {
   }, [parentStudents, selectedStudentId]);
 
   useEffect(() => {
-    // Only fetch if a student is selected
     if (selectedStudentId) {
-      fetchHabitEntriesForDate(selectedDate);
+      const unsubscribe = fetchHabitEntriesForDate(selectedDate);
+      return () => unsubscribe();
     }
   }, [selectedDate, selectedStudentId, fetchHabitEntriesForDate]);
   
@@ -250,3 +251,6 @@ export function OrangTuaDashboardClient() {
 
     
 
+
+
+    

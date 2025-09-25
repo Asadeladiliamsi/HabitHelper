@@ -1,5 +1,6 @@
 
 
+
 'use client';
 
 import { useAuth } from '@/contexts/auth-context';
@@ -53,7 +54,8 @@ export function SiswaDashboardClient() {
   
   useEffect(() => {
     if (studentData) {
-      fetchHabitEntriesForDate(selectedDate);
+      const unsubscribe = fetchHabitEntriesForDate(selectedDate);
+      return () => unsubscribe();
     }
   }, [selectedDate, studentData, fetchHabitEntriesForDate]);
 
@@ -213,3 +215,6 @@ export function SiswaDashboardClient() {
   );
 }
 
+
+
+    

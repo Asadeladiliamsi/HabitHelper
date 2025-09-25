@@ -1,6 +1,7 @@
 
 
 
+
 'use client';
 
 import {
@@ -78,7 +79,8 @@ export function DashboardClient() {
     translations.en.landingPage.habits;
 
   useEffect(() => {
-    fetchHabitEntriesForDate(selectedDate);
+    const unsubscribe = fetchHabitEntriesForDate(selectedDate);
+    return () => unsubscribe();
   }, [selectedDate, fetchHabitEntriesForDate]);
 
   const habitTranslationMapping: Record<string, string> = {
@@ -417,3 +419,6 @@ export function DashboardClient() {
   );
 }
 
+
+
+    

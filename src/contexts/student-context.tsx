@@ -22,7 +22,7 @@ interface StudentContextType {
   addHabitEntry: (data: Omit<HabitEntry, 'id' | 'timestamp' | 'recordedBy'>) => Promise<void>;
   linkParentToStudent: (studentId: string, parentId: string, parentName: string) => Promise<void>;
   getHabitsForDate: (studentId: string, date: Date) => Habit[];
-  fetchHabitEntriesForDate: (date: Date) => Promise<void>;
+  fetchHabitEntriesForDate: (date: Date) => () => void;
 }
 
 const StudentContext = createContext<StudentContextType | undefined>(undefined);
@@ -33,8 +33,7 @@ export const StudentProvider = ({ children }: { children: React.React.ReactNode 
   const [habitEntries, setHabitEntries] = useState<HabitEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateLoading, setDateLoading] = useState(false);
-  const [lastFetchedDate, setLastFetchedDate] = useState<Date | null>(null);
-
+  
   useEffect(() => {
     if (authLoading || !user) {
       setLoading(false); 
@@ -140,57 +139,45 @@ export const StudentProvider = ({ children }: { children: React.React.ReactNode 
     await deleteDoc(studentDocRef);
   };
   
-  const fetchHabitEntriesForDate = useCallback(async (date: Date) => {
-      if (!user) return;
-      
-      setDateLoading(true);
-      setLastFetchedDate(date); // Store the date being fetched
-      
-      const studentIds = students.map(s => s.id);
-      if (studentIds.length === 0) {
-        setDateLoading(false);
-        setHabitEntries([]);
-        return;
-      }
-      
-      const q = query(
-          collection(db, 'habit_entries'), 
-          where('studentId', 'in', studentIds),
-          where('date', '>=', startOfDay(date)),
-          where('date', '<=', endOfDay(date))
-      );
+  const fetchHabitEntriesForDate = useCallback((date: Date): (() => void) => {
+    if (!user || students.length === 0) {
+      setHabitEntries([]);
+      setDateLoading(false);
+      return () => {}; // Return an empty unsubscribe function
+    }
+    
+    setDateLoading(true);
+    
+    const studentIds = students.map(s => s.id);
+    const q = query(
+      collection(db, 'habit_entries'), 
+      where('studentId', 'in', studentIds),
+      where('date', '>=', startOfDay(date)),
+      where('date', '<=', endOfDay(date))
+    );
 
-      try {
-          // Use onSnapshot for real-time updates for the selected date
-          const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const entries: HabitEntry[] = [];
-            querySnapshot.forEach(doc => {
-                const data = doc.data();
-                entries.push({
-                    id: doc.id,
-                    ...data,
-                    date: (data.date as Timestamp).toDate(),
-                    timestamp: data.timestamp
-                } as HabitEntry);
-            });
-            setHabitEntries(entries);
-            setDateLoading(false);
-          }, (error) => {
-            console.error("Error fetching real-time habit entries:", error);
-            setHabitEntries([]);
-            setDateLoading(false);
-          });
-          
-          // The onSnapshot listener will handle updates. 
-          // We don't return unsubscribe here as this function is for one-off fetches triggered by date changes.
-          // For a live dashboard, you would manage this unsubscribe differently.
-          
-      } catch (error) {
-          console.error("Error setting up habit entry listener:", error);
-          setHabitEntries([]);
-          setDateLoading(false);
-      }
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const entries: HabitEntry[] = [];
+      querySnapshot.forEach(doc => {
+        const data = doc.data();
+        entries.push({
+          id: doc.id,
+          ...data,
+          date: (data.date as Timestamp).toDate(),
+          timestamp: data.timestamp,
+        } as HabitEntry);
+      });
+      setHabitEntries(entries);
+      setDateLoading(false);
+    }, (error) => {
+      console.error("Error fetching real-time habit entries:", error);
+      setHabitEntries([]);
+      setDateLoading(false);
+    });
+
+    return unsubscribe;
   }, [user, students]);
+
 
   const addHabitEntry = async (data: Omit<HabitEntry, 'id' | 'timestamp' | 'recordedBy'>) => {
     if (!user) throw new Error("Authentication required.");
@@ -200,12 +187,6 @@ export const StudentProvider = ({ children }: { children: React.React.ReactNode 
       recordedBy: user.uid,
       timestamp: serverTimestamp()
     });
-    
-    // After adding, if the new entry's date is the same as the last fetched date,
-    // re-fetch to update the dashboard UI.
-    if (lastFetchedDate && isSameDay(data.date, lastFetchedDate)) {
-        await fetchHabitEntriesForDate(lastFetchedDate);
-    }
   };
 
 
@@ -304,3 +285,6 @@ export const useStudent = () => {
 };
 
 
+
+
+    
