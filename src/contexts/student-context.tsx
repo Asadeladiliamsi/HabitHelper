@@ -18,7 +18,7 @@ interface StudentContextType {
   addStudent: (newStudent: Omit<Student, 'id' | 'habits' | 'avatarUrl'>) => Promise<void>;
   updateStudent: (studentId: string, updatedData: Partial<Omit<Student, 'id' | 'habits' | 'avatarUrl'>>) => Promise<void>;
   deleteStudent: (studentId: string) => Promise<void>;
-  addHabitEntry: (data: Omit<HabitEntry, 'id' | 'timestamp' | 'recordedBy'>, onComplete: () => void) => Promise<void>;
+  addHabitEntry: (data: Omit<HabitEntry, 'id' | 'timestamp' | 'recordedBy'>) => Promise<void>;
   linkParentToStudent: (studentId: string, parentId: string, parentName: string) => Promise<void>;
   getHabitsForDate: (studentId: string, date: Date) => Habit[];
   fetchHabitEntriesForDate: (date: Date) => () => void;
@@ -139,24 +139,16 @@ export const StudentProvider = ({ children }: { children: React.React.Node }) =>
   };
   
   const fetchHabitEntriesForDate = useCallback((date: Date): (() => void) => {
-    if (!user || students.length === 0) {
+    if (!user) {
       setHabitEntries([]);
-      setDateLoading(false);
-      return () => {}; // Return an empty unsubscribe function
+      return () => {};
     }
     
     setDateLoading(true);
     
-    const studentIds = students.map(s => s.id);
-    if (studentIds.length === 0) {
-        setHabitEntries([]);
-        setDateLoading(false);
-        return () => {};
-    }
-    
+    // Simplified query to only filter by date, avoiding the composite index error.
     const q = query(
       collection(db, 'habit_entries'), 
-      where('studentId', 'in', studentIds),
       where('date', '>=', startOfDay(date)),
       where('date', '<=', endOfDay(date))
     );
@@ -174,7 +166,12 @@ export const StudentProvider = ({ children }: { children: React.React.Node }) =>
             } as HabitEntry);
         }
       });
-      setHabitEntries(entries);
+      
+      // Filter by relevant students on the client side
+      const studentIds = new Set(students.map(s => s.id));
+      const filteredEntries = entries.filter(entry => studentIds.has(entry.studentId));
+
+      setHabitEntries(filteredEntries);
       setDateLoading(false);
     }, (error) => {
       console.error("Error fetching real-time habit entries:", error);
@@ -186,15 +183,16 @@ export const StudentProvider = ({ children }: { children: React.React.Node }) =>
   }, [user, students]);
 
 
-  const addHabitEntry = async (data: Omit<HabitEntry, 'id' | 'timestamp' | 'recordedBy'>, onComplete: () => void) => {
+  const addHabitEntry = async (data: Omit<HabitEntry, 'id' | 'timestamp' | 'recordedBy'>) => {
     if (!user) throw new Error("Authentication required.");
     
+    // This function now just adds the document.
+    // The onSnapshot listener in fetchHabitEntriesForDate will automatically update the state.
     await addDoc(collection(db, 'habit_entries'), {
       ...data,
       recordedBy: user.uid,
       timestamp: serverTimestamp()
     });
-    onComplete();
   };
   
   const linkParentToStudent = async (studentId: string, parentId: string, parentName: string) => {
