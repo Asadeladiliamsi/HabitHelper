@@ -1,7 +1,4 @@
 
-
-
-
 'use client';
 
 import { useAuth } from '@/contexts/auth-context';
@@ -21,16 +18,21 @@ import {
   Bed,
   Calendar as CalendarIcon,
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { Student, Habit } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Button } from './ui/button';
 import { Calendar } from './ui/calendar';
-import { format } from 'date-fns';
+import { format, startOfDay, eachDayOfInterval, subDays } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { DateRange } from 'react-day-picker';
+import { DateRangePicker } from './ui/date-range-picker';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { HABIT_DEFINITIONS } from '@/lib/types';
+
 
 const habitIcons: { [key: string]: React.ReactNode } = {
   'Bangun Pagi': <Sunrise className="h-5 w-5 text-yellow-500" />,
@@ -42,14 +44,29 @@ const habitIcons: { [key: string]: React.ReactNode } = {
   'Tidur Cepat': <Bed className="h-5 w-5 text-indigo-500" />,
 };
 
+const habitColors: { [key: string]: string } = {
+    'Bangun Pagi': 'hsl(var(--chart-1))',
+    'Taat Beribadah': 'hsl(var(--chart-2))',
+    'Rajin Olahraga': 'hsl(var(--chart-3))',
+    'Makan Sehat & Bergizi': 'hsl(var(--chart-4))',
+    'Gemar Belajar': 'hsl(var(--chart-5))',
+    'Bermasyarakat': '#8B5CF6',
+    'Tidur Cepat': '#10B981',
+};
+
+
 export function OrangTuaDashboardClient() {
   const { userProfile } = useAuth();
-  const { students, loading: studentsLoading, getHabitsForDate, dateLoading, fetchHabitEntriesForDate } = useStudent();
+  const { students, loading: studentsLoading, getHabitsForDate, dateLoading, fetchHabitEntriesForRange, habitEntries } = useStudent();
   const { language } = useLanguage();
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
 
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: subDays(new Date(), 6),
+    to: new Date(),
+  });
   
   const parentStudents = students.filter(s => s.parentId === userProfile?.uid);
 
@@ -60,11 +77,20 @@ export function OrangTuaDashboardClient() {
   }, [parentStudents, selectedStudentId]);
 
   useEffect(() => {
+    // This fetches data for the single date picker (daily details)
     if (selectedStudentId) {
-      const unsubscribe = fetchHabitEntriesForDate(selectedDate);
+      const unsubscribe = fetchHabitEntriesForRange({ from: selectedDate, to: selectedDate });
       return () => unsubscribe();
     }
-  }, [selectedDate, selectedStudentId, fetchHabitEntriesForDate]);
+  }, [selectedDate, selectedStudentId, fetchHabitEntriesForRange]);
+
+  useEffect(() => {
+    // This fetches data for the date range picker (chart)
+    if (selectedStudentId) {
+        const unsubscribe = fetchHabitEntriesForRange(dateRange);
+        return () => unsubscribe();
+    }
+  }, [dateRange, selectedStudentId, fetchHabitEntriesForRange]);
   
   const selectedStudentData = parentStudents.find(s => s.id === selectedStudentId);
   const habitsForSelectedDate = selectedStudentData ? getHabitsForDate(selectedStudentData.id, selectedDate) : [];
@@ -78,6 +104,34 @@ export function OrangTuaDashboardClient() {
     'Bermasyarakat': tHabits.bermasyarakat.name,
     'Tidur Cepat': tHabits.tidurCepat.name,
   };
+
+  const chartData = useMemo(() => {
+    if (!dateRange?.from || !selectedStudentData) return [];
+
+    const toDate = dateRange.to || dateRange.from;
+    const intervalDays = eachDayOfInterval({ start: dateRange.from, end: toDate });
+
+    const dataByDate = intervalDays.map(day => {
+      const formattedDate = format(day, 'dd/MM');
+      const habitsForDay = getHabitsForDate(selectedStudentData.id, day);
+      
+      const result: { date: string, [key: string]: any } = { date: formattedDate };
+      
+      habitsForDay.forEach(habit => {
+        const validSubHabits = habit.subHabits.filter(sh => sh.score > 0);
+        if (validSubHabits.length > 0) {
+          const habitAvg = validSubHabits.reduce((sum, sh) => sum + sh.score, 0) / validSubHabits.length;
+          result[habit.name] = habitAvg;
+        } else {
+          result[habit.name] = 0;
+        }
+      });
+      return result;
+    });
+    
+    return dataByDate;
+
+  }, [dateRange, selectedStudentData, habitEntries, getHabitsForDate]);
 
   if (studentsLoading) {
     return (
@@ -148,100 +202,154 @@ export function OrangTuaDashboardClient() {
       )}
 
       {selectedStudentData ? (
-        <Card>
-            <CardHeader>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                  <CardTitle>Progres Kebiasaan {selectedStudentData.name}</CardTitle>
-                  <CardDescription>Pilih tanggal untuk melihat progres pada hari itu.</CardDescription>
+        <>
+            <Card>
+                <CardHeader>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                    <CardTitle>Grafik Perkembangan Kebiasaan {selectedStudentData.name}</CardTitle>
+                    <CardDescription>
+                        Visualisasikan tren skor kebiasaan anak Anda pada rentang tanggal yang dipilih.
+                    </CardDescription>
+                    </div>
+                    <DateRangePicker date={dateRange} onDateChange={setDateRange} />
                 </div>
-                <Popover>
-                  <PopoverTrigger asChild>
-                      <Button
-                      variant={'outline'}
-                      className={cn(
-                          'w-full sm:w-[280px] justify-start text-left font-normal',
-                          !selectedDate && 'text-muted-foreground'
-                      )}
-                      >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {selectedDate ? format(selectedDate, 'PPP', { locale: id }) : <span>Pilih tanggal</span>}
-                      </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                      <Calendar
-                      mode="single"
-                      selected={selectedDate}
-                      onSelect={(date) => setSelectedDate(date || new Date())}
-                      initialFocus
-                      />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </CardHeader>
-            <CardContent>
-            {dateLoading ? (
-               <div className="flex h-48 items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-               </div>
-            ) : habitsForSelectedDate.length > 0 && habitsForSelectedDate.some(h => h.subHabits.some(sh => sh.score > 0)) ? (
-              <div className="space-y-4">
-                <Accordion type="multiple" className="w-full">
-                  {habitsForSelectedDate.map((habit) => {
-                      const habitAverage = (!habit.subHabits || habit.subHabits.length === 0 || habit.subHabits.every(sh => sh.score === 0))
-                          ? 0 
-                          : habit.subHabits.reduce((acc, sub) => acc + sub.score, 0) / (habit.subHabits.filter(sh => sh.score > 0).length || 1);
+                </CardHeader>
+                <CardContent>
+                {dateLoading && !chartData.length ? (
+                    <div className="flex h-80 items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    </div>
+                ) : (
+                    <div className="h-80 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <LineChart
+                            data={chartData}
+                            margin={{ top: 5, right: 20, left: -10, bottom: 5 }}
+                        >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="date" fontSize={12} tickLine={false} axisLine={false} />
+                            <YAxis domain={[0, 4]} fontSize={12} tickLine={false} axisLine={false} />
+                            <Tooltip
+                                contentStyle={{
+                                    background: 'hsl(var(--background))',
+                                    border: '1px solid hsl(var(--border))',
+                                    borderRadius: 'var(--radius)',
+                                }}
+                            />
+                            <Legend formatter={(value) => (<span className="text-muted-foreground">{habitTranslationMapping[value] || value}</span>)} />
+                            {Object.keys(HABIT_DEFINITIONS).map((habitName) => (
+                                <Line
+                                    key={habitName}
+                                    type="monotone"
+                                    dataKey={habitName}
+                                    stroke={habitColors[habitName] || '#8884d8'}
+                                    strokeWidth={2}
+                                    dot={false}
+                                />
+                            ))}
+                        </LineChart>
+                    </ResponsiveContainer>
+                    </div>
+                )}
+                </CardContent>
+            </Card>
 
-                      return (
-                          <AccordionItem value={habit.id} key={habit.id}>
-                              <AccordionTrigger className="hover:no-underline">
-                                  <div className="flex items-center gap-3 w-full">
-                                      {habitIcons[habit.name]}
-                                      <span className="font-medium flex-1 text-left">{habitTranslationMapping[habit.name] || habit.name}</span>
-                                      <div className="flex items-center gap-2 pr-2">
-                                          <Progress value={(habitAverage / 4) * 100} className="w-24 h-2" />
-                                          <span className="font-mono text-lg font-bold">{habitAverage.toFixed(1)}</span>
-                                      </div>
-                                  </div>
-                              </AccordionTrigger>
-                              <AccordionContent>
-                                  <div className="pl-8 pr-4 space-y-3">
-                                      {habit.subHabits && habit.subHabits.length > 0 ? (
-                                          habit.subHabits.map(subHabit => (
-                                              <div key={subHabit.id} className="flex items-center justify-between text-sm">
-                                                  <p className="text-muted-foreground flex-1 pr-4">{subHabit.name}</p>
-                                                  <div className="flex items-center gap-2 w-28">
-                                                      <Progress value={(subHabit.score / 4) * 100} className="w-16 h-1.5" />
-                                                      <span className="font-mono text-sm font-semibold">{subHabit.score}</span>
-                                                  </div>
-                                              </div>
-                                          ))
-                                      ) : (
-                                          <p className="text-sm text-muted-foreground">Tidak ada aspek yang tercatat untuk kebiasaan ini.</p>
-                                      )}
-                                  </div>
-                              </AccordionContent>
-                          </AccordionItem>
-                      )
-                  })}
-              </Accordion>
-              
-              <div className="flex justify-between items-center bg-muted/50 p-4 rounded-lg font-bold">
-                  <span>Rata-rata Keseluruhan</span>
-                  <div className="flex items-center justify-end gap-2">
-                      <Progress value={(averageScore / 4) * 100} className="w-24 h-2" />
-                      <span className="font-mono text-sm">{ averageScore.toFixed(1) }</span>
-                  </div>
-              </div>
-            </div>
-            ) : (
-               <div className="flex flex-col items-center justify-center h-48 border-2 border-dashed rounded-lg">
-                <p className="text-muted-foreground">Tidak ada data yang tercatat untuk tanggal ini.</p>
-                <p className="text-sm text-muted-foreground mt-1">Silakan pilih tanggal lain atau input data anak Anda.</p>
-            </div>
-            )}
-            </CardContent>
-        </Card>
+            <Card>
+                <CardHeader>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                    <CardTitle>Rincian Progres Harian {selectedStudentData.name}</CardTitle>
+                    <CardDescription>Pilih tanggal untuk melihat rincian progres pada hari itu.</CardDescription>
+                    </div>
+                    <Popover>
+                    <PopoverTrigger asChild>
+                        <Button
+                        variant={'outline'}
+                        className={cn(
+                            'w-full sm:w-[280px] justify-start text-left font-normal',
+                            !selectedDate && 'text-muted-foreground'
+                        )}
+                        >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {selectedDate ? format(selectedDate, 'PPP', { locale: id }) : <span>Pilih tanggal</span>}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                        <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={(date) => setSelectedDate(date || new Date())}
+                        initialFocus
+                        />
+                    </PopoverContent>
+                    </Popover>
+                </div>
+                </CardHeader>
+                <CardContent>
+                {dateLoading ? (
+                <div className="flex h-48 items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+                ) : habitsForSelectedDate.length > 0 && habitsForSelectedDate.some(h => h.subHabits.some(sh => sh.score > 0)) ? (
+                <div className="space-y-4">
+                    <Accordion type="multiple" className="w-full">
+                    {habitsForSelectedDate.map((habit) => {
+                        const habitAverage = (!habit.subHabits || habit.subHabits.length === 0 || habit.subHabits.every(sh => sh.score === 0))
+                            ? 0 
+                            : habit.subHabits.reduce((acc, sub) => acc + sub.score, 0) / (habit.subHabits.filter(sh => sh.score > 0).length || 1);
+
+                        return (
+                            <AccordionItem value={habit.id} key={habit.id}>
+                                <AccordionTrigger className="hover:no-underline">
+                                    <div className="flex items-center gap-3 w-full">
+                                        {habitIcons[habit.name]}
+                                        <span className="font-medium flex-1 text-left">{habitTranslationMapping[habit.name] || habit.name}</span>
+                                        <div className="flex items-center gap-2 pr-2">
+                                            <Progress value={(habitAverage / 4) * 100} className="w-24 h-2" />
+                                            <span className="font-mono text-lg font-bold">{habitAverage.toFixed(1)}</span>
+                                        </div>
+                                    </div>
+                                </AccordionTrigger>
+                                <AccordionContent>
+                                    <div className="pl-8 pr-4 space-y-3">
+                                        {habit.subHabits && habit.subHabits.length > 0 ? (
+                                            habit.subHabits.map(subHabit => (
+                                                <div key={subHabit.id} className="flex items-center justify-between text-sm">
+                                                    <p className="text-muted-foreground flex-1 pr-4">{subHabit.name}</p>
+                                                    <div className="flex items-center gap-2 w-28">
+                                                        <Progress value={(subHabit.score / 4) * 100} className="w-16 h-1.5" />
+                                                        <span className="font-mono text-sm font-semibold">{subHabit.score}</span>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <p className="text-sm text-muted-foreground">Tidak ada aspek yang tercatat untuk kebiasaan ini.</p>
+                                        )}
+                                    </div>
+                                </AccordionContent>
+                            </AccordionItem>
+                        )
+                    })}
+                </Accordion>
+                
+                <div className="flex justify-between items-center bg-muted/50 p-4 rounded-lg font-bold">
+                    <span>Rata-rata Keseluruhan</span>
+                    <div className="flex items-center justify-end gap-2">
+                        <Progress value={(averageScore / 4) * 100} className="w-24 h-2" />
+                        <span className="font-mono text-sm">{ averageScore.toFixed(1) }</span>
+                    </div>
+                </div>
+                </div>
+                ) : (
+                <div className="flex flex-col items-center justify-center h-48 border-2 border-dashed rounded-lg">
+                    <p className="text-muted-foreground">Tidak ada data yang tercatat untuk tanggal ini.</p>
+                    <p className="text-sm text-muted-foreground mt-1">Silakan pilih tanggal lain atau input data anak Anda.</p>
+                </div>
+                )}
+                </CardContent>
+            </Card>
+        </>
       ) : (
          <div className="flex h-48 items-center justify-center">
             <p className="text-muted-foreground">Silakan pilih anak untuk melihat progres.</p>
@@ -250,9 +358,3 @@ export function OrangTuaDashboardClient() {
     </div>
   );
 }
-
-    
-
-
-
-    
