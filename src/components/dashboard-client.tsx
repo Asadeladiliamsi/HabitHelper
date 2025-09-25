@@ -19,7 +19,6 @@ import {
 } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { overallHabitData } from '@/lib/mock-data';
 import {
   Sunrise,
   BookOpen,
@@ -27,16 +26,12 @@ import {
   Users,
   TrendingUp,
   Activity,
-  ArrowUp,
-  ArrowDown,
-  Minus,
   Utensils,
   HandHelping,
   Church,
   Bed,
 } from 'lucide-react';
 import type { Student, Habit } from '@/lib/types';
-import { cn } from '@/lib/utils';
 import { useStudent } from '@/contexts/student-context';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
@@ -49,8 +44,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
-import { HABIT_DEFINITIONS } from '@/lib/types';
-
 
 const habitIcons: { [key: string]: React.ReactNode } = {
   'Bangun Pagi': <Sunrise className="h-5 w-5 text-yellow-500" />,
@@ -105,28 +98,55 @@ export function DashboardClient() {
     return totalScore / student.habits.length;
   };
 
-  const getChange = (habit: any) => {
-    const change = habit['Minggu Ini'] - habit['Minggu Lalu'];
-    if (change > 0)
-      return (
-        <span className="flex items-center text-green-600">
-          <ArrowUp className="h-4 w-4" />
-          {change}%
-        </span>
-      );
-    if (change < 0)
-      return (
-        <span className="flex items-center text-red-600">
-          <ArrowDown className="h-4 w-4" />
-          {Math.abs(change)}%
-        </span>
-      );
-    return (
-      <span className="flex items-center text-muted-foreground">
-        <Minus className="h-4 w-4" />
-      </span>
-    );
-  };
+  const overallHabitAverages = useMemo(() => {
+    if (filteredStudents.length === 0) {
+      return [];
+    }
+
+    const habitData: { [habitName: string]: { [subHabitName: string]: { total: number, count: number } } } = {};
+
+    // Initialize the structure
+    filteredStudents[0].habits.forEach(habit => {
+      habitData[habit.name] = {};
+      habit.subHabits.forEach(subHabit => {
+        habitData[habit.name][subHabit.name] = { total: 0, count: 0 };
+      });
+    });
+
+    // Aggregate scores
+    for (const student of filteredStudents) {
+      if (!student.habits) continue;
+      for (const habit of student.habits) {
+        if (!habit.subHabits) continue;
+        for (const subHabit of habit.subHabits) {
+          if (habitData[habit.name] && habitData[habit.name][subHabit.name]) {
+            habitData[habit.name][subHabit.name].total += subHabit.score;
+            habitData[habit.name][subHabit.name].count++;
+          }
+        }
+      }
+    }
+
+    // Calculate averages
+    const result = Object.entries(habitData).map(([habitName, subHabits]) => {
+      const subHabitAverages = Object.entries(subHabits).map(([subHabitName, data]) => ({
+        name: subHabitName,
+        averageScore: data.count > 0 ? data.total / data.count : 0,
+      }));
+
+      const overallHabitAverage = subHabitAverages.reduce((acc, curr) => acc + curr.averageScore, 0) / (subHabitAverages.length || 1);
+      
+      return {
+        name: habitName,
+        averageScore: overallHabitAverage,
+        subHabits: subHabitAverages,
+      };
+    });
+
+    return result;
+
+  }, [filteredStudents]);
+
 
   return (
     <>
@@ -180,46 +200,49 @@ export function DashboardClient() {
 
        <Card>
         <CardHeader>
-          <CardTitle>{t.overallHabitProgress}</CardTitle>
+          <CardTitle>Rata-rata Perkembangan Kebiasaan Umum</CardTitle>
           <CardDescription>
-            Ringkasan progres umum berdasarkan data minggu ini dan minggu lalu.
+            Skor rata-rata untuk setiap aspek kebiasaan di seluruh siswa yang ditampilkan.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t.habit}</TableHead>
-                <TableHead className="text-center">{t.lastWeek}</TableHead>
-                <TableHead className="text-center">{t.thisWeek}</TableHead>
-                <TableHead className="text-center">{t.change}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {overallHabitData.map((habit, index) => (
-                <TableRow key={index}>
-                  <TableCell className="font-medium">
-                    {habitTranslationMapping[habit.name] || habit.name}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {habit['Minggu Lalu']}%
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <Progress
-                        value={habit['Minggu Ini']}
-                        className="w-24"
-                      />
-                      <span>{habit['Minggu Ini']}%</span>
+           <Accordion type="multiple" className="w-full space-y-2">
+            {overallHabitAverages.map((habit, index) => (
+              <AccordionItem value={habit.name} key={index} className="border rounded-md px-4">
+                 <AccordionTrigger className="hover:no-underline py-3">
+                    <div className="flex items-center gap-3 w-full">
+                       {habitIcons[habit.name]}
+                      <div className="flex-1 text-left">
+                        <span className="font-medium">{habitTranslationMapping[habit.name] || habit.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2 pr-2">
+                         <span className='text-sm text-muted-foreground'>Rata-rata Kelas:</span>
+                         <Progress value={(habit.averageScore / 4) * 100} className="w-24 h-2" />
+                         <span className="font-mono text-lg font-bold">{habit.averageScore.toFixed(1)}</span>
+                      </div>
                     </div>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {getChange(habit)}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                 </AccordionTrigger>
+                 <AccordionContent>
+                    <div className="pl-8 pr-4 pt-2 pb-4 space-y-3">
+                      <h4 className="font-semibold text-sm mb-2">Rincian Rata-rata Aspek:</h4>
+                      {habit.subHabits && habit.subHabits.length > 0 ? (
+                          habit.subHabits.map(subHabit => (
+                              <div key={subHabit.name} className="flex items-center justify-between text-xs">
+                                  <p className="text-muted-foreground flex-1 pr-4">{subHabit.name}</p>
+                                  <div className="flex items-center gap-2 w-28">
+                                      <Progress value={(subHabit.averageScore / 4) * 100} className="w-16 h-1.5" />
+                                      <span className="font-mono text-xs font-semibold">{subHabit.averageScore.toFixed(2)}</span>
+                                  </div>
+                              </div>
+                          ))
+                      ) : (
+                          <p className="text-xs text-muted-foreground">Tidak ada aspek yang tercatat.</p>
+                      )}
+                    </div>
+                 </AccordionContent>
+              </AccordionItem>
+            ))}
+           </Accordion>
         </CardContent>
       </Card>
 
