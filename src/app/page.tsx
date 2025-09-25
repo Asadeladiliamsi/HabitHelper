@@ -84,7 +84,7 @@ export default function LandingPage() {
             <span className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white font-bold text-lg">
               K
             </span>
-            <span className="font-bold text-xl">Kalih.Spensa id</span>
+            <span className="font-bold text-xl">Kaih.Spensa id</span>
           </div>
           <div className="flex items-center space-x-4">
             <Link href="#features" className="text-primary-foreground font-medium hover:underline hidden sm:block">
@@ -121,7 +121,7 @@ export default function LandingPage() {
               Pantau Kemajuan Siswa dengan Mulus
             </h1>
             <p className="max-w-3xl mx-auto text-lg text-foreground mb-10">
-              Kalih.Spensa id menyediakan alat yang kuat bagi para pendidik dan orang tua untuk melacak pengembangan karakter, mengidentifikasi tren, dan membina lingkungan belajar yang mendukung. Dapatkan wawasan berharga tentang kebiasaan dan kemajuan siswa.
+              Kaih.Spensa id menyediakan alat yang kuat bagi para pendidik dan orang tua untuk melacak pengembangan karakter, mengidentifikasi tren, dan membina lingkungan belajar yang mendukung. Dapatkan wawasan berharga tentang kebiasaan dan kemajuan siswa.
             </p>
             <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
               <Link href="/reports">
@@ -190,7 +190,7 @@ export default function LandingPage() {
               Siap Meningkatkan Perkembangan Siswa?
             </h2>
             <p className="text-lg mb-10 opacity-90">
-              Bergabunglah dengan para pendidik dan orang tua yang memanfaatkan Kalih.Spensa id untuk membangun fondasi yang lebih kuat bagi kesuksesan siswa.
+              Bergabunglah dengan para pendidik dan orang tua yang memanfaatkan Kaih.Spensa id untuk membangun fondasi yang lebih kuat bagi kesuksesan siswa.
             </p>
             <Link href="/login">
                 <Button
@@ -207,7 +207,7 @@ export default function LandingPage() {
 
       <footer className="bg-card py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center text-muted-foreground">
-          <p>© {new Date().getFullYear()} Kalih.Spensa id | Memberdayakan Pengembangan Karakter. Hak Cipta Dilindungi Undang-Undang.</p>
+          <p>© {new Date().getFullYear()} Kaih.Spensa id | Memberdayakan Pengembangan Karakter. Hak Cipta Dilindungi Undang-Undang.</p>
         </div>
       </footer>
     </div>
