@@ -6,6 +6,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import {
@@ -39,7 +40,14 @@ import { cn } from '@/lib/utils';
 import { useStudent } from '@/contexts/student-context';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
-import React from 'react';
+import React, { useState, useMemo } from 'react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const habitIcons: { [key: string]: React.ReactNode } = {
   'Bangun Pagi': <Sunrise className="h-5 w-5 text-yellow-500" />,
@@ -54,6 +62,8 @@ const habitIcons: { [key: string]: React.ReactNode } = {
 export function DashboardClient() {
   const { students } = useStudent();
   const { language } = useLanguage();
+  const [selectedClass, setSelectedClass] = useState('all');
+
   const t = translations[language]?.dashboardPage || translations.en.dashboardPage;
   const tHabits =
     translations[language]?.landingPage.habits ||
@@ -68,6 +78,19 @@ export function DashboardClient() {
     'Bermasyarakat': tHabits.bermasyarakat.name,
     'Tidur Cepat': tHabits.tidurCepat.name,
   };
+
+  const classList = useMemo(() => {
+    const classes = new Set(students.map(s => s.class));
+    return ['all', ...Array.from(classes).sort()];
+  }, [students]);
+
+  const filteredStudents = useMemo(() => {
+    if (selectedClass === 'all') {
+      return students;
+    }
+    return students.filter(student => student.class === selectedClass);
+  }, [students, selectedClass]);
+
 
   return (
     <>
@@ -85,8 +108,10 @@ export function DashboardClient() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{students.length}</div>
-            <p className="text-xs text-muted-foreground">{t.activeStudents}</p>
+            <div className="text-2xl font-bold">{filteredStudents.length}</div>
+            <p className="text-xs text-muted-foreground">
+              {selectedClass === 'all' ? 'Siswa aktif terpantau' : `Siswa di kelas ${selectedClass}`}
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -190,7 +215,26 @@ export function DashboardClient() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{t.individualProgress}</CardTitle>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <CardTitle>{t.individualProgress}</CardTitle>
+                <CardDescription>
+                  Menampilkan progres individu untuk siswa di kelas yang dipilih.
+                </CardDescription>
+            </div>
+            <Select value={selectedClass} onValueChange={setSelectedClass}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Pilih kelas..." />
+              </SelectTrigger>
+              <SelectContent>
+                {classList.map(className => (
+                  <SelectItem key={className} value={className}>
+                    {className === 'all' ? 'Semua Kelas' : `Kelas ${className}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -217,7 +261,7 @@ export function DashboardClient() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {students.map((student: Student) => {
+              {filteredStudents.map((student: Student) => {
                 if (!student.habits) return null;
                 const totalScore = student.habits.reduce((acc, h) => {
                   if (!h.subHabits || h.subHabits.length === 0) return acc;
@@ -291,5 +335,3 @@ export function DashboardClient() {
     </>
   );
 }
-
-    
