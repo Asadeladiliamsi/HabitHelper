@@ -2,22 +2,25 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, serverTimestamp, getDocs, where, setDoc, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, serverTimestamp, getDocs, where, setDoc, writeBatch, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Student, Habit, SubHabit, HabitEntry } from '@/lib/types';
 import { useAuth } from './auth-context';
 import { HABIT_DEFINITIONS } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
+import { startOfDay, endOfDay } from 'date-fns';
 
 interface StudentContextType {
   students: Student[];
   loading: boolean;
+  dateLoading: boolean;
   addStudent: (newStudent: Omit<Student, 'id' | 'habits' | 'avatarUrl'>) => Promise<void>;
   updateStudent: (studentId: string, updatedData: Partial<Omit<Student, 'id' | 'habits' | 'avatarUrl'>>) => Promise<void>;
   deleteStudent: (studentId: string) => Promise<void>;
   updateHabitScore: (studentId: string, habitId: string, subHabitId: string, newScore: number) => Promise<void>;
   addHabitEntry: (data: Omit<HabitEntry, 'id' | 'timestamp' | 'recordedBy'>) => Promise<void>;
   linkParentToStudent: (studentId: string, parentId: string, parentName: string) => Promise<void>;
+  getHabitsForDate: (studentId: string, date: Date) => Habit[];
 }
 
 const StudentContext = createContext<StudentContextType | undefined>(undefined);
@@ -25,7 +28,10 @@ const StudentContext = createContext<StudentContextType | undefined>(undefined);
 export const StudentProvider = ({ children }: { children: React.React.ReactNode }) => {
   const { user, userProfile, loading: authLoading } = useAuth();
   const [students, setStudents] = useState<Student[]>([]);
+  const [habitEntries, setHabitEntries] = useState<HabitEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dateLoading, setDateLoading] = useState(false);
+  const [lastFetchedDate, setLastFetchedDate] = useState<Date | null>(null);
 
   useEffect(() => {
     if (authLoading || !user) {
@@ -95,7 +101,7 @@ export const StudentProvider = ({ children }: { children: React.React.ReactNode 
       subHabits: subHabitNames.map((subHabitName, subHabitIndex) => ({
         id: `${habitIndex + 1}-${subHabitIndex + 1}`,
         name: subHabitName,
-        score: 4, 
+        score: 0, 
       })),
     }));
 
@@ -137,7 +143,6 @@ export const StudentProvider = ({ children }: { children: React.React.ReactNode 
     
     const batch = writeBatch(db);
 
-    // 1. Create a new entry in the 'habit_entries' collection
     const habitEntryRef = doc(collection(db, 'habit_entries'));
     batch.set(habitEntryRef, {
       ...data,
@@ -145,12 +150,10 @@ export const StudentProvider = ({ children }: { children: React.React.ReactNode 
       timestamp: serverTimestamp()
     });
 
-    // 2. Update the latest score in the student's document for quick access
     const studentDocRef = doc(db, 'students', data.studentId);
     const studentToUpdate = students.find(s => s.id === data.studentId);
     if (!studentToUpdate) throw new Error("Student not found.");
     
-    // Deep copy habits to avoid direct state mutation
     const updatedHabits: Habit[] = JSON.parse(JSON.stringify(studentToUpdate.habits || []));
     const habitToUpdate = updatedHabits.find(h => h.name === data.habitName);
 
@@ -174,14 +177,11 @@ export const StudentProvider = ({ children }: { children: React.React.ReactNode 
        batch.update(studentDocRef, { habits: updatedHabits });
     }
 
-    // Commit both operations atomically
     await batch.commit();
 };
 
 
   const updateHabitScore = async (studentId: string, habitId: string, subHabitId: string, newScore: number) => {
-     // This function is now less relevant as we add entries instead of just updating.
-     // For now, it will update the summary score in the student document.
     if (!user) throw new Error("Authentication required");
 
     const studentToUpdate = students.find(s => s.id === studentId);
@@ -210,6 +210,77 @@ export const StudentProvider = ({ children }: { children: React.React.ReactNode 
     await updateDoc(studentDocRef, { parentId, parentName });
   }
 
+  const getHabitsForDate = useCallback((studentId: string, date: Date): Habit[] => {
+      const student = students.find(s => s.id === studentId);
+      if (!student) return [];
+
+      const relevantEntries = habitEntries.filter(entry => entry.studentId === studentId && entry.date.toDateString() === date.toDateString());
+
+      const habitsFromDefs: Habit[] = Object.entries(HABIT_DEFINITIONS).map(([habitName, subHabitNames], habitIndex) => ({
+        id: `${habitIndex + 1}`,
+        name: habitName,
+        subHabits: subHabitNames.map((subHabitName, subHabitIndex) => {
+          const entry = relevantEntries.find(e => e.habitName === habitName && e.subHabitName === subHabitName);
+          return {
+            id: `${habitIndex + 1}-${subHabitIndex + 1}`,
+            name: subHabitName,
+            score: entry ? entry.score : 0, // Default to 0 if no entry found
+          };
+        }),
+      }));
+      return habitsFromDefs;
+
+  }, [students, habitEntries]);
+
+  const fetchHabitEntriesForDate = useCallback(async (date: Date) => {
+      if (!user) return;
+      // Prevent refetching if date is the same
+      if (lastFetchedDate && lastFetchedDate.toDateString() === date.toDateString()) return;
+
+      setDateLoading(true);
+      
+      const studentIds = students.map(s => s.id);
+      if (studentIds.length === 0) {
+        setDateLoading(false);
+        return;
+      }
+      
+      const q = query(
+          collection(db, 'habit_entries'), 
+          where('studentId', 'in', studentIds),
+          where('date', '>=', startOfDay(date)),
+          where('date', '<=', endOfDay(date))
+      );
+
+      try {
+          const querySnapshot = await getDocs(q);
+          const entries: HabitEntry[] = [];
+          querySnapshot.forEach(doc => {
+              const data = doc.data();
+              entries.push({
+                  id: doc.id,
+                  ...data,
+                  date: (data.date as Timestamp).toDate(),
+              } as HabitEntry);
+          });
+          setHabitEntries(entries);
+          setLastFetchedDate(date);
+      } catch (error) {
+          console.error("Error fetching habit entries for date:", error);
+      } finally {
+          setDateLoading(false);
+      }
+  }, [user, students, lastFetchedDate]);
+
+
+  useEffect(() => {
+    // This effect can be triggered to pre-fetch today's data or when the student list changes
+    if (students.length > 0) {
+        fetchHabitEntriesForDate(new Date());
+    }
+  }, [students, fetchHabitEntriesForDate]);
+  
+
   if (authLoading || loading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -221,12 +292,14 @@ export const StudentProvider = ({ children }: { children: React.React.ReactNode 
   const contextValue = {
     students,
     loading,
+    dateLoading,
     addStudent,
     updateStudent,
     deleteStudent,
     updateHabitScore,
     addHabitEntry,
-    linkParentToStudent
+    linkParentToStudent,
+    getHabitsForDate,
   };
 
   return (
@@ -243,4 +316,3 @@ export const useStudent = () => {
   }
   return context;
 };
-
