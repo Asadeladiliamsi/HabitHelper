@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useAuth } from '@/contexts/auth-context';
@@ -77,20 +76,18 @@ export function OrangTuaDashboardClient() {
   }, [parentStudents, selectedStudentId]);
 
   useEffect(() => {
-    // This fetches data for the single date picker (daily details)
     if (selectedStudentId) {
-      const unsubscribe = fetchHabitEntriesForRange({ from: selectedDate, to: selectedDate });
-      return () => unsubscribe();
-    }
-  }, [selectedDate, selectedStudentId, fetchHabitEntriesForRange]);
+      // This fetches data for the single date picker (daily details)
+      const unsubscribeDaily = fetchHabitEntriesForRange({ from: selectedDate, to: selectedDate });
+      // This fetches data for the date range picker (chart)
+      const unsubscribeRange = fetchHabitEntriesForRange(dateRange);
 
-  useEffect(() => {
-    // This fetches data for the date range picker (chart)
-    if (selectedStudentId) {
-        const unsubscribe = fetchHabitEntriesForRange(dateRange);
-        return () => unsubscribe();
+      return () => {
+        unsubscribeDaily();
+        unsubscribeRange();
+      };
     }
-  }, [dateRange, selectedStudentId, fetchHabitEntriesForRange]);
+  }, [selectedDate, dateRange, selectedStudentId, fetchHabitEntriesForRange]);
   
   const selectedStudentData = parentStudents.find(s => s.id === selectedStudentId);
   const habitsForSelectedDate = selectedStudentData ? getHabitsForDate(selectedStudentData.id, selectedDate) : [];
@@ -117,13 +114,18 @@ export function OrangTuaDashboardClient() {
       
       const result: { date: string, [key: string]: any } = { date: formattedDate };
       
-      habitsForDay.forEach(habit => {
-        const validSubHabits = habit.subHabits.filter(sh => sh.score > 0);
-        if (validSubHabits.length > 0) {
-          const habitAvg = validSubHabits.reduce((sum, sh) => sum + sh.score, 0) / validSubHabits.length;
-          result[habit.name] = habitAvg;
+      Object.keys(HABIT_DEFINITIONS).forEach(habitName => {
+        const habit = habitsForDay.find(h => h.name === habitName);
+        if (habit) {
+          const validSubHabits = habit.subHabits.filter(sh => sh.score > 0);
+          if (validSubHabits.length > 0) {
+            const habitAvg = validSubHabits.reduce((sum, sh) => sum + sh.score, 0) / validSubHabits.length;
+            result[habitName] = habitAvg;
+          } else {
+            result[habitName] = 0;
+          }
         } else {
-          result[habit.name] = 0;
+          result[habitName] = 0;
         }
       });
       return result;
@@ -287,7 +289,7 @@ export function OrangTuaDashboardClient() {
                 </div>
                 </CardHeader>
                 <CardContent>
-                {dateLoading ? (
+                {dateLoading && habitsForSelectedDate.length === 0 ? (
                 <div className="flex h-48 items-center justify-center">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
@@ -298,6 +300,8 @@ export function OrangTuaDashboardClient() {
                         const habitAverage = (!habit.subHabits || habit.subHabits.length === 0 || habit.subHabits.every(sh => sh.score === 0))
                             ? 0 
                             : habit.subHabits.reduce((acc, sub) => acc + sub.score, 0) / (habit.subHabits.filter(sh => sh.score > 0).length || 1);
+
+                        if (habitAverage === 0) return null;
 
                         return (
                             <AccordionItem value={habit.id} key={habit.id}>
@@ -313,8 +317,8 @@ export function OrangTuaDashboardClient() {
                                 </AccordionTrigger>
                                 <AccordionContent>
                                     <div className="pl-8 pr-4 space-y-3">
-                                        {habit.subHabits && habit.subHabits.length > 0 ? (
-                                            habit.subHabits.map(subHabit => (
+                                        {habit.subHabits && habit.subHabits.filter(sh => sh.score > 0).length > 0 ? (
+                                            habit.subHabits.filter(sh => sh.score > 0).map(subHabit => (
                                                 <div key={subHabit.id} className="flex items-center justify-between text-sm">
                                                     <p className="text-muted-foreground flex-1 pr-4">{subHabit.name}</p>
                                                     <div className="flex items-center gap-2 w-28">
@@ -330,7 +334,7 @@ export function OrangTuaDashboardClient() {
                                 </AccordionContent>
                             </AccordionItem>
                         )
-                    })}
+                    }).filter(Boolean)}
                 </Accordion>
                 
                 <div className="flex justify-between items-center bg-muted/50 p-4 rounded-lg font-bold">
