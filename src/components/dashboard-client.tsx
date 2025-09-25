@@ -105,6 +105,28 @@ export function DashboardClient() {
     return totalScore / student.habits.length;
   };
 
+  const getChange = (habit: any) => {
+    const change = habit['Minggu Ini'] - habit['Minggu Lalu'];
+    if (change > 0)
+      return (
+        <span className="flex items-center text-green-600">
+          <ArrowUp className="h-4 w-4" />
+          {change}%
+        </span>
+      );
+    if (change < 0)
+      return (
+        <span className="flex items-center text-red-600">
+          <ArrowDown className="h-4 w-4" />
+          {Math.abs(change)}%
+        </span>
+      );
+    return (
+      <span className="flex items-center text-muted-foreground">
+        <Minus className="h-4 w-4" />
+      </span>
+    );
+  };
 
   return (
     <>
@@ -156,48 +178,48 @@ export function DashboardClient() {
         </Card>
       </div>
 
-      <Card>
+       <Card>
         <CardHeader>
           <CardTitle>{t.overallHabitProgress}</CardTitle>
-          <CardDescription>Klik pada setiap kebiasaan untuk melihat rincian aspeknya.</CardDescription>
+          <CardDescription>
+            Ringkasan progres umum berdasarkan data minggu ini dan minggu lalu.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <Accordion type="multiple" className="w-full space-y-2">
-            {overallHabitData.map(habit => {
-                const translatedName = habitTranslationMapping[habit.name] || habit.name;
-                const aspects = HABIT_DEFINITIONS[habit.name] || [];
-
-                return (
-                  <AccordionItem value={habit.name} key={habit.name} className="border rounded-md px-4">
-                    <AccordionTrigger className="hover:no-underline py-3">
-                       <div className="flex items-center gap-3 w-full">
-                          {habitIcons[habit.name]}
-                          <span className="font-medium flex-1 text-left">{translatedName}</span>
-                           <div className="flex items-center gap-2 pr-2">
-                               <Progress
-                                value={habit['Minggu Ini']}
-                                className="w-24 h-2"
-                                />
-                               <span className="font-mono text-lg font-bold">
-                                {habit['Minggu Ini']}%
-                               </span>
-                           </div>
-                       </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <div className="pl-8 pr-4 pt-2 pb-4 space-y-2">
-                        <h4 className="font-semibold text-sm mb-2 text-muted-foreground">Aspek yang dinilai:</h4>
-                        <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                          {aspects.map((aspect, index) => (
-                            <li key={index}>{aspect}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                );
-              })}
-          </Accordion>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t.habit}</TableHead>
+                <TableHead className="text-center">{t.lastWeek}</TableHead>
+                <TableHead className="text-center">{t.thisWeek}</TableHead>
+                <TableHead className="text-center">{t.change}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {overallHabitData.map((habit, index) => (
+                <TableRow key={index}>
+                  <TableCell className="font-medium">
+                    {habitTranslationMapping[habit.name] || habit.name}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {habit['Minggu Lalu']}%
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      <Progress
+                        value={habit['Minggu Ini']}
+                        className="w-24"
+                      />
+                      <span>{habit['Minggu Ini']}%</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {getChange(habit)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 
