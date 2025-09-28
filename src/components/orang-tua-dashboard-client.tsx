@@ -29,7 +29,7 @@ import { id } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { DateRange } from 'react-day-picker';
 import { DateRangePicker } from './ui/date-range-picker';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Bar, BarChart } from 'recharts';
 import { HABIT_DEFINITIONS } from '@/lib/types';
 
 
@@ -101,6 +101,16 @@ export function OrangTuaDashboardClient() {
     'Bermasyarakat': tHabits.bermasyarakat.name,
     'Tidur Cepat': tHabits.tidurCepat.name,
   };
+  
+  const shortHabitNames: Record<string, string> = {
+    'Bangun Pagi': 'Pagi',
+    'Taat Beribadah': 'Ibadah',
+    'Rajin Olahraga': 'Olahraga',
+    'Makan Sehat & Bergizi': 'Makan',
+    'Gemar Belajar': 'Belajar',
+    'Bermasyarakat': 'Sosial',
+    'Tidur Cepat': 'Tidur',
+  };
 
   const chartData = useMemo(() => {
     if (!dateRange?.from || !selectedStudentData) return [];
@@ -171,7 +181,28 @@ export function OrangTuaDashboardClient() {
     return totalScore / (validHabits.length || 1);
   };
   
+  const prepareDailySummaryChartData = (habits: Habit[]) => {
+    if (!habits || habits.length === 0) return [];
+    
+    return Object.keys(HABIT_DEFINITIONS).map(habitName => {
+        const habit = habits.find(h => h.name === habitName);
+        let average = 0;
+        if (habit) {
+            const subHabitsWithScores = habit.subHabits.filter(sh => sh.score > 0);
+            if (subHabitsWithScores.length > 0) {
+                average = subHabitsWithScores.reduce((acc, sub) => acc + sub.score, 0) / subHabitsWithScores.length;
+            }
+        }
+        return {
+            name: shortHabitNames[habitName] || habitName,
+            average,
+            fill: habitColors[habitName] || '#8884d8'
+        };
+    }).filter(d => d.average > 0);
+  };
+  
   const averageScore = calculateOverallAverage(habitsForSelectedDate);
+  const dailySummaryData = prepareDailySummaryChartData(habitsForSelectedDate);
 
   return (
     <div className="flex flex-col gap-6">
@@ -295,21 +326,38 @@ export function OrangTuaDashboardClient() {
                 </div>
                 ) : habitsForSelectedDate.length > 0 && habitsForSelectedDate.some(h => h.subHabits.some(sh => sh.score > 0)) ? (
                 <div className="space-y-4">
-                    <div className="bg-muted/50 p-4 rounded-lg">
-                        <div className="flex justify-between items-center font-semibold mb-2">
-                            <span>Rata-rata Keseluruhan</span>
-                            <span className="font-mono text-2xl">{averageScore.toFixed(1)}</span>
+                     {dailySummaryData.length > 0 ? (
+                        <div className="bg-muted/50 p-4 rounded-lg">
+                            <h4 className="font-semibold text-sm mb-2 text-center">Ringkasan Rata-Rata per Kebiasaan</h4>
+                             <ResponsiveContainer width="100%" height={200}>
+                                <BarChart data={dailySummaryData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                    <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
+                                    <YAxis domain={[0, 4]} allowDecimals={false} fontSize={12} tickLine={false} axisLine={false}/>
+                                    <Tooltip
+                                        cursor={{fill: 'hsla(var(--muted))'}}
+                                        contentStyle={{
+                                            background: 'hsl(var(--background))',
+                                            border: '1px solid hsl(var(--border))',
+                                            borderRadius: 'var(--radius)',
+                                            fontSize: '12px',
+                                        }}
+                                        labelStyle={{fontWeight: 'bold'}}
+                                    />
+                                    <Bar dataKey="average" name="Rata-rata" radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
                         </div>
-                        <Progress value={(averageScore / 4) * 100} className="w-full h-2.5" />
-                    </div>
+                    ) : (
+                         <p className="text-sm text-muted-foreground text-center py-4">Tidak ada data untuk ditampilkan pada grafik ringkasan.</p>
+                    )}
 
                     <Accordion type="multiple" className="w-full">
                     {habitsForSelectedDate.map((habit) => {
-                        const habitAverage = (!habit.subHabits || habit.subHabits.length === 0 || habit.subHabits.every(sh => sh.score === 0))
-                            ? 0 
-                            : habit.subHabits.reduce((acc, sub) => acc + sub.score, 0) / (habit.subHabits.filter(sh => sh.score > 0).length || 1);
+                        const subHabitsWithScores = habit.subHabits.filter(sh => sh.score > 0);
+                        if (subHabitsWithScores.length === 0) return null;
 
-                        if (habitAverage === 0) return null;
+                        const habitAverage = subHabitsWithScores.reduce((acc, sub) => acc + sub.score, 0) / subHabitsWithScores.length;
 
                         return (
                             <AccordionItem value={habit.id} key={habit.id}>

@@ -63,6 +63,8 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  BarChart,
+  Bar,
 } from 'recharts';
 import { DateRange } from 'react-day-picker';
 import { DateRangePicker } from './ui/date-range-picker';
@@ -168,6 +170,16 @@ export function DashboardClient() {
     'Bermasyarakat': tHabits.bermasyarakat.name,
     'Tidur Cepat': tHabits.tidurCepat.name,
   };
+  
+  const shortHabitNames: Record<string, string> = {
+    'Bangun Pagi': 'Pagi',
+    'Taat Beribadah': 'Ibadah',
+    'Rajin Olahraga': 'Olahraga',
+    'Makan Sehat & Bergizi': 'Makan',
+    'Gemar Belajar': 'Belajar',
+    'Bermasyarakat': 'Sosial',
+    'Tidur Cepat': 'Tidur',
+  };
 
   const classList = useMemo(() => {
     const classes = new Set(students.map(s => s.class));
@@ -188,6 +200,26 @@ export function DashboardClient() {
     }, 0);
 
     return totalScore / validHabits.length;
+  };
+  
+  const prepareDailySummaryChartData = (habits: Habit[]) => {
+    if (!habits || habits.length === 0) return [];
+    
+    return Object.keys(HABIT_DEFINITIONS).map(habitName => {
+        const habit = habits.find(h => h.name === habitName);
+        let average = 0;
+        if (habit) {
+            const subHabitsWithScores = habit.subHabits.filter(sh => sh.score > 0);
+            if (subHabitsWithScores.length > 0) {
+                average = subHabitsWithScores.reduce((acc, sub) => acc + sub.score, 0) / subHabitsWithScores.length;
+            }
+        }
+        return {
+            name: shortHabitNames[habitName] || habitName,
+            average,
+            fill: habitColors[habitName] || '#8884d8'
+        };
+    }).filter(d => d.average > 0);
   };
 
   const chartData = useMemo(() => {
@@ -401,6 +433,7 @@ export function DashboardClient() {
               const studentHabitsOnDate = getHabitsForStudentOnDate(student.id, singleDate);
               const overallAverage = calculateOverallAverage(studentHabitsOnDate);
               const isLocked = student.lockedDates?.includes(format(singleDate, 'yyyy-MM-dd'));
+              const dailySummaryData = prepareDailySummaryChartData(studentHabitsOnDate);
 
               return (
                 <AccordionItem value={student.id} key={student.id} className="border rounded-md px-4">
@@ -441,13 +474,33 @@ export function DashboardClient() {
                    </AccordionTrigger>
                    <AccordionContent>
                       <div className="pl-12 pr-4 pt-2 pb-2 space-y-3">
-                        <div className="bg-muted/50 p-4 rounded-lg">
-                            <div className="flex justify-between items-center font-semibold mb-2">
-                                <span>Rata-rata Keseluruhan</span>
-                                <span className="font-mono text-xl">{overallAverage.toFixed(1)}</span>
+                        {dailySummaryData.length > 0 ? (
+                            <div className="bg-muted/50 p-4 rounded-lg">
+                                <h4 className="font-semibold text-sm mb-2 text-center">Ringkasan Rata-Rata per Kebiasaan</h4>
+                                <ResponsiveContainer width="100%" height={150}>
+                                    <BarChart data={dailySummaryData} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                        <XAxis dataKey="name" fontSize={10} tickLine={false} axisLine={false} />
+                                        <YAxis domain={[0, 4]} allowDecimals={false} fontSize={10} tickLine={false} axisLine={false}/>
+                                        <Tooltip
+                                            cursor={{fill: 'hsla(var(--muted))'}}
+                                            contentStyle={{
+                                                background: 'hsl(var(--background))',
+                                                border: '1px solid hsl(var(--border))',
+                                                borderRadius: 'var(--radius)',
+                                                fontSize: '12px',
+                                            }}
+                                            labelStyle={{fontWeight: 'bold'}}
+                                         />
+                                        <Bar dataKey="average" name="Rata-rata" radius={[4, 4, 0, 0]} />
+                                    </BarChart>
+                                </ResponsiveContainer>
                             </div>
-                            <Progress value={(overallAverage / 4) * 100} className="w-full h-2.5" />
-                        </div>
+                        ) : (
+                          <div className="bg-muted/50 p-4 rounded-lg text-center">
+                            <p className="text-sm text-muted-foreground">Tidak ada data untuk ditampilkan pada grafik ringkasan.</p>
+                          </div>
+                        )}
 
                         <h4 className="font-semibold text-sm pt-2">Rincian Kebiasaan:</h4>
                         {studentHabitsOnDate.some(h => h.subHabits.some(sh => sh.score > 0)) ? (
