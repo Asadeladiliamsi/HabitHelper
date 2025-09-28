@@ -8,7 +8,7 @@ export interface SubHabit {
 }
 
 export interface Habit {
-  id: string;
+  id:string;
   name: string;
   subHabits: SubHabit[];
 }
@@ -24,6 +24,7 @@ export interface Student extends DocumentData {
   parentId?: string;
   parentName?: string;
   linkedUserUid?: string;
+  lockedDates?: string[]; // YYYY-MM-DD format
 }
 
 export const HABIT_DEFINITIONS: Record<string, string[]> = {
@@ -110,7 +111,7 @@ export const HABIT_DEFINITIONS: Record<string, string[]> = {
     'Memilih untuk tidur lebih awal agar dapat bangun lebih pagi.',
     'Menunjukkan sikap positif terhadap tidur dan memahami pentingnya tidur yang cukup.',
     'Menjaga kesehatan dan dapat menjalani aktivitas dengan baik setelah tidur yang cukup.',
-  ]
+  ],
 };
 
 export const HABIT_NAMES = Object.keys(HABIT_DEFINITIONS);

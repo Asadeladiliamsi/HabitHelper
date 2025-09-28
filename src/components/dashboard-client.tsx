@@ -31,6 +31,8 @@ import {
   Church,
   Bed,
   Calendar as CalendarIcon,
+  Lock,
+  Unlock,
 } from 'lucide-react';
 import type { Student, Habit, SubHabit, HabitEntry } from '@/lib/types';
 import { useStudent } from '@/contexts/student-context';
@@ -65,6 +67,7 @@ import {
 } from 'recharts';
 import { DateRange } from 'react-day-picker';
 import { DateRangePicker } from './ui/date-range-picker';
+import { useToast } from '@/hooks/use-toast';
 
 const habitIcons: { [key: string]: React.ReactNode } = {
   'Bangun Pagi': <Sunrise className="h-5 w-5 text-yellow-500" />,
@@ -88,9 +91,10 @@ const habitColors: { [key: string]: string } = {
 
 
 export function DashboardClient() {
-  const { students, getHabitsForDate, habitEntries, fetchHabitEntriesForRange, dateLoading } = useStudent();
+  const { students, getHabitsForDate, habitEntries, fetchHabitEntriesForRange, dateLoading, toggleDateLock } = useStudent();
   const { language } = useLanguage();
   const [selectedClass, setSelectedClass] = useState('all');
+  const { toast } = useToast();
   
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: subDays(new Date(), 6),
@@ -120,6 +124,28 @@ export function DashboardClient() {
     const unsubscribe = fetchHabitEntriesForRange(dateRange);
     return () => unsubscribe();
   }, [dateRange, fetchHabitEntriesForRange]);
+
+  const handleLockAll = async () => {
+    const date = singleDate;
+    if (!date) return;
+
+    try {
+        await Promise.all(
+            filteredStudents.map(student => toggleDateLock(student.id, date, true))
+        );
+        toast({
+            title: 'Sukses',
+            description: `Nilai untuk tanggal ${format(date, 'PPP', { locale: id })} berhasil dikunci untuk semua siswa di kelas ${selectedClass === 'all' ? 'ini' : selectedClass}.`,
+        });
+    } catch (error) {
+        console.error("Failed to lock all scores:", error);
+        toast({
+            variant: "destructive",
+            title: "Gagal",
+            description: "Terjadi kesalahan saat mencoba mengunci semua nilai.",
+        });
+    }
+  };
 
   const getHabitsForStudentOnDate = useCallback((studentId: string, date: Date): Habit[] => {
     return getHabitsForDate(studentId, date);
@@ -314,7 +340,7 @@ export function DashboardClient() {
                   Progres siswa untuk tanggal: {format(singleDate, 'PPP', { locale: id })}.
                 </CardDescription>
             </div>
-            <div className='flex gap-2'>
+            <div className='flex flex-wrap items-center gap-2'>
               <Popover>
                 <PopoverTrigger asChild>
                     <Button
@@ -349,6 +375,9 @@ export function DashboardClient() {
                   ))}
                 </SelectContent>
               </Select>
+              <Button onClick={handleLockAll} size="sm" variant="outline">
+                <Lock className="mr-2 h-4 w-4" /> Kunci Nilai Hari Ini
+              </Button>
             </div>
           </div>
         </CardHeader>
@@ -362,11 +391,24 @@ export function DashboardClient() {
             {filteredStudents.map((student: Student) => {
               const studentHabitsOnDate = getHabitsForStudentOnDate(student.id, singleDate);
               const overallAverage = calculateOverallAverage(studentHabitsOnDate);
+              const isLocked = student.lockedDates?.includes(format(singleDate, 'yyyy-MM-dd'));
 
               return (
                 <AccordionItem value={student.id} key={student.id} className="border rounded-md px-4">
                    <AccordionTrigger className="hover:no-underline py-3">
                       <div className="flex items-center gap-3 w-full">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent accordion from toggling
+                            toggleDateLock(student.id, singleDate, !isLocked);
+                          }}
+                        >
+                          {isLocked ? <Lock className="h-4 w-4 text-destructive" /> : <Unlock className="h-4 w-4 text-muted-foreground" />}
+                          <span className="sr-only">Toggle Lock</span>
+                        </Button>
                         <Avatar>
                           <AvatarImage
                             src={student.avatarUrl}

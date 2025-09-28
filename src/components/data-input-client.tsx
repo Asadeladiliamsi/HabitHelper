@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { CalendarIcon, Loader2 } from 'lucide-react';
+import { CalendarIcon, Loader2, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { id, enUS } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/select';
 import { StudentSearchDialog } from './student-search-dialog';
 import { useAuth } from '@/contexts/auth-context';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 const formSchema = z.object({
   studentId: z.string().min(1, 'Siswa harus dipilih.'),
@@ -79,6 +80,19 @@ export function DataInputClient({ studentId: lockedStudentId, allowedHabits }: D
   });
   
   const selectedHabitName = form.watch('habitName');
+  const selectedDate = form.watch('date');
+  const studentIdToWatch = lockedStudentId || form.watch('studentId');
+
+  const studentData = useMemo(() => {
+    return students.find(s => s.id === studentIdToWatch);
+  }, [students, studentIdToWatch]);
+  
+  const isDateLocked = useMemo(() => {
+    if (!studentData || !selectedDate) return false;
+    const formattedDate = format(selectedDate, 'yyyy-MM-dd');
+    return studentData.lockedDates?.includes(formattedDate) || false;
+  }, [studentData, selectedDate]);
+
 
   useEffect(() => {
     if (selectedHabitName) {
@@ -152,158 +166,168 @@ export function DataInputClient({ studentId: lockedStudentId, allowedHabits }: D
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {isDateLocked && (
+            <Alert variant="destructive" className="mb-6">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Data Terkunci</AlertTitle>
+                <AlertDescription>
+                   Input untuk tanggal ini telah dikunci oleh guru dan tidak dapat diubah atau ditambahkan.
+                </AlertDescription>
+            </Alert>
+        )}
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {!lockedStudentId && (
-            <div className="space-y-2">
-              <Label htmlFor="studentId">{t.selectStudent}</Label>
-              <Controller
-                control={form.control}
-                name="studentId"
-                render={({ field }) => (
-                  <StudentSearchDialog
-                    students={students}
-                    selectedStudentId={field.value}
-                    onStudentSelect={(studentId) => field.onChange(studentId)}
-                    placeholder={t.selectStudentPlaceholder}
-                    selectedStudentName={selectedStudentName}
-                  />
-                )}
-              />
-              {form.formState.errors.studentId && (
-                <p className="text-sm text-destructive mt-1">
-                  {form.formState.errors.studentId.message}
-                </p>
-              )}
-            </div>
-          )}
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <fieldset disabled={isDateLocked || isLoading} className="space-y-6">
+            {!lockedStudentId && (
               <div className="space-y-2">
-                <Label htmlFor="habitName">{t.selectHabit}</Label>
+                <Label htmlFor="studentId">{t.selectStudent}</Label>
                 <Controller
                   control={form.control}
-                  name="habitName"
+                  name="studentId"
                   render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger id="habitName">
-                        <SelectValue placeholder={t.selectHabitPlaceholder} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {habitsToShow.map((name) => (
-                          <SelectItem key={name} value={name}>
-                            {habitTranslationMapping[name] || name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <StudentSearchDialog
+                      students={students}
+                      selectedStudentId={field.value}
+                      onStudentSelect={(studentId) => field.onChange(studentId)}
+                      placeholder={t.selectStudentPlaceholder}
+                      selectedStudentName={selectedStudentName}
+                    />
                   )}
                 />
-                {form.formState.errors.habitName && (
+                {form.formState.errors.studentId && (
                   <p className="text-sm text-destructive mt-1">
-                    {form.formState.errors.habitName.message}
+                    {form.formState.errors.studentId.message}
+                  </p>
+                )}
+              </div>
+            )}
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="habitName">{t.selectHabit}</Label>
+                  <Controller
+                    control={form.control}
+                    name="habitName"
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger id="habitName">
+                          <SelectValue placeholder={t.selectHabitPlaceholder} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {habitsToShow.map((name) => (
+                            <SelectItem key={name} value={name}>
+                              {habitTranslationMapping[name] || name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {form.formState.errors.habitName && (
+                    <p className="text-sm text-destructive mt-1">
+                      {form.formState.errors.habitName.message}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="subHabitName">Aspek Kebiasaan</Label>
+                    <Controller
+                        control={form.control}
+                        name="subHabitName"
+                        render={({ field }) => (
+                        <Select onValueChange={field.onChange} value={field.value} disabled={!selectedHabitName}>
+                            <SelectTrigger id="subHabitName">
+                            <SelectValue placeholder="Pilih aspek..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                            {availableSubHabits.map((name) => (
+                                <SelectItem key={name} value={name}>
+                                {name}
+                                </SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        )}
+                    />
+                    {form.formState.errors.subHabitName && (
+                        <p className="text-sm text-destructive mt-1">
+                        {form.formState.errors.subHabitName.message}
+                        </p>
+                    )}
+                </div>
+            </div>
+            
+
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="score">{t.score}</Label>
+                  <Controller
+                      control={form.control}
+                      name="score"
+                      render={({ field }) => (
+                          <Select onValueChange={(value) => field.onChange(Number(value))} value={String(field.value)}>
+                              <SelectTrigger id="score">
+                                  <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                  {[4, 3, 2, 1].map((score) => (
+                                      <SelectItem key={score} value={String(score)}>
+                                          {score}
+                                      </SelectItem>
+                                  ))}
+                              </SelectContent>
+                          </Select>
+                      )}
+                  />
+                {form.formState.errors.score && (
+                  <p className="text-sm text-destructive mt-1">
+                    {form.formState.errors.score.message}
                   </p>
                 )}
               </div>
               <div className="space-y-2">
-                  <Label htmlFor="subHabitName">Aspek Kebiasaan</Label>
+                  <Label>{t.date}</Label>
                   <Controller
-                      control={form.control}
-                      name="subHabitName"
-                      render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value} disabled={!selectedHabitName}>
-                          <SelectTrigger id="subHabitName">
-                          <SelectValue placeholder="Pilih aspek..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                          {availableSubHabits.map((name) => (
-                              <SelectItem key={name} value={name}>
-                              {name}
-                              </SelectItem>
-                          ))}
-                          </SelectContent>
-                      </Select>
-                      )}
-                  />
-                  {form.formState.errors.subHabitName && (
-                      <p className="text-sm text-destructive mt-1">
-                      {form.formState.errors.subHabitName.message}
-                      </p>
+                  control={form.control}
+                  name="date"
+                  render={({ field }) => (
+                      <Popover>
+                      <PopoverTrigger asChild>
+                          <Button
+                          variant={'outline'}
+                          className={cn(
+                              'w-full justify-start text-left font-normal',
+                              !field.value && 'text-muted-foreground'
+                          )}
+                          >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {field.value ? format(field.value, 'PPP', { locale }) : <span>{t.datePlaceholder}</span>}
+                          </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                          <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          initialFocus
+                          locale={locale}
+                          />
+                      </PopoverContent>
+                      </Popover>
                   )}
+                  />
+                  {form.formState.errors.date && <p className="text-sm text-destructive mt-1">{form.formState.errors.date.message}</p>}
               </div>
-          </div>
-          
-
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-             <div className="space-y-2">
-               <Label htmlFor="score">{t.score}</Label>
-                <Controller
-                    control={form.control}
-                    name="score"
-                    render={({ field }) => (
-                        <Select onValueChange={(value) => field.onChange(Number(value))} value={String(field.value)}>
-                            <SelectTrigger id="score">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {[4, 3, 2, 1].map((score) => (
-                                    <SelectItem key={score} value={String(score)}>
-                                        {score}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    )}
-                />
-              {form.formState.errors.score && (
-                <p className="text-sm text-destructive mt-1">
-                  {form.formState.errors.score.message}
-                </p>
+            </div>
+             <Button type="submit" disabled={isDateLocked || isLoading || !form.formState.isValid} className="w-full">
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t.saving}
+                </>
+              ) : (
+                t.saveButton
               )}
-            </div>
-            <div className="space-y-2">
-                <Label>{t.date}</Label>
-                <Controller
-                control={form.control}
-                name="date"
-                render={({ field }) => (
-                    <Popover>
-                    <PopoverTrigger asChild>
-                        <Button
-                        variant={'outline'}
-                        className={cn(
-                            'w-full justify-start text-left font-normal',
-                            !field.value && 'text-muted-foreground'
-                        )}
-                        >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {field.value ? format(field.value, 'PPP', { locale }) : <span>{t.datePlaceholder}</span>}
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                        <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        initialFocus
-                        locale={locale}
-                        />
-                    </PopoverContent>
-                    </Popover>
-                )}
-                />
-                {form.formState.errors.date && <p className="text-sm text-destructive mt-1">{form.formState.errors.date.message}</p>}
-            </div>
-          </div>
-
-          <Button type="submit" disabled={isLoading || !form.formState.isValid} className="w-full">
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t.saving}
-              </>
-            ) : (
-              t.saveButton
-            )}
-          </Button>
+            </Button>
+          </fieldset>
         </form>
       </CardContent>
     </Card>

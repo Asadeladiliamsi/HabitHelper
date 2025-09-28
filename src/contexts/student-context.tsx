@@ -3,13 +3,13 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, serverTimestamp, getDocs, where, setDoc, writeBatch, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, serverTimestamp, getDocs, where, setDoc, writeBatch, Timestamp, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Student, Habit, SubHabit, HabitEntry } from '@/lib/types';
 import { useAuth } from './auth-context';
 import { HABIT_DEFINITIONS } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
-import { startOfDay, endOfDay, isSameDay } from 'date-fns';
+import { startOfDay, endOfDay, isSameDay, format as formatDate } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 
 interface StudentContextType {
@@ -24,6 +24,7 @@ interface StudentContextType {
   getHabitsForDate: (studentId: string, date: Date) => Habit[];
   fetchHabitEntriesForRange: (dateRange: DateRange | undefined) => () => void;
   habitEntries: HabitEntry[];
+  toggleDateLock: (studentId: string, date: Date, lock: boolean) => Promise<void>;
 }
 
 const StudentContext = createContext<StudentContextType | undefined>(undefined);
@@ -111,6 +112,7 @@ export const StudentProvider = ({ children }: { children: React.React.Node }) =>
       ...newStudentData,
       habits: initialHabits,
       createdAt: serverTimestamp(),
+      lockedDates: [],
     });
   };
   
@@ -201,6 +203,16 @@ export const StudentProvider = ({ children }: { children: React.React.Node }) =>
     const studentDocRef = doc(db, 'students', studentId);
     await updateDoc(studentDocRef, { parentId, parentName });
   }
+
+  const toggleDateLock = async (studentId: string, date: Date, lock: boolean) => {
+    if (!user || !['admin', 'guru'].includes(userProfile?.role || '')) throw new Error("Authentication required or insufficient permissions");
+    const studentDocRef = doc(db, 'students', studentId);
+    const formattedDate = formatDate(date, 'yyyy-MM-dd');
+
+    await updateDoc(studentDocRef, {
+      lockedDates: lock ? arrayUnion(formattedDate) : arrayRemove(formattedDate),
+    });
+  };
   
   const getHabitsForDate = useCallback((studentId: string, date: Date): Habit[] => {
       const student = students.find(s => s.id === studentId);
@@ -250,6 +262,7 @@ export const StudentProvider = ({ children }: { children: React.React.Node }) =>
     getHabitsForDate,
     fetchHabitEntriesForRange,
     habitEntries,
+    toggleDateLock,
   };
 
   return (
