@@ -264,11 +264,21 @@ export function SiswaDashboardClient() {
              </div>
           ) : habitsForSelectedDate.length > 0 && habitsForSelectedDate.some(h => h.subHabits.some(sh => sh.score > 0)) ? (
             <div className="space-y-4">
+                <div className="bg-muted/50 p-4 rounded-lg">
+                    <div className="flex justify-between items-center font-semibold mb-2">
+                        <span>Rata-rata Keseluruhan</span>
+                        <span className="font-mono text-2xl">{averageScore.toFixed(1)}</span>
+                    </div>
+                    <Progress value={(averageScore / 4) * 100} className="w-full h-2.5" />
+                </div>
+
                <Accordion type="multiple" className="w-full">
                   {habitsForSelectedDate.map((habit) => {
                       const habitAverage = (!habit.subHabits || habit.subHabits.length === 0 || habit.subHabits.every(sh => sh.score === 0))
                           ? 0 
                           : habit.subHabits.reduce((acc, sub) => acc + sub.score, 0) / (habit.subHabits.filter(sh => sh.score > 0).length || 1);
+                      
+                      if (habitAverage === 0) return null;
 
                       return (
                           <AccordionItem value={habit.id} key={habit.id}>
@@ -284,8 +294,8 @@ export function SiswaDashboardClient() {
                               </AccordionTrigger>
                               <AccordionContent>
                                   <div className="pl-8 pr-4 space-y-3">
-                                      {habit.subHabits && habit.subHabits.length > 0 ? (
-                                          habit.subHabits.map(subHabit => (
+                                      {habit.subHabits && habit.subHabits.filter(sh => sh.score > 0).length > 0 ? (
+                                          habit.subHabits.filter(sh => sh.score > 0).map(subHabit => (
                                               <div key={subHabit.id} className="flex items-center justify-between text-sm">
                                                   <p className="text-muted-foreground flex-1 pr-4">{subHabit.name}</p>
                                                   <div className="flex items-center gap-2 w-28">
@@ -301,16 +311,8 @@ export function SiswaDashboardClient() {
                               </AccordionContent>
                           </AccordionItem>
                       )
-                  })}
+                  }).filter(Boolean)}
               </Accordion>
-              
-              <div className="flex justify-between items-center bg-muted/50 p-4 rounded-lg font-bold">
-                  <span>Rata-rata Keseluruhan</span>
-                  <div className="flex items-center justify-end gap-2">
-                      <Progress value={(averageScore / 4) * 100} className="w-24 h-2" />
-                      <span className="font-mono text-sm">{averageScore.toFixed(1)}</span>
-                  </div>
-              </div>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-48 border-2 border-dashed rounded-lg">

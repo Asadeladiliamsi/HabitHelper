@@ -441,7 +441,15 @@ export function DashboardClient() {
                    </AccordionTrigger>
                    <AccordionContent>
                       <div className="pl-12 pr-4 pt-2 pb-2 space-y-3">
-                        <h4 className="font-semibold text-sm mb-2">Rincian Kebiasaan:</h4>
+                        <div className="bg-muted/50 p-4 rounded-lg">
+                            <div className="flex justify-between items-center font-semibold mb-2">
+                                <span>Rata-rata Keseluruhan</span>
+                                <span className="font-mono text-xl">{overallAverage.toFixed(1)}</span>
+                            </div>
+                            <Progress value={(overallAverage / 4) * 100} className="w-full h-2.5" />
+                        </div>
+
+                        <h4 className="font-semibold text-sm pt-2">Rincian Kebiasaan:</h4>
                         {studentHabitsOnDate.some(h => h.subHabits.some(sh => sh.score > 0)) ? (
                           <Accordion type="multiple" className="w-full space-y-1">
                             {studentHabitsOnDate.map((habit) => {
@@ -449,6 +457,9 @@ export function DashboardClient() {
                                 const habitAverage = subHabitsWithScores.length === 0
                                     ? 0
                                     : subHabitsWithScores.reduce((acc, sub) => acc + sub.score, 0) / (subHabitsWithScores.length || 1);
+                                
+                                if (habitAverage === 0) return null;
+                                
                                 return(
                                   <AccordionItem value={habit.id} key={habit.id}>
                                     <AccordionTrigger className="hover:no-underline text-sm py-2 rounded-md hover:bg-muted/50 px-2">
@@ -463,8 +474,8 @@ export function DashboardClient() {
                                     </AccordionTrigger>
                                      <AccordionContent className="pt-2">
                                          <div className="pl-8 pr-4 space-y-2">
-                                            {habit.subHabits && habit.subHabits.length > 0 ? (
-                                                habit.subHabits.map(subHabit => (
+                                            {habit.subHabits && habit.subHabits.filter(sh => sh.score > 0).length > 0 ? (
+                                                habit.subHabits.filter(sh => sh.score > 0).map(subHabit => (
                                                     <div key={subHabit.id} className="flex items-center justify-between text-xs">
                                                         <p className="text-muted-foreground flex-1 pr-4">{subHabit.name}</p>
                                                         <div className="flex items-center gap-2 w-24">
