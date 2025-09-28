@@ -65,6 +65,7 @@ import {
   ResponsiveContainer,
   BarChart,
   Bar,
+  LabelList,
 } from 'recharts';
 import { DateRange } from 'react-day-picker';
 import { DateRangePicker } from './ui/date-range-picker';
@@ -216,7 +217,7 @@ export function DashboardClient() {
         }
         return {
             name: shortHabitNames[habitName] || habitName,
-            average,
+            average: parseFloat(average.toFixed(1)),
             fill: habitColors[habitName] || '#8884d8'
         };
     }).filter(d => d.average > 0);
@@ -478,7 +479,7 @@ export function DashboardClient() {
                             <div className="bg-muted/50 p-4 rounded-lg">
                                 <h4 className="font-semibold text-sm mb-2 text-center">Ringkasan Rata-Rata per Kebiasaan</h4>
                                 <ResponsiveContainer width="100%" height={150}>
-                                    <BarChart data={dailySummaryData} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
+                                    <BarChart data={dailySummaryData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                         <XAxis dataKey="name" fontSize={10} tickLine={false} axisLine={false} />
                                         <YAxis domain={[0, 4]} allowDecimals={false} fontSize={10} tickLine={false} axisLine={false}/>
@@ -492,7 +493,9 @@ export function DashboardClient() {
                                             }}
                                             labelStyle={{fontWeight: 'bold'}}
                                          />
-                                        <Bar dataKey="average" name="Rata-rata" radius={[4, 4, 0, 0]} />
+                                        <Bar dataKey="average" name="Rata-rata" radius={[4, 4, 0, 0]}>
+                                           <LabelList dataKey="average" position="top" className="fill-foreground" fontSize={10} />
+                                        </Bar>
                                     </BarChart>
                                 </ResponsiveContainer>
                             </div>

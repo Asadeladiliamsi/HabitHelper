@@ -28,7 +28,7 @@ import { cn } from '@/lib/utils';
 import type { Habit } from '@/lib/types';
 import { DateRange } from 'react-day-picker';
 import { DateRangePicker } from './ui/date-range-picker';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, LabelList } from 'recharts';
 import { HABIT_DEFINITIONS } from '@/lib/types';
 
 
@@ -186,7 +186,7 @@ export function SiswaDashboardClient() {
         }
         return {
             name: shortHabitNames[habitName] || habitName,
-            average,
+            average: parseFloat(average.toFixed(1)),
             fill: habitColors[habitName] || '#8884d8'
         };
     }).filter(d => d.average > 0);
@@ -299,7 +299,7 @@ export function SiswaDashboardClient() {
                     <div className="bg-muted/50 p-4 rounded-lg">
                         <h4 className="font-semibold text-sm mb-2 text-center">Ringkasan Rata-Rata per Kebiasaan</h4>
                         <ResponsiveContainer width="100%" height={200}>
-                            <BarChart data={dailySummaryData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
+                            <BarChart data={dailySummaryData} margin={{ top: 20, right: 20, left: -20, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                 <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
                                 <YAxis domain={[0, 4]} allowDecimals={false} fontSize={12} tickLine={false} axisLine={false} />
@@ -313,7 +313,9 @@ export function SiswaDashboardClient() {
                                     }}
                                     labelStyle={{fontWeight: 'bold'}}
                                 />
-                                <Bar dataKey="average" name="Rata-rata" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="average" name="Rata-rata" radius={[4, 4, 0, 0]}>
+                                  <LabelList dataKey="average" position="top" className="fill-foreground" fontSize={12} />
+                                </Bar>
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
