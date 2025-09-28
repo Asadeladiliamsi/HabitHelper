@@ -4,6 +4,7 @@
 import { DataInputClient } from '@/components/data-input-client';
 import { EditScoresClient } from '@/components/edit-scores-client';
 import { ManageStudentsClient } from '@/components/manage-students-client';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/auth-context';
 import { useLanguage } from '@/contexts/language-provider';
@@ -33,7 +34,7 @@ function DataMasterTabs() {
   const unlinkedStudentUsers = users.filter(user => user.role === 'siswa' && !linkedUserUids.has(user.uid));
 
   return (
-    <Tabs defaultValue="manage-students">
+    <Tabs defaultValue="data-input">
       <TabsList className="grid w-full grid-cols-2">
         <TabsTrigger value="data-input">
           {t.sidebar.dataInput}
@@ -42,7 +43,21 @@ function DataMasterTabs() {
           {t.sidebar.manageStudents}
         </TabsTrigger>
       </TabsList>
-      <TabsContent value="data-input" className="mt-6">
+      <TabsContent value="data-input" className="mt-6 space-y-6">
+         <Card>
+            <CardHeader>
+                <CardTitle>Panduan Penilaian Skor</CardTitle>
+                <CardDescription>Gunakan panduan ini untuk memberikan skor yang konsisten.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                    <li><strong className="text-foreground">4 (Sangat Memadai):</strong> Siswa memenuhi semua kriteria secara mandiri dan konsisten.</li>
+                    <li><strong className="text-foreground">3 (Memadai):</strong> Siswa memenuhi sebagian besar kriteria dengan sedikit bimbingan.</li>
+                    <li><strong className="text-foreground">2 (Tidak Memadai):</strong> Siswa memenuhi sebagian kecil kriteria atau membutuhkan bimbingan.</li>
+                    <li><strong className="text-foreground">1 (Sangat Tidak Memadai):</strong> Siswa tidak memenuhi kriteria atau memerlukan banyak bimbingan.</li>
+                </ul>
+            </CardContent>
+        </Card>
         <StudentProvider>
           <DataInputClient />
         </StudentProvider>
