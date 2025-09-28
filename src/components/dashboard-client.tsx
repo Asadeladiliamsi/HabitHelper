@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -114,6 +113,14 @@ export function DashboardClient() {
     }
     return students.filter(student => student.class === selectedClass);
   }, [students, selectedClass]);
+
+  const areAllLocked = useMemo(() => {
+    if (filteredStudents.length === 0) return false;
+    const formattedDate = format(singleDate, 'yyyy-MM-dd');
+    const lockedCount = filteredStudents.filter(student => student.lockedDates?.includes(formattedDate)).length;
+    // Consider "all locked" if more than half are locked, to handle toggle intention
+    return lockedCount > filteredStudents.length / 2;
+  }, [filteredStudents, singleDate]);
   
    useEffect(() => {
     const unsubscribe = fetchHabitEntriesForRange({from: singleDate, to: singleDate});
@@ -125,24 +132,25 @@ export function DashboardClient() {
     return () => unsubscribe();
   }, [dateRange, fetchHabitEntriesForRange]);
 
-  const handleLockAll = async () => {
+  const handleToggleAllLocks = async () => {
     const date = singleDate;
     if (!date) return;
+    const lockAction = !areAllLocked;
 
     try {
         await Promise.all(
-            filteredStudents.map(student => toggleDateLock(student.id, date, true))
+            filteredStudents.map(student => toggleDateLock(student.id, date, lockAction))
         );
         toast({
             title: 'Sukses',
-            description: `Nilai untuk tanggal ${format(date, 'PPP', { locale: id })} berhasil dikunci untuk semua siswa di kelas ${selectedClass === 'all' ? 'ini' : selectedClass}.`,
+            description: `Nilai untuk tanggal ${format(date, 'PPP', { locale: id })} berhasil di${lockAction ? 'kunci' : 'buka'} untuk semua siswa yang ditampilkan.`,
         });
     } catch (error) {
-        console.error("Failed to lock all scores:", error);
+        console.error("Failed to toggle all scores:", error);
         toast({
             variant: "destructive",
             title: "Gagal",
-            description: "Terjadi kesalahan saat mencoba mengunci semua nilai.",
+            description: "Terjadi kesalahan saat mencoba mengubah status kunci semua nilai.",
         });
     }
   };
@@ -375,8 +383,9 @@ export function DashboardClient() {
                   ))}
                 </SelectContent>
               </Select>
-              <Button onClick={handleLockAll} size="sm" variant="outline">
-                <Lock className="mr-2 h-4 w-4" /> Kunci Nilai Hari Ini
+               <Button onClick={handleToggleAllLocks} size="sm" variant="outline">
+                {areAllLocked ? <Unlock className="mr-2 h-4 w-4" /> : <Lock className="mr-2 h-4 w-4" />}
+                {areAllLocked ? 'Buka Kunci Nilai Hari Ini' : 'Kunci Nilai Hari Ini'}
               </Button>
             </div>
           </div>
