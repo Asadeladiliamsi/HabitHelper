@@ -14,52 +14,65 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangle, Loader2, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { UserRole } from '@/lib/types';
 
-// Pendaftaran hanya untuk siswa, jadi skema disederhanakan.
+
 const formSchema = z.object({
   name: z.string().min(3, { message: 'Nama minimal 3 karakter.' }),
   email: z.string().email({ message: 'Email tidak valid.' }),
-  nisn: z.string().min(1, { message: 'NISN tidak boleh kosong.' }),
+  password: z.string().min(6, { message: 'Kata sandi minimal 6 karakter.' }),
+  role: z.enum(['guru', 'siswa', 'orangtua']),
+  nisn: z.string().optional(),
+}).refine(data => data.role !== 'siswa' || (data.nisn && data.nisn.length > 0), {
+    message: 'NISN wajib diisi jika Anda mendaftar sebagai siswa.',
+    path: ['nisn'],
 });
+
 
 type FormValues = z.infer<typeof formSchema>;
 
 export default function SignupPage() {
-  const { validateAndCreateUserProfile } = useAuth();
+  const { signupAndCreateProfile } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [showNisn, setShowNisn] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
       email: '',
+      password: '',
+      role: 'siswa',
       nisn: '',
     },
   });
+
+  const selectedRole = form.watch('role');
 
   const onSubmit = async (data: FormValues) => {
     setError(null);
     setIsLoading(true);
     try {
-      // Semua pendaftaran baru akan memiliki peran 'siswa' secara default.
-      // NISN akan digunakan sebagai password di Firebase Auth.
-      await validateAndCreateUserProfile(data.name, data.email, data.nisn);
+      await signupAndCreateProfile(data);
       
       toast({
           title: 'Pendaftaran Berhasil',
-          description: 'Akun Anda telah dibuat. Silakan masuk menggunakan email dan NISN Anda.',
+          description: 'Akun Anda telah dibuat. Silakan masuk menggunakan email dan kata sandi Anda.',
       });
-      // Arahkan ke halaman login setelah pendaftaran berhasil.
       router.push('/login'); 
     } catch (err: any) {
        if (err.code === 'auth/email-already-in-use') {
         setError('Email ini sudah terdaftar. Silakan gunakan email lain atau masuk.');
-      } else if (err.code === 'auth/weak-password') {
-        setError('NISN harus terdiri dari minimal 6 karakter. Mohon periksa kembali.');
       } else {
         console.error(err);
         setError(`Gagal mendaftar: ${err.message}`);
@@ -72,7 +85,7 @@ export default function SignupPage() {
   return (
     <Card>
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl">Buat Akun Siswa</CardTitle>
+        <CardTitle className="text-2xl">Buat Akun</CardTitle>
         <CardDescription>Daftar untuk mulai menggunakan Kaih.Spensa id.</CardDescription>
       </CardHeader>
       <CardContent>
@@ -95,19 +108,41 @@ export default function SignupPage() {
             {form.formState.errors.email && <p className="text-sm text-destructive">{form.formState.errors.email.message}</p>}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="nisn">NISN (Nomor Induk Siswa Nasional)</Label>
+            <Label htmlFor="password">Kata Sandi</Label>
              <div className="relative">
-              <Input id="nisn" type={showNisn ? 'text' : 'password'} placeholder="NISN Anda akan menjadi kata sandi" {...form.register('nisn')} />
+              <Input id="password" type={showPassword ? 'text' : 'password'} placeholder="Minimal 6 karakter" {...form.register('password')} />
               <button
                 type="button"
-                onClick={() => setShowNisn(!showNisn)}
+                onClick={() => setShowPassword(!showPassword)}
                 className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground"
               >
-                {showNisn ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
-            {form.formState.errors.nisn && <p className="text-sm text-destructive">{form.formState.errors.nisn.message}</p>}
+            {form.formState.errors.password && <p className="text-sm text-destructive">{form.formState.errors.password.message}</p>}
           </div>
+
+           <div className="space-y-2">
+            <Label htmlFor="role">Saya adalah</Label>
+            <Select onValueChange={(value) => form.setValue('role', value as UserRole)} defaultValue={selectedRole}>
+              <SelectTrigger id="role">
+                <SelectValue placeholder="Pilih peran Anda..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="siswa">Siswa</SelectItem>
+                <SelectItem value="guru">Guru</SelectItem>
+                <SelectItem value="orangtua">Orang Tua</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {selectedRole === 'siswa' && (
+            <div className="space-y-2">
+                <Label htmlFor="nisn">NISN (Nomor Induk Siswa Nasional)</Label>
+                <Input id="nisn" type="text" placeholder="Masukkan NISN Anda" {...form.register('nisn')} />
+                {form.formState.errors.nisn && <p className="text-sm text-destructive">{form.formState.errors.nisn.message}</p>}
+            </div>
+          )}
           
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? <Loader2 className="animate-spin" /> : 'Daftar'}
