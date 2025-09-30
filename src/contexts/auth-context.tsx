@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, type User } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp, getDocs, collection, query, where } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import type { UserProfile } from '@/lib/types';
 import { useRouter } from 'next/navigation';
@@ -12,11 +12,9 @@ interface AuthContextType {
   user: User | null;
   userProfile: UserProfile | null;
   loading: boolean;
-  isNisnVerified: boolean; // New state for session verification
-  setNisnVerified: (isVerified: boolean) => void; // New setter
-  login: (email: string, pass: string) => Promise<any>;
+  login: (email: string, nisn: string) => Promise<any>;
   signup: (email: string, pass: string) => Promise<any>;
-  validateAndCreateUserProfile: (name: string, email: string, pass: string) => Promise<void>;
+  validateAndCreateUserProfile: (name: string, email: string, nisn: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -26,7 +24,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isNisnVerified, setNisnVerified] = useState(false); // Default to false
   const router = useRouter();
 
   const fetchUserProfile = useCallback(async (user: User | null) => {
@@ -51,7 +48,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setLoading(true);
-      setNisnVerified(false); // Reset verification state on any auth change
       await fetchUserProfile(user);
       setLoading(false);
     });
@@ -59,12 +55,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, [fetchUserProfile]);
   
-  const login = async (email: string, pass: string) => {
-    try {
-        return await signInWithEmailAndPassword(auth, email, pass);
+  const login = async (email: string, nisn: string) => {
+     try {
+        // 1. Find user profile by email
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef, where("email", "==", email));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+            throw new Error('Email tidak terdaftar.');
+        }
+
+        const userDoc = querySnapshot.docs[0];
+        const userData = userDoc.data() as UserProfile;
+
+        // 2. Verify NISN
+        if (userData.nisn !== nisn) {
+            throw new Error('NISN yang Anda masukkan salah.');
+        }
+        
+        // 3. If NISN is correct, sign in with Firebase Auth
+        // Here, we use NISN as the password for authentication
+        return await signInWithEmailAndPassword(auth, email, nisn);
+
     } catch (error: any) {
-        if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
-            throw new Error('Email atau kata sandi salah. Silakan coba lagi.');
+         if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+            // This can happen if password (NISN) in Auth doesn't match, or email not in Auth
+            throw new Error('Email atau NISN salah. Silakan coba lagi.');
+        }
+        // Re-throw custom messages
+        if (error.message === 'Email tidak terdaftar.' || error.message === 'NISN yang Anda masukkan salah.') {
+            throw error;
         }
         console.error("Login error:", error);
         throw new Error('Terjadi kesalahan saat mencoba masuk.');
@@ -75,8 +96,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return createUserWithEmailAndPassword(auth, email, pass);
   };
 
-  const validateAndCreateUserProfile = async (name: string, email: string, pass: string) => {
-     const userCredential = await signup(email, pass);
+  const validateAndCreateUserProfile = async (name: string, email: string, nisn: string) => {
+     // For signup, the password is the NISN
+     const userCredential = await signup(email, nisn);
      const userDocRef = doc(db, 'users', userCredential.user.uid);
      
      const profileData: UserProfile = {
@@ -84,7 +106,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         email: email,
         name: name,
         role: 'siswa',
-        // NISN is not present on creation, must be added by teacher/admin
+        nisn: nisn,
       };
 
      await setDoc(userDocRef, {
@@ -97,7 +119,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await signOut(auth);
     setUser(null);
     setUserProfile(null);
-    setNisnVerified(false);
     router.push('/login');
   };
 
@@ -109,8 +130,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     signup, 
     validateAndCreateUserProfile, 
     logout,
-    isNisnVerified,
-    setNisnVerified
   };
 
   return (

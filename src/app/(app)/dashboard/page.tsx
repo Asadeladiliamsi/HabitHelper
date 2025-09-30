@@ -9,7 +9,7 @@ import { StudentProvider } from '@/contexts/student-context';
 import { SiswaDashboardClient } from '@/components/siswa-dashboard-client';
 
 export default function DashboardPage() {
-  const { userProfile, loading, isNisnVerified } = useAuth();
+  const { userProfile, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -17,13 +17,6 @@ export default function DashboardPage() {
       if (!userProfile) {
         // Not logged in at all, go to login page.
         router.replace('/login');
-        return;
-      }
-
-      // CRITICAL: If user is a student and has NOT verified their NISN for this session,
-      // they MUST be redirected to the verification page. This logic acts as a guard.
-      if (userProfile.role === 'siswa' && !isNisnVerified) {
-        router.replace('/verify-nisn');
         return;
       }
       
@@ -34,12 +27,11 @@ export default function DashboardPage() {
         router.replace('/orangtua/dashboard');
       }
     }
-  }, [loading, userProfile, isNisnVerified, router]);
+  }, [loading, userProfile, router]);
 
-  // This is the guard that prevents content from flashing for unverified students.
   // While loading, or if the user is a student who hasn't verified their NISN for the session,
   // show a spinner. The useEffect above will handle the actual redirection.
-  if (loading || !userProfile || (userProfile.role === 'siswa' && !isNisnVerified)) {
+  if (loading || !userProfile) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />

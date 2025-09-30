@@ -16,7 +16,7 @@ import Link from 'next/link';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Email tidak valid.' }),
-  password: z.string().min(6, { message: 'Kata sandi minimal 6 karakter.' }),
+  nisn: z.string().min(1, { message: 'NISN tidak boleh kosong.' }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -26,13 +26,13 @@ export default function LoginPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+  const [showNisn, setShowNisn] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       email: '',
-      password: '',
+      nisn: '',
     },
   });
 
@@ -40,7 +40,7 @@ export default function LoginPage() {
     setError(null);
     setIsLoading(true);
     try {
-      await login(data.email, data.password);
+      await login(data.email, data.nisn);
       router.push('/dashboard');
     } catch (err: any) {
       setError(err.message);
@@ -54,7 +54,7 @@ export default function LoginPage() {
       <CardHeader className="text-center">
         <CardTitle className="text-2xl">Masuk</CardTitle>
         <CardDescription>
-          Masukkan email dan kata sandi Anda untuk masuk.
+          Masukkan email dan NISN Anda untuk masuk.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -72,18 +72,18 @@ export default function LoginPage() {
                 {form.formState.errors.email && <p className="text-sm text-destructive">{form.formState.errors.email.message}</p>}
             </div>
             <div className="space-y-2">
-                <Label htmlFor="password">Kata Sandi</Label>
+                <Label htmlFor="nisn">NISN (Nomor Induk Siswa Nasional)</Label>
                 <div className="relative">
-                  <Input id="password" type={showPassword ? 'text' : 'password'} placeholder="••••••••" {...form.register('password')} />
+                  <Input id="nisn" type={showNisn ? 'text' : 'password'} placeholder="Masukkan NISN Anda" {...form.register('nisn')} />
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
+                    onClick={() => setShowNisn(!showNisn)}
                     className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground"
                   >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showNisn ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                {form.formState.errors.password && <p className="text-sm text-destructive">{form.formState.errors.password.message}</p>}
+                {form.formState.errors.nisn && <p className="text-sm text-destructive">{form.formState.errors.nisn.message}</p>}
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? <Loader2 className="animate-spin" /> : 'Masuk'}

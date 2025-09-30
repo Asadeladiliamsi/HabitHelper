@@ -13,12 +13,13 @@ import { useState } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangle, Loader2, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
+import { useToast } from '@/hooks/use-toast';
 
 // Pendaftaran hanya untuk siswa, jadi skema disederhanakan.
 const formSchema = z.object({
   name: z.string().min(3, { message: 'Nama minimal 3 karakter.' }),
   email: z.string().email({ message: 'Email tidak valid.' }),
-  password: z.string().min(6, { message: 'Kata sandi minimal 6 karakter.' }),
+  nisn: z.string().min(1, { message: 'NISN tidak boleh kosong.' }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -26,16 +27,17 @@ type FormValues = z.infer<typeof formSchema>;
 export default function SignupPage() {
   const { validateAndCreateUserProfile } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+  const [showNisn, setShowNisn] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
       email: '',
-      password: '',
+      nisn: '',
     },
   });
 
@@ -44,12 +46,20 @@ export default function SignupPage() {
     setIsLoading(true);
     try {
       // Semua pendaftaran baru akan memiliki peran 'siswa' secara default.
-      await validateAndCreateUserProfile(data.name, data.email, data.password);
+      // NISN akan digunakan sebagai password di Firebase Auth.
+      await validateAndCreateUserProfile(data.name, data.email, data.nisn);
+      
+      toast({
+          title: 'Pendaftaran Berhasil',
+          description: 'Akun Anda telah dibuat. Silakan masuk menggunakan email dan NISN Anda.',
+      });
       // Arahkan ke halaman login setelah pendaftaran berhasil.
       router.push('/login'); 
     } catch (err: any) {
        if (err.code === 'auth/email-already-in-use') {
         setError('Email ini sudah terdaftar. Silakan gunakan email lain atau masuk.');
+      } else if (err.code === 'auth/weak-password') {
+        setError('NISN harus terdiri dari minimal 6 karakter. Mohon periksa kembali.');
       } else {
         console.error(err);
         setError(`Gagal mendaftar: ${err.message}`);
@@ -85,18 +95,18 @@ export default function SignupPage() {
             {form.formState.errors.email && <p className="text-sm text-destructive">{form.formState.errors.email.message}</p>}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Kata Sandi</Label>
-            <div className="relative">
-              <Input id="password" type={showPassword ? 'text' : 'password'} placeholder="••••••••" {...form.register('password')} />
+            <Label htmlFor="nisn">NISN (Nomor Induk Siswa Nasional)</Label>
+             <div className="relative">
+              <Input id="nisn" type={showNisn ? 'text' : 'password'} placeholder="NISN Anda akan menjadi kata sandi" {...form.register('nisn')} />
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
+                onClick={() => setShowNisn(!showNisn)}
                 className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground"
               >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {showNisn ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
-            {form.formState.errors.password && <p className="text-sm text-destructive">{form.formState.errors.password.message}</p>}
+            {form.formState.errors.nisn && <p className="text-sm text-destructive">{form.formState.errors.nisn.message}</p>}
           </div>
           
           <Button type="submit" className="w-full" disabled={isLoading}>
