@@ -290,11 +290,10 @@ export function AdminDashboardClient() {
         </header>
 
          <Tabs defaultValue="manage-users">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="manage-users">Manajemen Pengguna</TabsTrigger>
                 <TabsTrigger value="manage-teachers">Manajemen Guru</TabsTrigger>
                 <TabsTrigger value="manage-students">Manajemen Siswa</TabsTrigger>
-                <TabsTrigger value="settings">Pengaturan</TabsTrigger>
             </TabsList>
             <TabsContent value="manage-users" className="mt-6 space-y-6">
                 <div className="relative sm:w-64">
@@ -317,6 +316,7 @@ export function AdminDashboardClient() {
                 />
             </TabsContent>
              <TabsContent value="manage-teachers" className="mt-6 space-y-6">
+                <TeacherCodeManager />
                  <div className="relative sm:w-64">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -338,9 +338,6 @@ export function AdminDashboardClient() {
             </TabsContent>
              <TabsContent value="manage-students" className="mt-6">
                 <ManageStudentsClient parentUsers={parentUsers} studentUsers={unlinkedStudentUsers} />
-            </TabsContent>
-            <TabsContent value="settings" className="mt-6">
-                <TeacherCodeManager />
             </TabsContent>
         </Tabs>
       </div>
