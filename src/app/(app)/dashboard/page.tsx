@@ -35,7 +35,7 @@ function DashboardRouter() {
     
     if (userProfile.role === 'siswa') {
       const studentData = students.find(s => s.linkedUserUid === userProfile.uid);
-      // Jika data siswa sudah ada tapi belum ada kelas, paksa ke halaman pilih kelas
+      // Jika data siswa ada tapi belum ada kelas, paksa ke halaman pilih kelas
       if (studentData && !studentData.class) {
         router.replace('/pilih-kelas');
         return;
@@ -73,13 +73,26 @@ function DashboardRouter() {
   );
 }
 
+function DashboardPageContent() {
+    return (
+        <StudentProvider>
+            <div className="flex flex-col gap-6">
+                <DashboardRouter />
+            </div>
+        </StudentProvider>
+    );
+}
 
 export default function DashboardPage() {
-  return (
-    <StudentProvider>
-      <div className="flex flex-col gap-6">
-        <DashboardRouter />
+  const { userProfile, loading } = useAuth();
+
+  if (loading || !userProfile) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
       </div>
-    </StudentProvider>
-  );
+    );
+  }
+
+  return <DashboardPageContent />;
 }
