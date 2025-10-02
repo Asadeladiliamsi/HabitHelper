@@ -20,7 +20,7 @@ export default function InputDataPage() {
     }
   }, [userProfile, authLoading, router]);
   
-  const studentData = students.find(s => s.email === user?.email);
+  const studentData = students.find(s => s.linkedUserUid === user?.uid);
 
   if (authLoading || studentLoading) {
     return (

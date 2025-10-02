@@ -65,7 +65,7 @@ export function SiswaDashboardClient() {
     to: new Date(),
   });
 
-  const studentData = students.find(s => s.email === user?.email);
+  const studentData = students.find(s => s.linkedUserUid === user?.uid);
   
   useEffect(() => {
     if (studentData) {
