@@ -38,7 +38,14 @@ export default function PilihKelasPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (userProfile && userProfile.role === 'siswa') {
+    // Only run this logic if auth is done and we have a user profile
+    if (!authLoading && userProfile) {
+      // Must be a student to be on this page
+      if (userProfile.role !== 'siswa') {
+        router.replace('/dashboard');
+        return;
+      }
+
       setStudentLoading(true);
       const q = query(collection(db, 'students'), where('linkedUserUid', '==', userProfile.uid));
       const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -46,11 +53,12 @@ export default function PilihKelasPage() {
           const studentDoc = snapshot.docs[0];
           const data = { id: studentDoc.id, ...studentDoc.data() } as Student;
           setStudentData(data);
-          // If student already has a class, redirect them.
+          // If student already has a class, they should not be on this page. Redirect them.
           if (data.class) {
             router.replace('/dashboard');
           }
         } else {
+          // No student data linked to this user account yet.
           setStudentData(null);
         }
         setStudentLoading(false);
@@ -59,9 +67,9 @@ export default function PilihKelasPage() {
         setStudentLoading(false);
       });
       return () => unsubscribe();
-    } else if (!authLoading) {
-      // If not a student, redirect away
-      router.replace('/dashboard');
+    } else if (!authLoading && !userProfile) {
+        // If auth is done and there's no user, send to login
+        router.replace('/login');
     }
   }, [userProfile, authLoading, router]);
 
@@ -80,8 +88,8 @@ export default function PilihKelasPage() {
 
   if (authLoading || studentLoading) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin" />
       </div>
     );
   }
@@ -89,14 +97,16 @@ export default function PilihKelasPage() {
   // If student data has not been created by admin/teacher yet.
   if (!studentData) {
      return (
-        <Card className="mx-auto mt-10 max-w-lg">
-             <CardHeader>
-                <CardTitle>Data Siswa Belum Siap</CardTitle>
-             </CardHeader>
-             <CardContent>
-                <p>Data siswa Anda belum ditambahkan oleh admin atau guru. Mohon tunggu atau hubungi pihak sekolah untuk konfirmasi.</p>
-             </CardContent>
-        </Card>
+        <div className="flex items-center justify-center h-screen">
+            <Card className="mx-auto max-w-lg">
+                <CardHeader>
+                    <CardTitle>Data Siswa Belum Siap</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p>Data siswa Anda belum ditambahkan oleh admin atau guru. Mohon tunggu atau hubungi pihak sekolah untuk konfirmasi.</p>
+                </CardContent>
+            </Card>
+        </div>
      )
   }
 
@@ -122,43 +132,45 @@ export default function PilihKelasPage() {
   };
 
   return (
-    <Card className="mx-auto mt-10 max-w-lg">
-      <CardHeader>
-        <CardTitle>Pilih Kelas Anda</CardTitle>
-        <CardDescription>
-          Selamat datang, {userProfile?.name}! Untuk melanjutkan, silakan pilih kelas Anda dari daftar di bawah ini.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="kelas">Kelas</Label>
-            <Controller
-              control={form.control}
-              name="kelas"
-              render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <SelectTrigger id="kelas">
-                    <SelectValue placeholder="Pilih kelas Anda..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {KELAS_LIST.map(kelas => (
-                      <SelectItem key={kelas} value={kelas}>
-                        {kelas}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-            {form.formState.errors.kelas && <p className="text-sm text-destructive mt-1">{form.formState.errors.kelas.message}</p>}
-          </div>
+    <div className="flex items-center justify-center h-screen bg-muted">
+        <Card className="mx-auto w-full max-w-lg shadow-2xl">
+        <CardHeader>
+            <CardTitle>Pilih Kelas Anda</CardTitle>
+            <CardDescription>
+            Selamat datang, {userProfile?.name}! Untuk melanjutkan, silakan pilih kelas Anda dari daftar di bawah ini.
+            </CardDescription>
+        </CardHeader>
+        <CardContent>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div className="space-y-2">
+                <Label htmlFor="kelas">Kelas</Label>
+                <Controller
+                control={form.control}
+                name="kelas"
+                render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value}>
+                    <SelectTrigger id="kelas">
+                        <SelectValue placeholder="Pilih kelas Anda..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {KELAS_LIST.map(kelas => (
+                        <SelectItem key={kelas} value={kelas}>
+                            {kelas}
+                        </SelectItem>
+                        ))}
+                    </SelectContent>
+                    </Select>
+                )}
+                />
+                {form.formState.errors.kelas && <p className="text-sm text-destructive mt-1">{form.formState.errors.kelas.message}</p>}
+            </div>
 
-          <Button type="submit" disabled={isSubmitting} className="w-full">
-            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Simpan dan Lanjutkan'}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+            <Button type="submit" disabled={isSubmitting} className="w-full">
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Simpan dan Lanjutkan'}
+            </Button>
+            </form>
+        </CardContent>
+        </Card>
+    </div>
   );
 }
