@@ -15,9 +15,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 
 const KELAS_LIST = [
-    "VII A", "VII B", "VII C", "VII D", "VII E", "VII F",
-    "VIII A", "VIII B", "VIII C", "VIII D", "VIII E", "VIII F",
-    "IX A", "IX B", "IX C", "IX D", "IX E", "IX F",
+    "7 Ruang 1", "7 Ruang 2", "7 Ruang 3", "7 Ruang 4", "7 Ruang 5", "7 Ruang 6", "7 Ruang 7", "7 Ruang 8", "7 Ruang 9",
+    "8 Ruang 1", "8 Ruang 2", "8 Ruang 3", "8 Ruang 4", "8 Ruang 5", "8 Ruang 6", "8 Ruang 7", "8 Ruang 8", "8 Ruang 9",
+    "9 Ruang 1", "9 Ruang 2", "9 Ruang 3", "9 Ruang 4", "9 Ruang 5", "9 Ruang 6", "9 Ruang 7", "9 Ruang 8", "9 Ruang 9",
 ];
 
 const formSchema = z.object({
