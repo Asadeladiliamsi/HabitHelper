@@ -14,26 +14,32 @@ function DashboardContent() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!authLoading && !studentLoading) {
-      if (!userProfile) {
-        router.replace('/login');
-        return;
-      }
-      
-      if (userProfile.role === 'admin') {
-        router.replace('/admin/dashboard');
-      } else if (userProfile.role === 'orangtua') {
-        router.replace('/orangtua/dashboard');
-      } else if (userProfile.role === 'siswa') {
-        const studentData = students.find(s => s.linkedUserUid === userProfile.uid);
-        // Jika data siswa ditemukan tapi belum ada kelas, arahkan ke halaman pilih kelas.
-        if (studentData && !studentData.class) {
-          router.replace('/pilih-kelas');
-        }
+    // Tunggu hingga semua proses loading selesai
+    if (authLoading || studentLoading) {
+      return;
+    }
+
+    // Jika tidak ada profil pengguna, arahkan ke login
+    if (!userProfile) {
+      router.replace('/login');
+      return;
+    }
+    
+    // Logika pengalihan berdasarkan peran
+    if (userProfile.role === 'admin') {
+      router.replace('/admin/dashboard');
+    } else if (userProfile.role === 'orangtua') {
+      router.replace('/orangtua/dashboard');
+    } else if (userProfile.role === 'siswa') {
+      const studentData = students.find(s => s.linkedUserUid === userProfile.uid);
+      // Jika data siswa ditemukan tapi belum ada kelas, arahkan ke halaman pilih kelas.
+      if (studentData && !studentData.class) {
+        router.replace('/pilih-kelas');
       }
     }
   }, [authLoading, studentLoading, userProfile, students, router]);
 
+  // Tampilkan loader jika ada proses yang masih berjalan atau belum ada profil pengguna
   if (authLoading || studentLoading || !userProfile) {
     return (
       <div className="flex h-full w-full items-center justify-center">
@@ -61,10 +67,11 @@ function DashboardContent() {
     );
   }
 
-  // Fallback untuk peran lain atau jika tidak ada yang cocok
+  // Fallback untuk peran lain (admin/orangtua/siswa tanpa kelas) selagi dialihkan
   return (
     <div className="flex h-full w-full items-center justify-center">
       <p>Memuat dasbor Anda...</p>
+      <Loader2 className="ml-2 h-4 w-4 animate-spin" />
     </div>
   );
 }
