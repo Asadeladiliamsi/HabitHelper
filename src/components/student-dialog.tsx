@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useForm, Controller } from 'react-hook-form';
@@ -30,6 +29,15 @@ const formSchema = z.object({
 });
 
 type FormValues = z.infer<typeof formSchema>;
+
+interface StudentDialogProps {
+    isOpen: boolean;
+    onOpenChange: (isOpen: boolean) => void;
+    onSave: (studentData: Omit<Student, 'id' | 'habits' | 'avatarUrl'>) => void;
+    student: Student | null;
+    studentUsers: UserProfile[];
+}
+
 
 export function StudentDialog({ isOpen, onOpenChange, onSave, student, studentUsers }: StudentDialogProps) {
   const { language } = useLanguage();
@@ -85,6 +93,7 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student, studentUs
     if (selectedUser) {
         setValue('name', selectedUser.name);
         setValue('email', selectedUser.email || '');
+        setValue('nisn', selectedUser.nisn || '');
         setSelectedUserName(selectedUser.name);
     }
   }, [selectedUserUid, studentUsers, setValue]);
@@ -108,7 +117,7 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student, studentUs
         <DialogHeader className="flex-shrink-0">
             <DialogTitle>{student ? t.editTitle : t.addTitle}</DialogTitle>
             <DialogDescription>
-              {student ? t.editDescription : 'Pilih akun siswa yang sudah terdaftar, lalu lengkapi data NISN dan kelas.'}
+              {student ? t.editDescription : 'Pilih akun siswa yang sudah terdaftar, lalu lengkapi data kelas.'}
             </DialogDescription>
         </DialogHeader>
         
@@ -146,19 +155,19 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student, studentUs
                     </Label>
                     <Input id="email" type="email" {...register('email')} readOnly className="bg-muted/50 cursor-not-allowed"/>
                 </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="nisn">
+                        NISN
+                    </Label>
+                    <Input id="nisn" {...register('nisn')} placeholder="Nomor Induk Siswa Nasional" readOnly={isEditMode} className={isEditMode ? "bg-muted/50 cursor-not-allowed" : ""} />
+                    {errors.nisn && <p className="text-sm text-destructive mt-1">{errors.nisn.message}</p>}
+                </div>
                 <div className="space-y-2">
                     <Label htmlFor="class">
                         {t.class}
                     </Label>
                     <Input id="class" {...register('class')} />
                     {errors.class && <p className="text-sm text-destructive mt-1">{errors.class.message}</p>}
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="nisn">
-                        NISN
-                    </Label>
-                    <Input id="nisn" {...register('nisn')} placeholder="Nomor Induk Siswa Nasional" />
-                    {errors.nisn && <p className="text-sm text-destructive mt-1">{errors.nisn.message}</p>}
                 </div>
             </form>
         </div>
