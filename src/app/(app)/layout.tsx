@@ -10,8 +10,6 @@ import {
   Settings,
   LogOut,
   Loader2,
-  Shield,
-  Heart,
   Database,
   PencilLine,
 } from 'lucide-react';
@@ -27,11 +25,11 @@ import {
   SidebarTrigger,
   SidebarInset,
 } from '@/components/ui/sidebar';
-import { Logo } from '@/components/icons/logo';
-import { useLanguage } from '@/contexts/language-provider';
-import { translations } from '@/lib/translations';
-import { useAuth } from '@/contexts/auth-context';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { useUserProfile } from '@/hooks/use-user-profile';
+import { auth } from '@/lib/firebase';
+import { signOut } from 'firebase/auth';
+
 
 export default function AppLayout({
   children,
@@ -40,21 +38,24 @@ export default function AppLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { language } = useLanguage();
-  const { user, userProfile, loading, logout } = useAuth();
-  const t = translations[language] || translations.en;
-
+  const { user, userProfile, loading } = useUserProfile();
+  
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
     }
   }, [loading, user, router]);
+  
+  const handleLogout = async () => {
+    await signOut(auth);
+    router.push('/login');
+  };
 
   const getDashboardTitle = () => {
     if (!userProfile) return 'Dasbor';
     switch (userProfile.role) {
       case 'guru':
-        return t.sidebar.teacherDashboard;
+        return 'Dasbor Guru';
       case 'siswa':
         return 'Dasbor Siswa';
       case 'admin':
@@ -70,12 +71,12 @@ export default function AppLayout({
   const dashboardPath = userProfile?.role === 'admin' ? '/admin/dashboard' : '/dashboard';
 
   const navItems = [
-    { href: dashboardPath, icon: LayoutDashboard, label: t.sidebar.dashboard, roles: ['guru', 'siswa', 'admin', 'orangtua'] },
+    { href: dashboardPath, icon: LayoutDashboard, label: 'Dasbor', roles: ['guru', 'siswa', 'admin', 'orangtua'] },
     { href: '/input-data', icon: PencilLine, label: 'Input Data Harian', roles: ['siswa'] },
     { href: '/orangtua/input-data', icon: PencilLine, label: 'Input Data Anak', roles: ['orangtua'] },
-    { href: '/data-master', icon: Database, label: t.sidebar.dataMaster, roles: ['guru', 'admin'] },
-    { href: '/notifications', icon: Bell, label: t.sidebar.notifications, roles: ['guru', 'admin'] },
-    { href: '/reports', icon: FileText, label: t.sidebar.reports, roles: ['guru', 'admin'] },
+    { href: '/data-master', icon: Database, label: 'Data Master', roles: ['guru', 'admin'] },
+    { href: '/notifications', icon: Bell, label: 'Notifikasi', roles: ['guru', 'admin'] },
+    { href: '/reports', icon: FileText, label: 'Laporan', roles: ['guru', 'admin'] },
   ];
 
   if (loading || !user) {
@@ -122,21 +123,21 @@ export default function AppLayout({
               <Link href="/settings">
                 <SidebarMenuButton
                   isActive={pathname === '/settings'}
-                  tooltip={{ children: t.sidebar.settings }}
+                  tooltip={{ children: 'Pengaturan' }}
                 >
                   <Settings />
-                  <span>{t.sidebar.settings}</span>
+                  <span>{'Pengaturan'}</span>
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton
-                onClick={logout}
-                tooltip={{ children: t.sidebar.logout }}
+                onClick={handleLogout}
+                tooltip={{ children: 'Keluar' }}
                 className="w-full"
               >
                 <LogOut />
-                <span>{t.sidebar.logout}</span>
+                <span>{'Keluar'}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

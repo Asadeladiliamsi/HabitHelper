@@ -1,16 +1,16 @@
 'use client';
 
-import { useAuth } from '@/contexts/auth-context';
 import { Loader2 } from 'lucide-react';
 import { DashboardClient } from '@/components/dashboard-client';
 import { SiswaDashboardClient } from '@/components/siswa-dashboard-client';
 import { AdminDashboardClient } from '@/components/admin-dashboard-client';
 import { OrangTuaDashboardClient } from '@/components/orang-tua-dashboard-client';
+import { useUserProfile } from '@/hooks/use-user-profile';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 export default function DashboardPage() {
-  const { user, userProfile, loading } = useAuth();
+  const { user, userProfile, loading } = useUserProfile();
   const router = useRouter();
 
   useEffect(() => {
