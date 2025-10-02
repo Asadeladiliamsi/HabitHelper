@@ -81,6 +81,7 @@ export function SiswaDashboardClient() {
           const doc = snapshot.docs[0];
           const data = { id: doc.id, ...doc.data() } as Student;
           setStudentData(data);
+          // THIS IS THE KEY LOGIC: If class is not set, redirect to class selection.
           if (!data.class) {
             router.replace('/pilih-kelas');
           }
@@ -90,9 +91,12 @@ export function SiswaDashboardClient() {
         setLoading(false);
       }, (error) => {
         console.error("Failed to fetch student data:", error);
+        setStudentData(null); // Set student to null on error
         setLoading(false);
       });
       return () => unsubscribe();
+    } else {
+        setLoading(false);
     }
   }, [user, router]);
   
@@ -239,17 +243,28 @@ export function SiswaDashboardClient() {
     );
   }
 
+  // If student data doesn't exist for this user, show a message.
   if (!studentData) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Data Siswa Belum Ditemukan</CardTitle>
+          <CardTitle>Data Siswa Belum Ditautkan</CardTitle>
         </CardHeader>
         <CardContent>
-          <p>Profil Anda belum terhubung dengan data siswa di sistem. Mohon hubungi guru atau admin sekolah untuk memastikan data Anda sudah terdaftar dengan email yang benar.</p>
+          <p>Akun Anda belum ditautkan dengan data siswa di sistem. Mohon hubungi admin atau wali kelas untuk menautkan akun Anda.</p>
         </CardContent>
       </Card>
     );
+  }
+  
+  // If student data exists but class is not set, we show a loader while redirecting.
+  if (!studentData.class) {
+      return (
+          <div className="flex h-full w-full items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin" />
+              <p className="ml-4">Mengalihkan ke halaman pemilihan kelas...</p>
+          </div>
+      );
   }
   
   const calculateOverallAverage = (habits: Habit[]) => {

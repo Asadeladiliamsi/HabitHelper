@@ -1,24 +1,23 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { DashboardClient } from '@/components/dashboard-client';
 import { useAuth } from '@/contexts/auth-context';
 import { Loader2 } from 'lucide-react';
+import { DashboardClient } from '@/components/dashboard-client';
 import { SiswaDashboardClient } from '@/components/siswa-dashboard-client';
 import { AdminDashboardClient } from '@/components/admin-dashboard-client';
 import { OrangTuaDashboardClient } from '@/components/orang-tua-dashboard-client';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 export default function DashboardPage() {
-  const { userProfile, loading } = useAuth();
+  const { user, userProfile, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !userProfile) {
+    if (!loading && !user) {
       router.replace('/login');
     }
-  }, [loading, userProfile, router]);
-
+  }, [loading, user, router]);
 
   if (loading || !userProfile) {
     return (
@@ -28,26 +27,23 @@ export default function DashboardPage() {
     );
   }
 
-  if (userProfile.role === 'guru') {
-    return <DashboardClient />;
+  // Render the appropriate dashboard based on the user's role
+  switch (userProfile.role) {
+    case 'guru':
+      return <DashboardClient />;
+    case 'admin':
+      return <AdminDashboardClient />;
+    case 'orangtua':
+      return <OrangTuaDashboardClient />;
+    case 'siswa':
+      return <SiswaDashboardClient />;
+    default:
+      // Fallback for any other case or while role is being determined
+      return (
+        <div className="flex h-full w-full items-center justify-center">
+          <p>Peran pengguna tidak dikenali. Menunggu...</p>
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      );
   }
-
-  if (userProfile.role === 'admin') {
-    return <AdminDashboardClient />;
-  }
-  
-  if (userProfile.role === 'orangtua') {
-    return <OrangTuaDashboardClient />;
-  }
-
-  if (userProfile.role === 'siswa') {
-    return <SiswaDashboardClient />;
-  }
-  
-  // Fallback loading or empty state
-  return (
-    <div className="flex h-full w-full items-center justify-center">
-      <Loader2 className="h-8 w-8 animate-spin" />
-    </div>
-  );
 }
