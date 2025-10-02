@@ -14,32 +14,25 @@ function DashboardContent() {
   const router = useRouter();
 
   useEffect(() => {
-    // Tunggu hingga semua proses loading selesai
-    if (authLoading || studentLoading) {
-      return;
-    }
+    if (authLoading || studentLoading) return;
 
-    // Jika tidak ada profil pengguna, arahkan ke login
     if (!userProfile) {
       router.replace('/login');
       return;
     }
     
-    // Logika pengalihan berdasarkan peran
     if (userProfile.role === 'admin') {
       router.replace('/admin/dashboard');
     } else if (userProfile.role === 'orangtua') {
       router.replace('/orangtua/dashboard');
     } else if (userProfile.role === 'siswa') {
       const studentData = students.find(s => s.linkedUserUid === userProfile.uid);
-      // Jika data siswa ditemukan tapi belum ada kelas, arahkan ke halaman pilih kelas.
       if (studentData && !studentData.class) {
         router.replace('/pilih-kelas');
       }
     }
   }, [authLoading, studentLoading, userProfile, students, router]);
 
-  // Tampilkan loader jika ada proses yang masih berjalan atau belum ada profil pengguna
   if (authLoading || studentLoading || !userProfile) {
     return (
       <div className="flex h-full w-full items-center justify-center">
@@ -48,18 +41,16 @@ function DashboardContent() {
     );
   }
   
-  // Render dasbor yang sesuai berdasarkan peran pengguna
   if (userProfile.role === 'guru') {
     return <DashboardClient />;
   }
   
   if (userProfile.role === 'siswa') {
     const studentData = students.find(s => s.linkedUserUid === userProfile.uid);
-    // Tampilkan dasbor siswa hanya jika data siswa ada dan sudah memiliki kelas
     if (studentData && studentData.class) {
       return <SiswaDashboardClient />;
     }
-    // Jika data siswa belum ada atau belum ada kelas, tampilkan loader selagi di-redirect
+    // While redirecting or if student data is not ready, show loader
     return (
        <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -67,7 +58,7 @@ function DashboardContent() {
     );
   }
 
-  // Fallback untuk peran lain (admin/orangtua/siswa tanpa kelas) selagi dialihkan
+  // Fallback for roles that should be redirected (admin/parent/student-no-class)
   return (
     <div className="flex h-full w-full items-center justify-center">
       <p>Memuat dasbor Anda...</p>
