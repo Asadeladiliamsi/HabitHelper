@@ -2,12 +2,15 @@
 
 import { DataInputClient } from '@/components/data-input-client';
 import { useAuth } from '@/contexts/auth-context';
-import { useStudent } from '@/contexts/student-context';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import type { Student } from '@/lib/types';
+
 
 const PARENT_ALLOWED_HABITS = [
     'Taat Beribadah', 
@@ -18,25 +21,41 @@ const PARENT_ALLOWED_HABITS = [
 
 export default function ParentInputDataPage() {
   const { userProfile, loading: authLoading } = useAuth();
-  const { students, loading: studentLoading } = useStudent();
+  const [students, setStudents] = useState<Student[]>([]);
+  const [studentLoading, setStudentLoading] = useState(true);
   const router = useRouter();
   
-  const parentStudents = students.filter(s => s.parentId === userProfile?.uid);
   const [selectedStudentId, setSelectedStudentId] = useState<string>('');
 
   useEffect(() => {
-    // Redirect if not a parent or still loading
     if (!authLoading && userProfile?.role !== 'orangtua') {
       router.replace('/dashboard');
     }
   }, [userProfile, authLoading, router]);
 
-   useEffect(() => {
-    // Auto-select first child if only one, or if none is selected yet
-    if (parentStudents.length > 0 && !selectedStudentId) {
-      setSelectedStudentId(parentStudents[0].id);
+  useEffect(() => {
+    if (userProfile && userProfile.role === 'orangtua') {
+      setStudentLoading(true);
+      const q = query(collection(db, 'students'), where('parentId', '==', userProfile.uid));
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const studentData: Student[] = [];
+        querySnapshot.forEach((doc) => {
+          studentData.push({ id: doc.id, ...doc.data() } as Student);
+        });
+        setStudents(studentData);
+        if (studentData.length > 0 && !selectedStudentId) {
+          setSelectedStudentId(studentData[0].id);
+        }
+        setStudentLoading(false);
+      }, (error) => {
+        console.error("Error fetching parent's students:", error);
+        setStudentLoading(false);
+      });
+      return () => unsubscribe();
+    } else {
+      setStudentLoading(false);
     }
-  }, [parentStudents, selectedStudentId]);
+  }, [userProfile, selectedStudentId]);
 
 
   if (authLoading || studentLoading) {
@@ -51,7 +70,7 @@ export default function ParentInputDataPage() {
     return null; // Or a redirect
   }
   
-  if (parentStudents.length === 0) {
+  if (students.length === 0) {
       return (
         <Card>
             <CardHeader>
@@ -75,7 +94,7 @@ export default function ParentInputDataPage() {
         </p>
       </header>
 
-      {parentStudents.length > 1 && (
+      {students.length > 1 && (
          <Card>
             <CardHeader>
                 <CardTitle>Pilih Anak</CardTitle>
@@ -87,7 +106,7 @@ export default function ParentInputDataPage() {
                         <SelectValue placeholder="Pilih nama anak..." />
                     </SelectTrigger>
                     <SelectContent>
-                        {parentStudents.map(student => (
+                        {students.map(student => (
                             <SelectItem key={student.id} value={student.id}>
                                 {student.name} - Kelas {student.class}
                             </SelectItem>

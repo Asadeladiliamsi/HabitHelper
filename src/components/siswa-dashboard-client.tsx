@@ -1,7 +1,6 @@
 'use client';
 
 import { useAuth } from '@/contexts/auth-context';
-import { useStudent } from '@/contexts/student-context';
 import { Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -18,18 +17,21 @@ import {
   Calendar as CalendarIcon,
 } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from './ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar } from './ui/calendar';
-import { format, subDays, eachDayOfInterval } from 'date-fns';
+import { format, subDays, eachDayOfInterval, startOfDay, isSameDay } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import type { Habit } from '@/lib/types';
+import type { Habit, Student, HabitEntry } from '@/lib/types';
 import { DateRange } from 'react-day-picker';
 import { DateRangePicker } from './ui/date-range-picker';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, LabelList } from 'recharts';
 import { HABIT_DEFINITIONS } from '@/lib/types';
+import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { useRouter } from 'next/navigation';
 
 
 const habitIcons: { [key: string]: React.ReactNode } = {
@@ -55,7 +57,12 @@ const habitColors: { [key: string]: string } = {
 
 export function SiswaDashboardClient() {
   const { user } = useAuth();
-  const { students, loading: studentsLoading, getHabitsForDate, fetchHabitEntriesForRange, dateLoading, habitEntries } = useStudent();
+  const [studentData, setStudentData] = useState<Student | null>(null);
+  const [habitEntries, setHabitEntries] = useState<HabitEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dateLoading, setDateLoading] = useState(false);
+  const router = useRouter();
+
   const { language } = useLanguage();
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
 
@@ -65,21 +72,109 @@ export function SiswaDashboardClient() {
     to: new Date(),
   });
 
-  const studentData = students.find(s => s.linkedUserUid === user?.uid);
+  useEffect(() => {
+    if (user) {
+      setLoading(true);
+      const q = query(collection(db, 'students'), where('linkedUserUid', '==', user.uid));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        if (!snapshot.empty) {
+          const doc = snapshot.docs[0];
+          const data = { id: doc.id, ...doc.data() } as Student;
+          setStudentData(data);
+          if (!data.class) {
+            router.replace('/pilih-kelas');
+          }
+        } else {
+          setStudentData(null);
+        }
+        setLoading(false);
+      }, (error) => {
+        console.error("Failed to fetch student data:", error);
+        setLoading(false);
+      });
+      return () => unsubscribe();
+    }
+  }, [user, router]);
   
+  const fetchHabitEntriesForRange = useCallback((studentId: string, dateRange: DateRange | undefined): (() => void) => {
+    if (!studentId || !dateRange?.from) {
+      setHabitEntries([]);
+      return () => {};
+    }
+    
+    setDateLoading(true);
+    
+    const from = startOfDay(dateRange.from);
+    const to = dateRange.to ? startOfDay(dateRange.to) : startOfDay(dateRange.from);
+
+    const q = query(
+      collection(db, 'habit_entries'), 
+      where('studentId', '==', studentId),
+      where('date', '>=', from),
+      where('date', '<=', to)
+    );
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const entries: HabitEntry[] = [];
+      querySnapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.date && data.timestamp) {
+            entries.push({
+            id: doc.id,
+            ...data,
+            date: (data.date as Timestamp).toDate(),
+            timestamp: data.timestamp,
+            } as HabitEntry);
+        }
+      });
+      setHabitEntries(entries);
+      setDateLoading(false);
+    }, (error) => {
+      console.error("Error fetching habit entries for student:", error);
+      setDateLoading(false);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  const getHabitsForDate = useCallback((studentId: string, date: Date): Habit[] => {
+      if (!studentData || studentData.id !== studentId) return [];
+      
+      const relevantEntries = habitEntries.filter(entry => 
+        entry.studentId === studentId && isSameDay(entry.date, date)
+      );
+      
+      const habitsFromDefs: Habit[] = Object.entries(HABIT_DEFINITIONS).map(([habitName, subHabitNames], habitIndex) => ({
+        id: `${habitIndex + 1}`,
+        name: habitName,
+        subHabits: subHabitNames.map((subHabitName, subHabitIndex) => {
+          const entry = relevantEntries
+              .filter(e => e.habitName === habitName && e.subHabitName === subHabitName)
+              .sort((a, b) => (b.timestamp as Timestamp).toMillis() - (a.timestamp as Timestamp).toMillis())[0];
+
+          return {
+            id: `${habitIndex + 1}-${subHabitIndex + 1}`,
+            name: subHabitName,
+            score: entry ? entry.score : 0,
+          };
+        }),
+      }));
+      return habitsFromDefs;
+
+  }, [studentData, habitEntries]);
+
+
   useEffect(() => {
     if (studentData) {
-      // Fetch for single day view
-      const unsubscribeDaily = fetchHabitEntriesForRange({ from: selectedDate, to: selectedDate });
-      // Fetch for date range chart
-      const unsubscribeRange = fetchHabitEntriesForRange(dateRange);
+      const unsubscribeDaily = fetchHabitEntriesForRange(studentData.id, { from: selectedDate, to: selectedDate });
+      const unsubscribeRange = fetchHabitEntriesForRange(studentData.id, dateRange);
 
       return () => {
         unsubscribeDaily();
         unsubscribeRange();
       };
     }
-  }, [selectedDate, dateRange, studentData, fetchHabitEntriesForRange]);
+  }, [studentData, selectedDate, dateRange, fetchHabitEntriesForRange]);
 
   const habitsForSelectedDate = studentData ? getHabitsForDate(studentData.id, selectedDate) : [];
 
@@ -136,7 +231,7 @@ export function SiswaDashboardClient() {
 
   }, [dateRange, studentData, habitEntries, getHabitsForDate]);
 
-  if (studentsLoading) {
+  if (loading) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -191,8 +286,7 @@ export function SiswaDashboardClient() {
         };
     }).filter(d => d.average > 0);
   };
-
-  const averageScore = calculateOverallAverage(habitsForSelectedDate);
+  
   const dailySummaryData = prepareDailySummaryChartData(habitsForSelectedDate);
 
   return (
@@ -376,5 +470,3 @@ export function SiswaDashboardClient() {
     </>
   );
 }
-
-    

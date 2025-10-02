@@ -24,7 +24,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useUser } from '@/contexts/user-context';
 import { Loader2, MoreHorizontal, Pencil, Trash2, Search, KeyRound } from 'lucide-react';
 import type { UserProfile, UserRole } from '@/lib/types';
 import { useEffect, useState } from 'react';
@@ -32,9 +31,11 @@ import { UserEditDialog } from './user-edit-dialog';
 import { UserDeleteDialog } from './user-delete-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { ManageStudentsClient } from './manage-students-client';
-import { useStudent } from '@/contexts/student-context';
 import { Input } from './ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { collection, onSnapshot, updateDoc, doc, deleteDoc, getDoc, setDoc, query } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { useAuth } from '@/contexts/auth-context';
 
 function UserTable({
   users,
@@ -138,21 +139,36 @@ function UserTable({
 }
 
 function TeacherCodeManager() {
-    const { teacherCode, updateTeacherCode, fetchTeacherCode } = useUser();
+    const { userProfile } = useAuth();
+    const [teacherCode, setTeacherCode] = useState<string | null>(null);
     const [code, setCode] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const { toast } = useToast();
 
+     const fetchTeacherCode = async () => {
+        if (!userProfile || userProfile.role !== 'admin') return;
+        const settingsDocRef = doc(db, 'app_settings', 'registration');
+        const docSnap = await getDoc(settingsDocRef);
+        const code = docSnap.exists() ? docSnap.data().teacherCode : '';
+        setTeacherCode(code);
+        setCode(code);
+    };
+
     useEffect(() => {
-        if (teacherCode !== null) {
-            setCode(teacherCode);
-        }
-    }, [teacherCode]);
+        fetchTeacherCode();
+    }, [userProfile]);
+
 
     const handleSave = async () => {
+        if (!userProfile || userProfile.role !== 'admin') {
+            toast({ variant: 'destructive', title: 'Gagal', description: 'Izin tidak cukup.' });
+            return;
+        }
         setIsSaving(true);
         try {
-            await updateTeacherCode(code);
+            const settingsDocRef = doc(db, 'app_settings', 'registration');
+            await setDoc(settingsDocRef, { teacherCode: code });
+            setTeacherCode(code);
             toast({
                 title: 'Sukses',
                 description: 'Kode registrasi guru berhasil diperbarui.',
@@ -205,23 +221,47 @@ function TeacherCodeManager() {
 
 
 export function AdminDashboardClient() {
-  const { users, loading: usersLoading, updateUserRole, updateUserName, deleteUser } = useUser();
-  const { students, loading: studentsLoading } = useStudent();
+  const { userProfile } = useAuth();
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [deletingUser, setDeletingUser] = useState<UserProfile | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const handleRoleChange = (uid: string, role: UserRole) => {
-    updateUserRole(uid, role);
+   useEffect(() => {
+    if (!userProfile || userProfile.role !== 'admin') {
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    const q = query(collection(db, 'users'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const usersData = snapshot.docs.map(doc => doc.data() as UserProfile);
+      setUsers(usersData);
+      setLoading(false);
+    }, (error) => {
+      console.error("Failed to fetch users:", error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [userProfile]);
+
+  const handleRoleChange = async (uid: string, role: UserRole) => {
+     const userDocRef = doc(db, 'users', uid);
+     await updateDoc(userDocRef, { role });
   };
 
-  const handleSaveName = (uid: string, newName: string) => {
-    updateUserName(uid, newName);
+  const handleSaveName = async (uid: string, newName: string) => {
+    const userDocRef = doc(db, 'users', uid);
+    await updateDoc(userDocRef, { name: newName });
     setEditingUser(null);
   };
 
-  const handleDeleteConfirm = (uid: string) => {
-    deleteUser(uid);
+  const handleDeleteConfirm = async (uid: string) => {
+    const userDocRef = doc(db, 'users', uid);
+    await deleteDoc(userDocRef);
     setDeletingUser(null);
   };
 
@@ -248,18 +288,13 @@ export function AdminDashboardClient() {
   const teacherUsers = filteredUsers.filter(user => user.role === 'guru');
 
 
-  if (usersLoading || studentsLoading) {
+  if (loading) {
     return (
       <div className="flex h-96 items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }
-
-  const parentUsers = users.filter(u => u.role === 'orangtua');
-  const linkedUserUids = new Set(students.map(s => s.linkedUserUid).filter(Boolean));
-  const unlinkedStudentUsers = users.filter(user => user.role === 'siswa' && !linkedUserUids.has(user.uid));
-
 
   return (
     <>
@@ -337,7 +372,7 @@ export function AdminDashboardClient() {
                 />
             </TabsContent>
              <TabsContent value="manage-students" className="mt-6">
-                <ManageStudentsClient parentUsers={parentUsers} studentUsers={unlinkedStudentUsers} />
+                <ManageStudentsClient />
             </TabsContent>
         </Tabs>
       </div>

@@ -2,24 +2,46 @@
 
 import { DataInputClient } from '@/components/data-input-client';
 import { useAuth } from '@/contexts/auth-context';
-import { useStudent } from '@/contexts/student-context';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import type { Student } from '@/lib/types';
 
 export default function InputDataPage() {
   const { user, userProfile, loading: authLoading } = useAuth();
-  const { students, loading: studentLoading } = useStudent();
+  const [studentData, setStudentData] = useState<Student | null>(null);
+  const [studentLoading, setStudentLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    // Redirect if not a student or still loading
     if (!authLoading && userProfile?.role !== 'siswa') {
       router.replace('/dashboard');
     }
   }, [userProfile, authLoading, router]);
   
-  const studentData = students.find(s => s.linkedUserUid === user?.uid);
+  useEffect(() => {
+    if (user && userProfile?.role === 'siswa') {
+      setStudentLoading(true);
+      const q = query(collection(db, 'students'), where('linkedUserUid', '==', user.uid));
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        if (!querySnapshot.empty) {
+          const doc = querySnapshot.docs[0];
+          setStudentData({ id: doc.id, ...doc.data() } as Student);
+        } else {
+          setStudentData(null);
+        }
+        setStudentLoading(false);
+      }, (error) => {
+        console.error("Failed to fetch student data:", error);
+        setStudentLoading(false);
+      });
+      return () => unsubscribe();
+    } else {
+      setStudentLoading(false);
+    }
+  }, [user, userProfile]);
 
   if (authLoading || studentLoading) {
     return (

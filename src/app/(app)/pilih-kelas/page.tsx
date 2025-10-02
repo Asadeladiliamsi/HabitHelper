@@ -8,11 +8,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/auth-context';
-import { useStudent } from '@/contexts/student-context';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
+import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import type { Student } from '@/lib/types';
+
 
 const KELAS_LIST = [
     "7 Ruang 1", "7 Ruang 2", "7 Ruang 3", "7 Ruang 4", "7 Ruang 5", "7 Ruang 6", "7 Ruang 7", "7 Ruang 8", "7 Ruang 9",
@@ -28,13 +31,39 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function PilihKelasPage() {
   const { userProfile, loading: authLoading } = useAuth();
-  const { students, updateStudentClass, loading: studentLoading } = useStudent();
+  const [studentData, setStudentData] = useState<Student | null>(null);
+  const [studentLoading, setStudentLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Cari data siswa yang sesuai dengan pengguna yang sedang login
-  const studentData = students.find(s => s.linkedUserUid === userProfile?.uid);
+  useEffect(() => {
+    if (userProfile && userProfile.role === 'siswa') {
+      setStudentLoading(true);
+      const q = query(collection(db, 'students'), where('linkedUserUid', '==', userProfile.uid));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        if (!snapshot.empty) {
+          const studentDoc = snapshot.docs[0];
+          const data = { id: studentDoc.id, ...studentDoc.data() } as Student;
+          setStudentData(data);
+          // If student already has a class, redirect them.
+          if (data.class) {
+            router.replace('/dashboard');
+          }
+        } else {
+          setStudentData(null);
+        }
+        setStudentLoading(false);
+      }, (error) => {
+        console.error("Error fetching student data for class selection:", error);
+        setStudentLoading(false);
+      });
+      return () => unsubscribe();
+    } else if (!authLoading) {
+      // If not a student, redirect away
+      router.replace('/dashboard');
+    }
+  }, [userProfile, authLoading, router]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -43,12 +72,11 @@ export default function PilihKelasPage() {
     },
   });
 
-  useEffect(() => {
-    // Jika siswa sudah punya kelas, paksa kembali ke dasbor.
-    if (!studentLoading && studentData && studentData.class) {
-      router.replace('/dashboard');
-    }
-  }, [studentData, studentLoading, router]);
+  const updateStudentClass = async (studentId: string, className: string) => {
+    const studentDocRef = doc(db, 'students', studentId);
+    await updateDoc(studentDocRef, { class: className });
+  };
+  
 
   if (authLoading || studentLoading) {
     return (
@@ -58,7 +86,7 @@ export default function PilihKelasPage() {
     );
   }
 
-  // Jika data siswa belum dibuat oleh admin/guru, tampilkan pesan.
+  // If student data has not been created by admin/teacher yet.
   if (!studentData) {
      return (
         <Card className="mx-auto mt-10 max-w-lg">

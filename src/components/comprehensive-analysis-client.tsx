@@ -1,12 +1,10 @@
-
 'use client';
 
-import { useState } from 'react';
-import { useStudent } from '@/contexts/student-context';
+import { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Loader2, AlertTriangle, CheckCircle } from 'lucide-react';
 import { checkHabitDecline, getRecentHabitScores } from '@/app/actions';
-import type { Student, Habit } from '@/lib/types';
+import type { Student } from '@/lib/types';
 import type { HabitDeclineNotificationOutput } from '@/ai/flows/habit-decline-notification';
 import {
   Table,
@@ -20,6 +18,8 @@ import { Badge } from './ui/badge';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
+import { collection, onSnapshot, query } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 interface AnalysisResult extends HabitDeclineNotificationOutput {
   studentName: string;
@@ -28,13 +28,25 @@ interface AnalysisResult extends HabitDeclineNotificationOutput {
 }
 
 export function ComprehensiveAnalysisClient() {
-  const { students } = useStudent();
+  const [students, setStudents] = useState<Student[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [studentsLoading, setStudentsLoading] = useState(true);
   const [results, setResults] = useState<AnalysisResult[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [analysisTimestamp, setAnalysisTimestamp] = useState<string | null>(null);
   const { language } = useLanguage();
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
+
+  useEffect(() => {
+    setStudentsLoading(true);
+    const q = query(collection(db, 'students'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const studentData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
+      setStudents(studentData);
+      setStudentsLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const habitTranslationMapping: Record<string, string> = {
     'Bangun Pagi': tHabits.bangunPagi.name,
@@ -55,6 +67,7 @@ export function ComprehensiveAnalysisClient() {
     const allAnalysisPromises = [];
 
     for (const student of students) {
+      if (!student.habits) continue;
       for (const habit of student.habits) {
         const promise = getRecentHabitScores(student.id, habit.name)
           .then(scoreResponse => {
@@ -100,7 +113,7 @@ export function ComprehensiveAnalysisClient() {
 
   return (
     <div className="space-y-6">
-      <Button onClick={runAnalysis} disabled={isLoading} size="lg">
+      <Button onClick={runAnalysis} disabled={isLoading || studentsLoading} size="lg">
         {isLoading ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menganalisis Seluruh Siswa...
@@ -109,6 +122,8 @@ export function ComprehensiveAnalysisClient() {
           'Jalankan Analisis Menyeluruh'
         )}
       </Button>
+      
+      {studentsLoading && <p className="text-sm text-muted-foreground">Memuat data siswa...</p>}
 
       {error && (
          <Alert variant="destructive">

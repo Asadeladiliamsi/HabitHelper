@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -10,21 +10,20 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MoreHorizontal, PlusCircle, Pencil, Trash2, Search, Link2 } from 'lucide-react';
 import type { Student, UserProfile } from '@/lib/types';
 import { StudentDialog } from '@/components/student-dialog';
-import { useStudent } from '@/contexts/student-context';
-import { HABIT_NAMES } from '@/lib/types';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { LinkParentDialog } from './link-parent-dialog';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, serverTimestamp, getDocs, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { HABIT_DEFINITIONS } from '@/lib/types';
 
-interface ManageStudentsClientProps {
-  parentUsers: UserProfile[];
-  studentUsers: UserProfile[];
-}
-
-export function ManageStudentsClient({ parentUsers, studentUsers }: ManageStudentsClientProps) {
-  const { students, addStudent, updateStudent, deleteStudent, linkParentToStudent } = useStudent();
+export function ManageStudentsClient() {
+  const [students, setStudents] = useState<Student[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  
   const [dialogOpen, setDialogOpen] = useState(false);
   const [linkParentDialogOpen, setLinkParentDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -32,6 +31,32 @@ export function ManageStudentsClient({ parentUsers, studentUsers }: ManageStuden
   const { language } = useLanguage();
   const { toast } = useToast();
   const t = translations[language]?.manageStudentsPage || translations.en.manageStudentsPage;
+
+  useEffect(() => {
+    setLoading(true);
+    const studentsQuery = query(collection(db, 'students'));
+    const usersQuery = query(collection(db, 'users'));
+
+    const unsubStudents = onSnapshot(studentsQuery, (snapshot) => {
+      const studentData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
+      setStudents(studentData);
+    });
+
+    const unsubUsers = onSnapshot(usersQuery, (snapshot) => {
+      const userData = snapshot.docs.map(doc => doc.data() as UserProfile);
+      setUsers(userData);
+    });
+    
+    // Combine loading state, could be more refined
+    Promise.all([new Promise(res => onSnapshot(studentsQuery, res)), new Promise(res => onSnapshot(usersQuery, res))])
+      .then(() => setLoading(false))
+      .catch(() => setLoading(false));
+
+    return () => {
+      unsubStudents();
+      unsubUsers();
+    };
+  }, []);
 
   const handleAddStudent = () => {
     setSelectedStudent(null);
@@ -48,6 +73,61 @@ export function ManageStudentsClient({ parentUsers, studentUsers }: ManageStuden
     setLinkParentDialogOpen(true);
   };
   
+  const addStudent = async (newStudentData: Omit<Student, 'id' | 'habits' | 'avatarUrl'>) => {
+    const nisnQuery = query(collection(db, 'students'), where('nisn', '==', newStudentData.nisn));
+    const nisnSnapshot = await getDocs(nisnQuery);
+    if (!nisnSnapshot.empty) {
+      throw new Error(`NISN ${newStudentData.nisn} sudah digunakan oleh siswa lain.`);
+    }
+
+    const userLinkQuery = query(collection(db, 'students'), where('linkedUserUid', '==', newStudentData.linkedUserUid));
+    const userLinkSnapshot = await getDocs(userLinkQuery);
+    if (!userLinkSnapshot.empty) {
+        throw new Error(`Akun pengguna ini sudah ditautkan ke siswa lain.`);
+    }
+
+    const initialHabits: Habit[] = Object.entries(HABIT_DEFINITIONS).map(([habitName, subHabitNames], habitIndex) => ({
+      id: `${habitIndex + 1}`,
+      name: habitName,
+      subHabits: subHabitNames.map((subHabitName, subHabitIndex) => ({
+        id: `${habitIndex + 1}-${subHabitIndex + 1}`,
+        name: subHabitName,
+        score: 0, 
+      })),
+    }));
+
+    await addDoc(collection(db, 'students'), {
+      ...newStudentData,
+      habits: initialHabits,
+      createdAt: serverTimestamp(),
+      lockedDates: [],
+    });
+  };
+
+  const updateStudent = async (studentId: string, updatedData: Partial<Omit<Student, 'id' | 'habits' | 'avatarUrl'>>) => {
+     if (updatedData.nisn) {
+      const q = query(collection(db, 'students'), where('nisn', '==', updatedData.nisn));
+      const querySnapshot = await getDocs(q);
+      const isDuplicate = !querySnapshot.empty && querySnapshot.docs.some(doc => doc.id !== studentId);
+      if (isDuplicate) {
+        throw new Error(`NISN ${updatedData.nisn} sudah digunakan.`);
+      }
+    }
+    const studentDocRef = doc(db, 'students', studentId);
+    await updateDoc(studentDocRef, { ...updatedData, updatedAt: serverTimestamp() });
+  }
+
+  const deleteStudent = async (studentId: string) => {
+    const studentDocRef = doc(db, 'students', studentId);
+    await deleteDoc(studentDocRef);
+  };
+  
+  const linkParentToStudent = async (studentId: string, parentId: string, parentName: string) => {
+    const studentDocRef = doc(db, 'students', studentId);
+    await updateDoc(studentDocRef, { parentId, parentName });
+  };
+
+
   const handleDialogSave = async (studentData: Omit<Student, 'id' | 'habits' | 'avatarUrl'>) => {
     try {
       if (selectedStudent) {
@@ -70,6 +150,8 @@ export function ManageStudentsClient({ parentUsers, studentUsers }: ManageStuden
     }
   };
   
+  const parentUsers = users.filter(u => u.role === 'orangtua');
+
   const handleLinkParentSave = async (studentId: string, parentId: string) => {
     const parent = parentUsers.find(u => u.uid === parentId);
     if (parent) {
@@ -94,6 +176,18 @@ export function ManageStudentsClient({ parentUsers, studentUsers }: ManageStuden
       (student.email && student.email.toLowerCase().includes(term))
     );
   });
+  
+  const linkedUserUids = new Set(students.map(s => s.linkedUserUid).filter(Boolean));
+  const unlinkedStudentUsers = users.filter(user => user.role === 'siswa' && !linkedUserUids.has(user.uid));
+
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -103,7 +197,7 @@ export function ManageStudentsClient({ parentUsers, studentUsers }: ManageStuden
           onOpenChange={setDialogOpen} 
           onSave={handleDialogSave}
           student={selectedStudent} 
-          studentUsers={studentUsers}
+          studentUsers={unlinkedStudentUsers}
         />
       )}
       {selectedStudent && (

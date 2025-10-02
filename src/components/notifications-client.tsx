@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -12,14 +11,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Lightbulb, AlertTriangle, Loader2 } from 'lucide-react';
 import { checkHabitDecline } from '@/app/actions';
-import { useStudent } from '@/contexts/student-context';
-import { HABIT_NAMES } from '@/lib/types';
+import { HABIT_NAMES, type Student } from '@/lib/types';
 import type { HabitDeclineNotificationOutput } from '@/ai/flows/habit-decline-notification';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
 import { StudentSearchDialog } from './student-search-dialog';
 import { Input } from './ui/input';
-
+import { collection, onSnapshot, query } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 const formSchema = z.object({
   studentId: z.string().min(1, 'Siswa harus dipilih.'),
@@ -32,13 +31,29 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export function NotificationsClient() {
-  const { students } = useStudent();
+  const [students, setStudents] = useState<Student[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<HabitDeclineNotificationOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { language } = useLanguage();
   const t = translations[language]?.notificationsClient || translations.en.notificationsClient;
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
+
+  useEffect(() => {
+    setLoading(true);
+    const q = query(collection(db, 'students'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const studentData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
+      setStudents(studentData);
+      setLoading(false);
+    }, (err) => {
+      console.error("Failed to fetch students for notifications:", err);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const habitTranslationMapping: Record<string, string> = {
     'Bangun Pagi': tHabits.bangunPagi.name,
@@ -84,6 +99,14 @@ export function NotificationsClient() {
     }
     setIsLoading(false);
   };
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

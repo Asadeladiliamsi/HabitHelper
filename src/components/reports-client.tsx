@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -9,9 +9,12 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StudentSearchDialog } from './student-search-dialog';
-import { useStudent } from '@/contexts/student-context';
 import { useToast } from '@/hooks/use-toast';
 import { DownloadCloud, Loader2 } from 'lucide-react';
+import { collection, onSnapshot, query } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import type { Student } from '@/lib/types';
+
 
 const reportFormSchema = z.object({
   reportType: z.string().min(1, 'Jenis laporan harus dipilih.'),
@@ -22,9 +25,24 @@ const reportFormSchema = z.object({
 type ReportFormValues = z.infer<typeof reportFormSchema>;
 
 export function ReportsClient() {
-  const { students } = useStudent();
+  const [students, setStudents] = useState<Student[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    setLoading(true);
+    const q = query(collection(db, 'students'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const studentData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
+      setStudents(studentData);
+      setLoading(false);
+    }, (error) => {
+      console.error("Failed to fetch students:", error);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const form = useForm<ReportFormValues>({
     resolver: zodResolver(reportFormSchema),
@@ -51,6 +69,14 @@ export function ReportsClient() {
 
     setIsLoading(false);
   };
+  
+  if (loading) {
+    return (
+       <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
+  }
 
   return (
     <Card className="mx-auto w-full max-w-2xl">

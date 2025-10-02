@@ -34,7 +34,6 @@ import {
   Unlock,
 } from 'lucide-react';
 import type { Student, Habit, SubHabit, HabitEntry } from '@/lib/types';
-import { useStudent } from '@/contexts/student-context';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -50,7 +49,7 @@ import { HABIT_DEFINITIONS } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
-import { format, startOfDay, eachDayOfInterval, subDays } from 'date-fns';
+import { format, startOfDay, eachDayOfInterval, subDays, isSameDay } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Calendar } from './ui/calendar';
 import { Loader2 } from 'lucide-react';
@@ -70,6 +69,8 @@ import {
 import { DateRange } from 'react-day-picker';
 import { DateRangePicker } from './ui/date-range-picker';
 import { useToast } from '@/hooks/use-toast';
+import { collection, onSnapshot, query, doc, updateDoc, arrayUnion, arrayRemove, where, Timestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 const habitIcons: { [key: string]: React.ReactNode } = {
   'Bangun Pagi': <Sunrise className="h-5 w-5 text-yellow-500" />,
@@ -93,7 +94,11 @@ const habitColors: { [key: string]: string } = {
 
 
 export function DashboardClient() {
-  const { students, getHabitsForDate, habitEntries, fetchHabitEntriesForRange, dateLoading, toggleDateLock } = useStudent();
+  const [students, setStudents] = useState<Student[]>([]);
+  const [habitEntries, setHabitEntries] = useState<HabitEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dateLoading, setDateLoading] = useState(false);
+  
   const { language } = useLanguage();
   const [selectedClass, setSelectedClass] = useState('all');
   const { toast } = useToast();
@@ -110,6 +115,105 @@ export function DashboardClient() {
     translations[language]?.landingPage.habits ||
     translations.en.landingPage.habits;
 
+  useEffect(() => {
+    setLoading(true);
+    const q = query(collection(db, 'students'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const studentData = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          avatarUrl: data.avatarUrl || `https://placehold.co/100x100.png?text=${data.name.charAt(0)}`
+        } as Student;
+      });
+      setStudents(studentData);
+      setLoading(false);
+    }, (error) => {
+      console.error("Failed to fetch students:", error);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const fetchHabitEntriesForRange = useCallback((dateRange: DateRange | undefined): (() => void) => {
+    if (!dateRange?.from) {
+      setHabitEntries([]);
+      return () => {};
+    }
+    
+    setDateLoading(true);
+    
+    const from = startOfDay(dateRange.from);
+    const to = dateRange.to ? startOfDay(dateRange.to) : startOfDay(dateRange.from);
+
+    const q = query(
+      collection(db, 'habit_entries'), 
+      where('date', '>=', from),
+      where('date', '<=', to)
+    );
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const entries: HabitEntry[] = [];
+      querySnapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.date && data.timestamp) {
+            entries.push({
+            id: doc.id,
+            ...data,
+            date: (data.date as Timestamp).toDate(),
+            timestamp: data.timestamp,
+            } as HabitEntry);
+        }
+      });
+      
+      setHabitEntries(entries);
+      setDateLoading(false);
+    }, (error) => {
+      console.error("Error fetching real-time habit entries:", error);
+      setHabitEntries([]);
+      setDateLoading(false);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  const getHabitsForDate = useCallback((studentId: string, date: Date): Habit[] => {
+      const student = students.find(s => s.id === studentId);
+      if (!student) return [];
+      
+      const relevantEntries = habitEntries.filter(entry => 
+        entry.studentId === studentId && isSameDay(entry.date, date)
+      );
+      
+      const habitsFromDefs: Habit[] = Object.entries(HABIT_DEFINITIONS).map(([habitName, subHabitNames], habitIndex) => ({
+        id: `${habitIndex + 1}`,
+        name: habitName,
+        subHabits: subHabitNames.map((subHabitName, subHabitIndex) => {
+          const entry = relevantEntries
+              .filter(e => e.habitName === habitName && e.subHabitName === subHabitName)
+              .sort((a, b) => (b.timestamp as Timestamp).toMillis() - (a.timestamp as Timestamp).toMillis())[0];
+
+          return {
+            id: `${habitIndex + 1}-${subHabitIndex + 1}`,
+            name: subHabitName,
+            score: entry ? entry.score : 0,
+          };
+        }),
+      }));
+      return habitsFromDefs;
+
+  }, [students, habitEntries]);
+  
+  const toggleDateLock = async (studentId: string, date: Date, lock: boolean) => {
+    const studentDocRef = doc(db, 'students', studentId);
+    const formattedDate = format(date, 'yyyy-MM-dd');
+
+    await updateDoc(studentDocRef, {
+      lockedDates: lock ? arrayUnion(formattedDate) : arrayRemove(formattedDate),
+    });
+  };
+
   const filteredStudents = useMemo(() => {
     if (selectedClass === 'all') {
       return students;
@@ -121,7 +225,6 @@ export function DashboardClient() {
     if (filteredStudents.length === 0) return false;
     const formattedDate = format(singleDate, 'yyyy-MM-dd');
     const lockedCount = filteredStudents.filter(student => student.lockedDates?.includes(formattedDate)).length;
-    // Consider "all locked" if more than half are locked, to handle toggle intention
     return lockedCount > filteredStudents.length / 2;
   }, [filteredStudents, singleDate]);
   
@@ -157,10 +260,6 @@ export function DashboardClient() {
         });
     }
   };
-
-  const getHabitsForStudentOnDate = useCallback((studentId: string, date: Date): Habit[] => {
-    return getHabitsForDate(studentId, date);
-  }, [getHabitsForDate]);
 
   const habitTranslationMapping: Record<string, string> = {
     'Bangun Pagi': tHabits.bangunPagi.name,
@@ -260,6 +359,14 @@ export function DashboardClient() {
     return dataByDate;
 
   }, [dateRange, filteredStudents, habitEntries, getHabitsForDate]);
+
+  if (loading) {
+    return (
+      <div className="flex h-full w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -431,7 +538,7 @@ export function DashboardClient() {
           ) : (
            <Accordion type="multiple" className="w-full space-y-2">
             {filteredStudents.map((student: Student) => {
-              const studentHabitsOnDate = getHabitsForStudentOnDate(student.id, singleDate);
+              const studentHabitsOnDate = getHabitsForDate(student.id, singleDate);
               const overallAverage = calculateOverallAverage(studentHabitsOnDate);
               const isLocked = student.lockedDates?.includes(format(singleDate, 'yyyy-MM-dd'));
               const dailySummaryData = prepareDailySummaryChartData(studentHabitsOnDate);

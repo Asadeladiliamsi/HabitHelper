@@ -1,7 +1,6 @@
 'use client';
 
 import { useAuth } from '@/contexts/auth-context';
-import { useStudent } from '@/contexts/student-context';
 import { Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -18,19 +17,21 @@ import {
   Calendar as CalendarIcon,
 } from 'lucide-react';
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import type { Student, Habit } from '@/lib/types';
+import type { Student, Habit, HabitEntry } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Button } from './ui/button';
 import { Calendar } from './ui/calendar';
-import { format, startOfDay, eachDayOfInterval, subDays } from 'date-fns';
+import { format, startOfDay, eachDayOfInterval, subDays, isSameDay } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { DateRange } from 'react-day-picker';
 import { DateRangePicker } from './ui/date-range-picker';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Bar, BarChart, LabelList } from 'recharts';
 import { HABIT_DEFINITIONS } from '@/lib/types';
+import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 
 const habitIcons: { [key: string]: React.ReactNode } = {
@@ -56,7 +57,11 @@ const habitColors: { [key: string]: string } = {
 
 export function OrangTuaDashboardClient() {
   const { userProfile } = useAuth();
-  const { students, loading: studentsLoading, getHabitsForDate, dateLoading, fetchHabitEntriesForRange, habitEntries } = useStudent();
+  const [students, setStudents] = useState<Student[]>([]);
+  const [habitEntries, setHabitEntries] = useState<HabitEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dateLoading, setDateLoading] = useState(false);
+
   const { language } = useLanguage();
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
 
@@ -67,29 +72,108 @@ export function OrangTuaDashboardClient() {
     to: new Date(),
   });
   
-  const parentStudents = students.filter(s => s.parentId === userProfile?.uid);
-
   useEffect(() => {
-    if (parentStudents.length > 0 && !selectedStudentId) {
-      setSelectedStudentId(parentStudents[0].id);
+    if (userProfile && userProfile.role === 'orangtua') {
+      setLoading(true);
+      const q = query(collection(db, 'students'), where('parentId', '==', userProfile.uid));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const studentData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
+        setStudents(studentData);
+        if (studentData.length > 0 && !selectedStudentId) {
+          setSelectedStudentId(studentData[0].id);
+        }
+        setLoading(false);
+      }, (error) => {
+        console.error("Failed to fetch parent's students:", error);
+        setLoading(false);
+      });
+
+      return () => unsubscribe();
     }
-  }, [parentStudents, selectedStudentId]);
+  }, [userProfile, selectedStudentId]);
 
+  const fetchHabitEntriesForRange = useCallback((studentIds: string[], dateRange: DateRange | undefined): (() => void) => {
+    if (studentIds.length === 0 || !dateRange?.from) {
+      setHabitEntries([]);
+      return () => {};
+    }
+    
+    setDateLoading(true);
+    
+    const from = startOfDay(dateRange.from);
+    const to = dateRange.to ? startOfDay(dateRange.to) : startOfDay(dateRange.from);
+
+    const q = query(
+      collection(db, 'habit_entries'), 
+      where('studentId', 'in', studentIds),
+      where('date', '>=', from),
+      where('date', '<=', to)
+    );
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const entries: HabitEntry[] = [];
+      querySnapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.date && data.timestamp) {
+            entries.push({
+            id: doc.id,
+            ...data,
+            date: (data.date as Timestamp).toDate(),
+            timestamp: data.timestamp,
+            } as HabitEntry);
+        }
+      });
+      setHabitEntries(entries);
+      setDateLoading(false);
+    }, (error) => {
+      console.error("Error fetching habit entries for parent:", error);
+      setDateLoading(false);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  const getHabitsForDate = useCallback((studentId: string, date: Date): Habit[] => {
+      const student = students.find(s => s.id === studentId);
+      if (!student) return [];
+      
+      const relevantEntries = habitEntries.filter(entry => 
+        entry.studentId === studentId && isSameDay(entry.date, date)
+      );
+      
+      const habitsFromDefs: Habit[] = Object.entries(HABIT_DEFINITIONS).map(([habitName, subHabitNames], habitIndex) => ({
+        id: `${habitIndex + 1}`,
+        name: habitName,
+        subHabits: subHabitNames.map((subHabitName, subHabitIndex) => {
+          const entry = relevantEntries
+              .filter(e => e.habitName === habitName && e.subHabitName === subHabitName)
+              .sort((a, b) => (b.timestamp as Timestamp).toMillis() - (a.timestamp as Timestamp).toMillis())[0];
+
+          return {
+            id: `${habitIndex + 1}-${subHabitIndex + 1}`,
+            name: subHabitName,
+            score: entry ? entry.score : 0,
+          };
+        }),
+      }));
+      return habitsFromDefs;
+
+  }, [students, habitEntries]);
+  
   useEffect(() => {
-    if (selectedStudentId) {
-      // This fetches data for the single date picker (daily details)
-      const unsubscribeDaily = fetchHabitEntriesForRange({ from: selectedDate, to: selectedDate });
-      // This fetches data for the date range picker (chart)
-      const unsubscribeRange = fetchHabitEntriesForRange(dateRange);
+    const studentIds = students.map(s => s.id);
+    if (studentIds.length > 0) {
+      const unsubscribeDaily = fetchHabitEntriesForRange(studentIds, { from: selectedDate, to: selectedDate });
+      const unsubscribeRange = fetchHabitEntriesForRange(studentIds, dateRange);
 
       return () => {
         unsubscribeDaily();
         unsubscribeRange();
       };
     }
-  }, [selectedDate, dateRange, selectedStudentId, fetchHabitEntriesForRange]);
+  }, [students, selectedDate, dateRange, fetchHabitEntriesForRange]);
   
-  const selectedStudentData = parentStudents.find(s => s.id === selectedStudentId);
+  const selectedStudentData = students.find(s => s.id === selectedStudentId);
   const habitsForSelectedDate = selectedStudentData ? getHabitsForDate(selectedStudentData.id, selectedDate) : [];
 
   const habitTranslationMapping: Record<string, string> = {
@@ -145,7 +229,7 @@ export function OrangTuaDashboardClient() {
 
   }, [dateRange, selectedStudentData, habitEntries, getHabitsForDate]);
 
-  if (studentsLoading) {
+  if (loading) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -153,7 +237,7 @@ export function OrangTuaDashboardClient() {
     );
   }
 
-  if (parentStudents.length === 0) {
+  if (students.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -201,7 +285,6 @@ export function OrangTuaDashboardClient() {
     }).filter(d => d.average > 0);
   };
   
-  const averageScore = calculateOverallAverage(habitsForSelectedDate);
   const dailySummaryData = prepareDailySummaryChartData(habitsForSelectedDate);
 
   return (
@@ -211,7 +294,7 @@ export function OrangTuaDashboardClient() {
         <p className="text-muted-foreground">Selamat datang, {userProfile?.name}. Pantau progres anak Anda di sini.</p>
       </header>
 
-      {parentStudents.length > 1 && (
+      {students.length > 1 && (
         <Card>
             <CardHeader>
                 <CardTitle>Pilih Anak</CardTitle>
@@ -223,7 +306,7 @@ export function OrangTuaDashboardClient() {
                         <SelectValue placeholder="Pilih nama anak..." />
                     </SelectTrigger>
                     <SelectContent>
-                        {parentStudents.map(student => (
+                        {students.map(student => (
                             <SelectItem key={student.id} value={student.id}>
                                 {student.name} - Kelas {student.class}
                             </SelectItem>
@@ -413,5 +496,3 @@ export function OrangTuaDashboardClient() {
     </div>
   );
 }
-
-    
