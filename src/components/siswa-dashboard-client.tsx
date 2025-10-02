@@ -81,21 +81,24 @@ export function SiswaDashboardClient() {
           const doc = snapshot.docs[0];
           const data = { id: doc.id, ...doc.data() } as Student;
           setStudentData(data);
-          // THIS IS THE KEY LOGIC: If class is not set, redirect to class selection.
+          // --- KEY LOGIC ---
+          // If class is not set, force redirect. This is the definitive check.
           if (!data.class) {
             router.replace('/pilih-kelas');
           }
         } else {
+          // This might happen briefly while the student data is being auto-created.
+          // The onSnapshot will trigger again once it's created.
           setStudentData(null);
         }
         setLoading(false);
       }, (error) => {
         console.error("Failed to fetch student data:", error);
-        setStudentData(null); // Set student to null on error
+        setStudentData(null);
         setLoading(false);
       });
       return () => unsubscribe();
-    } else {
+    } else if (!user) {
         setLoading(false);
     }
   }, [user, router]);
@@ -235,29 +238,17 @@ export function SiswaDashboardClient() {
 
   }, [dateRange, studentData, habitEntries, getHabitsForDate]);
 
-  if (loading) {
+  if (loading || !studentData) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
+        <p className="ml-4 text-muted-foreground">Memuat data siswa...</p>
       </div>
-    );
-  }
-
-  // If student data doesn't exist for this user, show a message.
-  if (!studentData) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Data Siswa Belum Ditautkan</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p>Akun Anda belum ditautkan dengan data siswa di sistem. Mohon hubungi admin atau wali kelas untuk menautkan akun Anda.</p>
-        </CardContent>
-      </Card>
     );
   }
   
   // If student data exists but class is not set, we show a loader while redirecting.
+  // The redirect itself is handled in the useEffect.
   if (!studentData.class) {
       return (
           <div className="flex h-full w-full items-center justify-center">

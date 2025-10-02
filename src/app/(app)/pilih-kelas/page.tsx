@@ -12,7 +12,7 @@ import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
-import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Student } from '@/lib/types';
 
@@ -31,7 +31,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function PilihKelasPage() {
   const { userProfile, loading: authLoading } = useAuth();
-  const [studentData, setStudentData] = useState<Student | null>(null);
+  const [studentDocId, setStudentDocId] = useState<string | null>(null);
   const [studentLoading, setStudentLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
@@ -51,15 +51,15 @@ export default function PilihKelasPage() {
       const unsubscribe = onSnapshot(q, (snapshot) => {
         if (!snapshot.empty) {
           const studentDoc = snapshot.docs[0];
-          const data = { id: studentDoc.id, ...studentDoc.data() } as Student;
-          setStudentData(data);
+          const data = studentDoc.data() as Student;
+          setStudentDocId(studentDoc.id);
           // If student already has a class, they should not be on this page. Redirect them.
           if (data.class) {
             router.replace('/dashboard');
           }
         } else {
-          // No student data linked to this user account yet.
-          setStudentData(null);
+          // This case should be rare now with auto-creation, but handle it just in case
+          setStudentDocId(null);
         }
         setStudentLoading(false);
       }, (error) => {
@@ -94,16 +94,18 @@ export default function PilihKelasPage() {
     );
   }
 
-  // If student data has not been created by admin/teacher yet.
-  if (!studentData) {
+  // This can happen if the student's account was just created and the student document
+  // hasn't been created yet by the AuthProvider logic. It's a temporary state.
+  if (!studentDocId) {
      return (
         <div className="flex items-center justify-center h-screen">
             <Card className="mx-auto max-w-lg">
                 <CardHeader>
-                    <CardTitle>Data Siswa Belum Siap</CardTitle>
+                    <CardTitle>Menyiapkan Akun Anda</CardTitle>
                 </CardHeader>
-                <CardContent>
-                    <p>Data siswa Anda belum ditambahkan oleh admin atau guru. Mohon tunggu atau hubungi pihak sekolah untuk konfirmasi.</p>
+                <CardContent className="flex flex-col items-center gap-4">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                    <p>Data siswa Anda sedang disiapkan. Halaman akan dimuat ulang secara otomatis...</p>
                 </CardContent>
             </Card>
         </div>
@@ -111,10 +113,10 @@ export default function PilihKelasPage() {
   }
 
   const onSubmit = async (data: FormValues) => {
-    if (!studentData) return;
+    if (!studentDocId) return;
     setIsSubmitting(true);
     try {
-      await updateStudentClass(studentData.id, data.kelas);
+      await updateStudentClass(studentDocId, data.kelas);
       toast({
         title: 'Kelas Berhasil Disimpan',
         description: `Anda telah terdaftar di kelas ${data.kelas}. Mengalihkan ke dasbor...`,

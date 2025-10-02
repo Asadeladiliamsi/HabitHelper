@@ -2,9 +2,10 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, type User } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp, getDocs, collection, query, where } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp, getDocs, collection, query, where, addDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-import type { UserProfile, UserRole } from '@/lib/types';
+import type { UserProfile, UserRole, Habit } from '@/lib/types';
+import { HABIT_DEFINITIONS } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 
 
@@ -39,7 +40,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const userDoc = await getDoc(userDocRef);
 
     if (userDoc.exists()) {
-      setUserProfile(userDoc.data() as UserProfile);
+      const profileData = userDoc.data() as UserProfile;
+      setUserProfile(profileData);
+
+      // --- NEW LOGIC: Auto-create student data if role is 'siswa' and data doesn't exist ---
+      if (profileData.role === 'siswa') {
+        const studentQuery = query(collection(db, 'students'), where('linkedUserUid', '==', user.uid));
+        const studentSnapshot = await getDocs(studentQuery);
+        
+        if (studentSnapshot.empty) {
+          // Student data doesn't exist, so create it now.
+          const initialHabits: Habit[] = Object.entries(HABIT_DEFINITIONS).map(([habitName, subHabitNames], habitIndex) => ({
+            id: `${habitIndex + 1}`,
+            name: habitName,
+            subHabits: subHabitNames.map((subHabitName, subHabitIndex) => ({
+              id: `${habitIndex + 1}-${subHabitIndex + 1}`,
+              name: subHabitName,
+              score: 0,
+            })),
+          }));
+
+          await addDoc(collection(db, 'students'), {
+            name: profileData.name,
+            email: profileData.email,
+            nisn: profileData.nisn || '',
+            linkedUserUid: user.uid,
+            class: '', // IMPORTANT: Class is empty, forcing selection
+            habits: initialHabits,
+            createdAt: serverTimestamp(),
+            lockedDates: [],
+          });
+        }
+      }
+      // --- END NEW LOGIC ---
+
     } else {
       setUserProfile(null);
     }
