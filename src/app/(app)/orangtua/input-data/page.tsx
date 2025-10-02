@@ -1,9 +1,8 @@
-
 'use client';
 
 import { DataInputClient } from '@/components/data-input-client';
 import { useAuth } from '@/contexts/auth-context';
-import { StudentProvider, useStudent } from '@/contexts/student-context';
+import { useStudent } from '@/contexts/student-context';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -66,51 +65,49 @@ export default function ParentInputDataPage() {
   }
 
   return (
-    <StudentProvider>
-        <div className="flex flex-col gap-6">
-          <header>
-            <h1 className="text-3xl font-bold tracking-tight">
-              Input Data Harian Anak
-            </h1>
-            <p className="text-muted-foreground">
-              Catat progres kebiasaan harian anak Anda di sini. Hanya kebiasaan tertentu yang bisa diisi oleh orang tua.
-            </p>
-          </header>
+    <div className="flex flex-col gap-6">
+      <header>
+        <h1 className="text-3xl font-bold tracking-tight">
+          Input Data Harian Anak
+        </h1>
+        <p className="text-muted-foreground">
+          Catat progres kebiasaan harian anak Anda di sini. Hanya kebiasaan tertentu yang bisa diisi oleh orang tua.
+        </p>
+      </header>
 
-          {parentStudents.length > 1 && (
-             <Card>
-                <CardHeader>
-                    <CardTitle>Pilih Anak</CardTitle>
-                    <CardDescription>Anda memiliki lebih dari satu anak. Pilih anak yang datanya ingin Anda isi.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
-                        <SelectTrigger className="w-full max-w-sm">
-                            <SelectValue placeholder="Pilih nama anak..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {parentStudents.map(student => (
-                                <SelectItem key={student.id} value={student.id}>
-                                    {student.name} - Kelas {student.class}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </CardContent>
-            </Card>
-          )}
+      {parentStudents.length > 1 && (
+         <Card>
+            <CardHeader>
+                <CardTitle>Pilih Anak</CardTitle>
+                <CardDescription>Anda memiliki lebih dari satu anak. Pilih anak yang datanya ingin Anda isi.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
+                    <SelectTrigger className="w-full max-w-sm">
+                        <SelectValue placeholder="Pilih nama anak..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {parentStudents.map(student => (
+                            <SelectItem key={student.id} value={student.id}>
+                                {student.name} - Kelas {student.class}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </CardContent>
+        </Card>
+      )}
 
-          {selectedStudentId ? (
-             <DataInputClient 
-                studentId={selectedStudentId} 
-                allowedHabits={PARENT_ALLOWED_HABITS}
-             />
-          ) : (
-             <div className="flex items-center justify-center h-48">
-                <p className="text-muted-foreground">Silakan pilih anak untuk mulai mengisi data.</p>
-             </div>
-          )}
-        </div>
-    </StudentProvider>
+      {selectedStudentId ? (
+         <DataInputClient 
+            studentId={selectedStudentId} 
+            allowedHabits={PARENT_ALLOWED_HABITS}
+         />
+      ) : (
+         <div className="flex items-center justify-center h-48">
+            <p className="text-muted-foreground">Silakan pilih anak untuk mulai mengisi data.</p>
+         </div>
+      )}
+    </div>
   );
 }

@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useEffect } from 'react';
@@ -39,10 +37,8 @@ import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function AppLayout({
   children,
-  params: _params,
 }: {
   children: React.ReactNode;
-  params: any;
 }) {
   const pathname = usePathname();
   const router = useRouter();

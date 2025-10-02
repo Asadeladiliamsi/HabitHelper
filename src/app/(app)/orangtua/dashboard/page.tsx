@@ -2,7 +2,6 @@
 
 import { OrangTuaDashboardClient } from '@/components/orang-tua-dashboard-client';
 import { useAuth } from '@/contexts/auth-context';
-import { StudentProvider } from '@/contexts/student-context';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
@@ -27,8 +26,6 @@ export default function OrangTuaDashboardPage() {
     }
 
   return (
-    <StudentProvider>
-        <OrangTuaDashboardClient />
-    </StudentProvider>
+    <OrangTuaDashboardClient />
   );
 }

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { DataInputClient } from '@/components/data-input-client';
@@ -8,8 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/auth-context';
 import { useLanguage } from '@/contexts/language-provider';
-import { StudentProvider, useStudent } from '@/contexts/student-context';
-import { UserProvider, useUser } from '@/contexts/user-context';
+import { useStudent } from '@/contexts/student-context';
+import { useUser } from '@/contexts/user-context';
 import { translations } from '@/lib/translations';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -58,9 +57,7 @@ function DataMasterTabs() {
                 </ul>
             </CardContent>
         </Card>
-        <StudentProvider>
-          <DataInputClient />
-        </StudentProvider>
+        <DataInputClient />
       </TabsContent>
       <TabsContent value="manage-students" className="mt-6">
         <ManageStudentsClient parentUsers={parentUsers} studentUsers={unlinkedStudentUsers} />
@@ -86,20 +83,16 @@ export default function DataMasterPage() {
   }
 
   return (
-    <UserProvider>
-      <StudentProvider>
-          <div className="flex flex-col gap-6">
-            <header>
-              <h1 className="text-3xl font-bold tracking-tight">
-                {t.sidebar.dataMaster}
-              </h1>
-              <p className="text-muted-foreground">
-                {t.dataMasterPage.description}
-              </p>
-            </header>
-            <DataMasterTabs />
-          </div>
-      </StudentProvider>
-    </UserProvider>
+    <div className="flex flex-col gap-6">
+      <header>
+        <h1 className="text-3xl font-bold tracking-tight">
+          {t.sidebar.dataMaster}
+        </h1>
+        <p className="text-muted-foreground">
+          {t.dataMasterPage.description}
+        </p>
+      </header>
+      <DataMasterTabs />
+    </div>
   );
 }

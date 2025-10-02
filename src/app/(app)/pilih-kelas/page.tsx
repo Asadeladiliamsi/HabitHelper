@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/auth-context';
-import { StudentProvider, useStudent } from '@/contexts/student-context';
+import { useStudent } from '@/contexts/student-context';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -26,7 +26,7 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-function PilihKelasForm() {
+export default function PilihKelasPage() {
   const { userProfile, loading: authLoading } = useAuth();
   const { students, updateStudentClass, loading: studentLoading } = useStudent();
   const router = useRouter();
@@ -133,13 +133,4 @@ function PilihKelasForm() {
       </CardContent>
     </Card>
   );
-}
-
-
-export default function PilihKelasPage() {
-    return (
-        <StudentProvider>
-            <PilihKelasForm />
-        </StudentProvider>
-    )
 }
