@@ -10,61 +10,74 @@ import { SiswaDashboardClient } from '@/components/siswa-dashboard-client';
 
 function DashboardContent() {
   const { userProfile, loading: authLoading } = useAuth();
-  const { students, loading: studentLoading } = useStudent();
+  const { loading: studentLoading } = useStudent();
   const router = useRouter();
 
   useEffect(() => {
-    if (authLoading || studentLoading) return;
-
-    if (!userProfile) {
+    if (!authLoading && !userProfile) {
       router.replace('/login');
-      return;
     }
-    
-    if (userProfile.role === 'admin') {
-      router.replace('/admin/dashboard');
-    } else if (userProfile.role === 'orangtua') {
-      router.replace('/orangtua/dashboard');
-    } else if (userProfile.role === 'siswa') {
-      const studentData = students.find(s => s.linkedUserUid === userProfile.uid);
-      if (studentData && !studentData.class) {
-        router.replace('/pilih-kelas');
-      }
-    }
-  }, [authLoading, studentLoading, userProfile, students, router]);
+  }, [authLoading, userProfile, router]);
 
-  if (authLoading || studentLoading || !userProfile) {
+  const isLoading = authLoading || studentLoading;
+
+  if (isLoading || !userProfile) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }
-  
+
+  // Redirect based on role after loading is complete
+  if (userProfile.role === 'admin') {
+    router.replace('/admin/dashboard');
+    return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+  }
+
+  if (userProfile.role === 'orangtua') {
+    router.replace('/orangtua/dashboard');
+    return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+  }
+
   if (userProfile.role === 'guru') {
     return <DashboardClient />;
   }
-  
+
   if (userProfile.role === 'siswa') {
-    const studentData = students.find(s => s.linkedUserUid === userProfile.uid);
-    if (studentData && studentData.class) {
-      return <SiswaDashboardClient />;
-    }
-    // While redirecting or if student data is not ready, show loader
-    return (
-       <div className="flex h-full w-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
+    return <SiswaDashboardRouter />;
   }
 
-  // Fallback for roles that should be redirected (admin/parent/student-no-class)
   return (
     <div className="flex h-full w-full items-center justify-center">
-      <p>Memuat dasbor Anda...</p>
-      <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+      <p>Peran pengguna tidak dikenali. Mengalihkan...</p>
     </div>
   );
+}
+
+function SiswaDashboardRouter() {
+    const { userProfile } = useAuth();
+    const { students, loading: studentLoading } = useStudent();
+    const router = useRouter();
+
+    const studentData = userProfile ? students.find(s => s.linkedUserUid === userProfile.uid) : undefined;
+
+    useEffect(() => {
+        if (!studentLoading && studentData && !studentData.class) {
+            router.replace('/pilih-kelas');
+        }
+    }, [studentLoading, studentData, router]);
+
+    if (studentLoading) {
+        return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+    }
+
+    if (studentData?.class) {
+        return <SiswaDashboardClient />;
+    }
+    
+    // While redirecting or if data is not ready
+    return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
 }
 
 
