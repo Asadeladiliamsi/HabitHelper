@@ -21,10 +21,10 @@ import { translations } from '@/lib/translations';
 import { StudentUserSearchDialog } from './student-user-search-dialog';
 
 const formSchema = z.object({
-  name: z.string(), // Now it will be auto-filled
+  name: z.string(), // Auto-filled
   class: z.string().min(1, { message: 'Kelas harus diisi.' }),
-  nisn: z.string().min(1, { message: 'NISN harus diisi.' }),
-  email: z.string(), // Now it will be auto-filled
+  nisn: z.string(), // Auto-filled
+  email: z.string(), // Auto-filled
   linkedUserUid: z.string().min(1, { message: 'Akun siswa harus dipilih.' }),
 });
 
@@ -70,7 +70,7 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student, studentUs
   useEffect(() => {
     if (isOpen) {
       if (student) {
-        // Edit mode
+        // Edit mode: Fill form with existing student data
         reset({ 
             name: student.name, 
             class: student.class, 
@@ -80,7 +80,7 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student, studentUs
         });
         setSelectedUserName(student.name);
       } else {
-        // Add mode
+        // Add mode: Reset form
         reset({ name: '', class: '', nisn: '', email: '', linkedUserUid: '' });
         setSelectedUserName('');
       }
@@ -93,10 +93,13 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student, studentUs
     if (selectedUser) {
         setValue('name', selectedUser.name);
         setValue('email', selectedUser.email || '');
-        setValue('nisn', selectedUser.nisn || '');
+        // When adding a new student, also populate NISN from the user profile
+        if (!isEditMode) {
+          setValue('nisn', selectedUser.nisn || '');
+        }
         setSelectedUserName(selectedUser.name);
     }
-  }, [selectedUserUid, studentUsers, setValue]);
+  }, [selectedUserUid, studentUsers, setValue, isEditMode]);
 
 
   const onSubmit = (data: FormValues) => {
@@ -117,7 +120,7 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student, studentUs
         <DialogHeader className="flex-shrink-0">
             <DialogTitle>{student ? t.editTitle : t.addTitle}</DialogTitle>
             <DialogDescription>
-              {student ? t.editDescription : 'Pilih akun siswa yang sudah terdaftar, lalu lengkapi data kelas.'}
+              {student ? "Ubah kelas untuk siswa yang sudah ada." : 'Pilih akun siswa yang sudah terdaftar, lalu lengkapi data kelasnya.'}
             </DialogDescription>
         </DialogHeader>
         
@@ -159,14 +162,14 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student, studentUs
                     <Label htmlFor="nisn">
                         NISN
                     </Label>
-                    <Input id="nisn" {...register('nisn')} placeholder="Nomor Induk Siswa Nasional" readOnly={isEditMode} className={isEditMode ? "bg-muted/50 cursor-not-allowed" : ""} />
+                    <Input id="nisn" {...register('nisn')} placeholder="Nomor Induk Siswa Nasional" readOnly className="bg-muted/50 cursor-not-allowed" />
                     {errors.nisn && <p className="text-sm text-destructive mt-1">{errors.nisn.message}</p>}
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="class">
                         {t.class}
                     </Label>
-                    <Input id="class" {...register('class')} />
+                    <Input id="class" {...register('class')} placeholder="Contoh: 7 Ruang 1" />
                     {errors.class && <p className="text-sm text-destructive mt-1">{errors.class.message}</p>}
                 </div>
             </form>

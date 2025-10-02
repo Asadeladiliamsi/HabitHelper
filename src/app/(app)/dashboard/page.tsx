@@ -35,6 +35,7 @@ function DashboardRouter() {
     
     if (userProfile.role === 'siswa') {
       const studentData = students.find(s => s.linkedUserUid === userProfile.uid);
+      // Jika data siswa sudah ada tapi belum ada kelas, paksa ke halaman pilih kelas
       if (studentData && !studentData.class) {
         router.replace('/pilih-kelas');
         return;
@@ -51,37 +52,23 @@ function DashboardRouter() {
     );
   }
 
+  // Tampilkan konten berdasarkan peran setelah semua pemeriksaan selesai
   if (userProfile.role === 'guru') {
     return <DashboardClient />;
   }
 
   if (userProfile.role === 'siswa') {
-    return <SiswaDashboardClient />;
-  }
-
-  // Fallback for roles that get redirected (admin, orangtua) while redirecting
-  if (userProfile.role === 'admin' || userProfile.role === 'orangtua') {
-      return (
-        <div className="flex h-full w-full items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin" />
-        </div>
-      );
+    const studentData = students.find(s => s.linkedUserUid === userProfile.uid);
+    // Pastikan data siswa ada dan sudah punya kelas sebelum render dasbor siswa
+    if (studentData && studentData.class) {
+       return <SiswaDashboardClient />;
+    }
   }
   
-  // Fallback for student being redirected to class selection
-  const studentData = students.find(s => s.linkedUserUid === userProfile.uid);
-  if (userProfile.role === 'siswa' && studentData && !studentData.class) {
-     return (
-        <div className="flex h-full w-full items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin" />
-        </div>
-      );
-  }
-
-
+  // Tampilkan loader sebagai fallback selama proses pengalihan untuk menghindari kedipan layar
   return (
     <div className="flex h-full w-full items-center justify-center">
-      <p>Peran pengguna tidak dikenali atau sedang dialihkan...</p>
+      <Loader2 className="h-8 w-8 animate-spin" />
     </div>
   );
 }

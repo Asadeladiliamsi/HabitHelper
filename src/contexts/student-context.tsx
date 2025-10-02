@@ -38,12 +38,13 @@ export const StudentProvider = ({ children }: { children: React.React.Node }) =>
   const [dateLoading, setDateLoading] = useState(false);
   
   useEffect(() => {
-    // Wait until auth loading is false and we have a user profile.
+    // Wait until auth loading is false.
     if (authLoading) {
       setLoading(true);
       return;
     }
     
+    // If no user or profile, no data to fetch.
     if (!user || !userProfile) {
       setLoading(false);
       setStudents([]);
@@ -60,6 +61,7 @@ export const StudentProvider = ({ children }: { children: React.React.Node }) =>
     } else if (userProfile.role === 'siswa') {
       q = query(collection(db, 'students'), where('linkedUserUid', '==', user.uid));
     } else {
+       // If role is not recognized, stop loading and clear data.
        setLoading(false);
        setStudents([]);
        return;
@@ -255,7 +257,7 @@ export const StudentProvider = ({ children }: { children: React.React.Node }) =>
   }, [students, habitEntries]);
 
 
-  if (authLoading && loading) {
+  if (authLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />

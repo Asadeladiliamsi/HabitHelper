@@ -31,8 +31,9 @@ function PilihKelasForm() {
   const { students, updateStudentClass, loading: studentLoading } = useStudent();
   const router = useRouter();
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Cari data siswa yang sesuai dengan pengguna yang sedang login
   const studentData = students.find(s => s.linkedUserUid === userProfile?.uid);
 
   const form = useForm<FormValues>({
@@ -43,7 +44,7 @@ function PilihKelasForm() {
   });
 
   useEffect(() => {
-    // Jika siswa sudah punya kelas, arahkan ke dasbor
+    // Jika siswa sudah punya kelas, paksa kembali ke dasbor.
     if (!studentLoading && studentData && studentData.class) {
       router.replace('/dashboard');
     }
@@ -57,6 +58,7 @@ function PilihKelasForm() {
     );
   }
 
+  // Jika data siswa belum dibuat oleh admin/guru, tampilkan pesan.
   if (!studentData) {
      return (
         <Card className="mx-auto mt-10 max-w-lg">
@@ -72,12 +74,12 @@ function PilihKelasForm() {
 
   const onSubmit = async (data: FormValues) => {
     if (!studentData) return;
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
       await updateStudentClass(studentData.id, data.kelas);
       toast({
         title: 'Kelas Berhasil Disimpan',
-        description: `Anda telah terdaftar di kelas ${data.kelas}.`,
+        description: `Anda telah terdaftar di kelas ${data.kelas}. Mengalihkan ke dasbor...`,
       });
       router.push('/dashboard');
     } catch (error: any) {
@@ -87,7 +89,7 @@ function PilihKelasForm() {
         description: `Terjadi kesalahan: ${error.message}`,
       });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -124,8 +126,8 @@ function PilihKelasForm() {
             {form.formState.errors.kelas && <p className="text-sm text-destructive mt-1">{form.formState.errors.kelas.message}</p>}
           </div>
 
-          <Button type="submit" disabled={isLoading} className="w-full">
-            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Simpan dan Lanjutkan'}
+          <Button type="submit" disabled={isSubmitting} className="w-full">
+            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Simpan dan Lanjutkan'}
           </Button>
         </form>
       </CardContent>
