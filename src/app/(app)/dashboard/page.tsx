@@ -8,18 +8,19 @@ import { Loader2 } from 'lucide-react';
 import { StudentProvider, useStudent } from '@/contexts/student-context';
 import { SiswaDashboardClient } from '@/components/siswa-dashboard-client';
 
-function DashboardContent() {
+function DashboardRouter() {
   const { userProfile, loading: authLoading } = useAuth();
-  const { loading: studentLoading } = useStudent();
+  const { students, loading: studentLoading } = useStudent();
   const router = useRouter();
 
+  const isLoading = authLoading || studentLoading;
+
   useEffect(() => {
-    if (!authLoading && !userProfile) {
+    if (!isLoading && !userProfile) {
       router.replace('/login');
     }
-  }, [authLoading, userProfile, router]);
+  }, [isLoading, userProfile, router]);
 
-  const isLoading = authLoading || studentLoading;
 
   if (isLoading || !userProfile) {
     return (
@@ -45,7 +46,12 @@ function DashboardContent() {
   }
 
   if (userProfile.role === 'siswa') {
-    return <SiswaDashboardRouter />;
+    const studentData = students.find(s => s.linkedUserUid === userProfile.uid);
+    if (studentData && !studentData.class) {
+      router.replace('/pilih-kelas');
+       return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+    }
+    return <SiswaDashboardClient />;
   }
 
   return (
@@ -55,37 +61,12 @@ function DashboardContent() {
   );
 }
 
-function SiswaDashboardRouter() {
-    const { userProfile } = useAuth();
-    const { students, loading: studentLoading } = useStudent();
-    const router = useRouter();
-
-    const studentData = userProfile ? students.find(s => s.linkedUserUid === userProfile.uid) : undefined;
-
-    useEffect(() => {
-        if (!studentLoading && studentData && !studentData.class) {
-            router.replace('/pilih-kelas');
-        }
-    }, [studentLoading, studentData, router]);
-
-    if (studentLoading) {
-        return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
-    }
-
-    if (studentData?.class) {
-        return <SiswaDashboardClient />;
-    }
-    
-    // While redirecting or if data is not ready
-    return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
-}
-
 
 export default function DashboardPage() {
   return (
     <StudentProvider>
       <div className="flex flex-col gap-6">
-        <DashboardContent />
+        <DashboardRouter />
       </div>
     </StudentProvider>
   );

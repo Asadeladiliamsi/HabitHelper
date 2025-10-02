@@ -38,8 +38,14 @@ export const StudentProvider = ({ children }: { children: React.React.Node }) =>
   const [dateLoading, setDateLoading] = useState(false);
   
   useEffect(() => {
-    if (authLoading || !user) {
-      setLoading(false); 
+    // Wait until auth loading is false and we have a user profile.
+    if (authLoading) {
+      setLoading(true);
+      return;
+    }
+    
+    if (!user || !userProfile) {
+      setLoading(false);
       setStudents([]);
       return;
     }
@@ -47,12 +53,11 @@ export const StudentProvider = ({ children }: { children: React.React.Node }) =>
     setLoading(true);
 
     let q;
-    if (userProfile?.role === 'guru' || userProfile?.role === 'admin') {
+    if (userProfile.role === 'guru' || userProfile.role === 'admin') {
       q = query(collection(db, 'students'));
-    } else if (userProfile?.role === 'orangtua') {
+    } else if (userProfile.role === 'orangtua') {
       q = query(collection(db, 'students'), where('parentId', '==', user.uid));
-    } else if (userProfile?.role === 'siswa' && user.email) {
-      // Siswa bisa melihat datanya sendiri, bahkan jika belum ada kelas, untuk proses pemilihan kelas.
+    } else if (userProfile.role === 'siswa') {
       q = query(collection(db, 'students'), where('linkedUserUid', '==', user.uid));
     } else {
        setLoading(false);
@@ -250,7 +255,7 @@ export const StudentProvider = ({ children }: { children: React.React.Node }) =>
   }, [students, habitEntries]);
 
 
-  if (authLoading) {
+  if (authLoading && loading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
