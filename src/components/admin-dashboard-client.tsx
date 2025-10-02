@@ -25,15 +25,16 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useUser } from '@/contexts/user-context';
-import { Loader2, MoreHorizontal, Pencil, Trash2, Search } from 'lucide-react';
+import { Loader2, MoreHorizontal, Pencil, Trash2, Search, KeyRound } from 'lucide-react';
 import type { UserProfile, UserRole } from '@/lib/types';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { UserEditDialog } from './user-edit-dialog';
 import { UserDeleteDialog } from './user-delete-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { ManageStudentsClient } from './manage-students-client';
 import { useStudent } from '@/contexts/student-context';
 import { Input } from './ui/input';
+import { useToast } from '@/hooks/use-toast';
 
 function UserTable({
   users,
@@ -136,6 +137,72 @@ function UserTable({
   );
 }
 
+function TeacherCodeManager() {
+    const { teacherCode, updateTeacherCode, fetchTeacherCode } = useUser();
+    const [code, setCode] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
+    const { toast } = useToast();
+
+    useEffect(() => {
+        if (teacherCode !== null) {
+            setCode(teacherCode);
+        }
+    }, [teacherCode]);
+
+    const handleSave = async () => {
+        setIsSaving(true);
+        try {
+            await updateTeacherCode(code);
+            toast({
+                title: 'Sukses',
+                description: 'Kode registrasi guru berhasil diperbarui.',
+            });
+        } catch (error: any) {
+            toast({
+                variant: 'destructive',
+                title: 'Gagal',
+                description: `Gagal menyimpan kode: ${error.message}`,
+            });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    if (teacherCode === null) {
+        return <Loader2 className="h-6 w-6 animate-spin" />;
+    }
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <KeyRound className="h-5 w-5" />
+                    Manajemen Kode Registrasi Guru
+                </CardTitle>
+                <CardDescription>
+                    Atur kode rahasia yang harus dimasukkan oleh pengguna saat mendaftar sebagai guru.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                 <div className="flex items-center space-x-2">
+                    <Input 
+                        value={code} 
+                        onChange={(e) => setCode(e.target.value)} 
+                        placeholder="Masukkan kode..." 
+                    />
+                    <Button onClick={handleSave} disabled={isSaving}>
+                        {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Simpan Kode
+                    </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                    Pastikan untuk memberikan kode ini hanya kepada guru yang berwenang.
+                </p>
+            </CardContent>
+        </Card>
+    );
+}
+
 
 export function AdminDashboardClient() {
   const { users, loading: usersLoading, updateUserRole, updateUserName, deleteUser } = useUser();
@@ -223,10 +290,11 @@ export function AdminDashboardClient() {
         </header>
 
          <Tabs defaultValue="manage-users">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="manage-users">Manajemen Pengguna</TabsTrigger>
                 <TabsTrigger value="manage-teachers">Manajemen Guru</TabsTrigger>
                 <TabsTrigger value="manage-students">Manajemen Siswa</TabsTrigger>
+                <TabsTrigger value="settings">Pengaturan</TabsTrigger>
             </TabsList>
             <TabsContent value="manage-users" className="mt-6 space-y-6">
                 <div className="relative sm:w-64">
@@ -270,6 +338,9 @@ export function AdminDashboardClient() {
             </TabsContent>
              <TabsContent value="manage-students" className="mt-6">
                 <ManageStudentsClient parentUsers={parentUsers} studentUsers={unlinkedStudentUsers} />
+            </TabsContent>
+            <TabsContent value="settings" className="mt-6">
+                <TeacherCodeManager />
             </TabsContent>
         </Tabs>
       </div>

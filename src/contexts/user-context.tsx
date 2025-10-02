@@ -14,6 +14,8 @@ import {
   doc,
   query,
   deleteDoc,
+  getDoc,
+  setDoc,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { UserProfile, UserRole } from '@/lib/types';
@@ -23,9 +25,12 @@ import { Loader2 } from 'lucide-react';
 interface UserContextType {
   users: UserProfile[];
   loading: boolean;
+  teacherCode: string | null;
   updateUserRole: (uid: string, newRole: UserRole) => Promise<void>;
   updateUserName: (uid: string, newName: string) => Promise<void>;
   deleteUser: (uid: string) => Promise<void>;
+  fetchTeacherCode: () => Promise<void>;
+  updateTeacherCode: (code: string) => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -34,11 +39,16 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const { user, userProfile, loading: authLoading } = useAuth();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [teacherCode, setTeacherCode] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading || !userProfile) {
       setLoading(true);
       return;
+    }
+
+    if (userProfile.role === 'admin') {
+      fetchTeacherCode();
     }
 
     // Only admins and teachers should be able to fetch the full user list.
@@ -69,6 +79,27 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
     return () => unsubscribe();
   }, [userProfile, authLoading]);
+
+  const fetchTeacherCode = async () => {
+    if (!userProfile || userProfile.role !== 'admin') return;
+    const settingsDocRef = doc(db, 'app_settings', 'registration');
+    const docSnap = await getDoc(settingsDocRef);
+    if (docSnap.exists()) {
+      setTeacherCode(docSnap.data().teacherCode);
+    } else {
+      setTeacherCode(''); // No code set yet
+    }
+  };
+  
+  const updateTeacherCode = async (code: string) => {
+    if (!userProfile || userProfile.role !== 'admin') {
+      throw new Error('Insufficient permissions');
+    }
+    const settingsDocRef = doc(db, 'app_settings', 'registration');
+    await setDoc(settingsDocRef, { teacherCode: code });
+    setTeacherCode(code);
+  };
+
 
   const updateUserRole = async (uid: string, newRole: UserRole) => {
     if (!userProfile || userProfile.role !== 'admin') {
@@ -122,6 +153,9 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     updateUserRole,
     updateUserName,
     deleteUser,
+    teacherCode,
+    fetchTeacherCode,
+    updateTeacherCode
   };
 
   return (

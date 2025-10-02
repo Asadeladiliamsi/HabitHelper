@@ -30,9 +30,13 @@ const formSchema = z.object({
   password: z.string().min(6, { message: 'Kata sandi minimal 6 karakter.' }),
   role: z.enum(['guru', 'siswa', 'orangtua']),
   nisn: z.string().optional(),
+  teacherCode: z.string().optional(),
 }).refine(data => data.role !== 'siswa' || (data.nisn && data.nisn.length > 0), {
     message: 'NISN wajib diisi jika Anda mendaftar sebagai siswa.',
     path: ['nisn'],
+}).refine(data => data.role !== 'guru' || (data.teacherCode && data.teacherCode.length > 0), {
+    message: 'Kode registrasi guru wajib diisi.',
+    path: ['teacherCode'],
 });
 
 
@@ -54,6 +58,7 @@ export default function SignupPage() {
       password: '',
       role: 'siswa',
       nisn: '',
+      teacherCode: '',
     },
   });
 
@@ -141,6 +146,14 @@ export default function SignupPage() {
                 <Label htmlFor="nisn">NISN (Nomor Induk Siswa Nasional)</Label>
                 <Input id="nisn" type="text" placeholder="Masukkan NISN Anda" {...form.register('nisn')} />
                 {form.formState.errors.nisn && <p className="text-sm text-destructive">{form.formState.errors.nisn.message}</p>}
+            </div>
+          )}
+
+          {selectedRole === 'guru' && (
+            <div className="space-y-2">
+                <Label htmlFor="teacherCode">Kode Registrasi Guru</Label>
+                <Input id="teacherCode" type="text" placeholder="Masukkan kode dari admin" {...form.register('teacherCode')} />
+                {form.formState.errors.teacherCode && <p className="text-sm text-destructive">{form.formState.errors.teacherCode.message}</p>}
             </div>
           )}
           

@@ -14,7 +14,7 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, pass: string) => Promise<any>;
   signup: (email: string, pass: string) => Promise<any>;
-  signupAndCreateProfile: (data: { name: string; email: string; password: string, role: UserRole, nisn?: string }) => Promise<void>;
+  signupAndCreateProfile: (data: { name: string; email: string; password: string, role: UserRole, nisn?: string, teacherCode?: string }) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -71,7 +71,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return createUserWithEmailAndPassword(auth, email, pass);
   };
 
-  const signupAndCreateProfile = async (data: { name: string; email: string; password: string, role: UserRole, nisn?: string }) => {
+  const signupAndCreateProfile = async (data: { name: string; email: string; password: string, role: UserRole, nisn?: string, teacherCode?: string }) => {
+      if (data.role === 'guru') {
+      const settingsDocRef = doc(db, 'app_settings', 'registration');
+      const docSnap = await getDoc(settingsDocRef);
+      if (!docSnap.exists() || docSnap.data().teacherCode !== data.teacherCode) {
+        throw new Error('Kode registrasi guru tidak valid.');
+      }
+    }
+    
      const userCredential = await signup(data.email, data.password);
      const userDocRef = doc(db, 'users', userCredential.user.uid);
      
