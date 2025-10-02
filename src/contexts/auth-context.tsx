@@ -2,9 +2,9 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, type User } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp, getDocs, collection, query, where, addDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp, getDocs, collection, query, where, addDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-import type { UserProfile, UserRole, Habit } from '@/lib/types';
+import type { UserProfile, UserRole, Habit, Student } from '@/lib/types';
 import { HABIT_DEFINITIONS } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 
@@ -12,9 +12,9 @@ import { useRouter } from 'next/navigation';
 interface AuthContextType {
   user: User | null;
   userProfile: UserProfile | null;
+  studentData: Student | null; // For logged-in students
   loading: boolean;
   login: (email: string, pass: string) => Promise<any>;
-  signup: (email: string, pass: string) => Promise<any>;
   signupAndCreateProfile: (data: { name: string; email: string; password: string, role: UserRole, nisn?: string, teacherCode?: string }) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -24,70 +24,105 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [studentData, setStudentData] = useState<Student | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  const fetchUserProfile = useCallback(async (user: User | null) => {
-    if (!user) {
-      setUser(null);
-      setUserProfile(null);
+  // This effect runs once on mount to set up the auth state listener.
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+      if (!user) {
+        // If user logs out, clear all data and finish loading.
+        setUserProfile(null);
+        setStudentData(null);
+        setLoading(false);
+      }
+    });
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, []);
+
+  // This effect reacts to changes in the authenticated user.
+  useEffect(() => {
+    if (user === null) {
+      // User is logged out or auth state is initializing.
       setLoading(false);
       return;
     }
 
-    setUser(user);
+    setLoading(true);
+    let studentUnsubscribe: (() => void) | null = null;
+    
+    // 1. Fetch UserProfile
     const userDocRef = doc(db, 'users', user.uid);
-    const userDoc = await getDoc(userDocRef);
+    const unsubProfile = onSnapshot(userDocRef, async (userDoc) => {
+      if (userDoc.exists()) {
+        const profile = userDoc.data() as UserProfile;
+        setUserProfile(profile);
 
-    if (userDoc.exists()) {
-      const profileData = userDoc.data() as UserProfile;
-      setUserProfile(profileData);
+        // 2. If user is a student, fetch their corresponding Student data.
+        if (profile.role === 'siswa') {
+          const studentQuery = query(collection(db, 'students'), where('linkedUserUid', '==', user.uid));
+          
+          // Clean up previous student listener if it exists
+          if (studentUnsubscribe) studentUnsubscribe();
 
-      // --- NEW LOGIC: Auto-create student data if role is 'siswa' and data doesn't exist ---
-      if (profileData.role === 'siswa') {
-        const studentQuery = query(collection(db, 'students'), where('linkedUserUid', '==', user.uid));
-        const studentSnapshot = await getDocs(studentQuery);
-        
-        if (studentSnapshot.empty) {
-          // Student data doesn't exist, so create it now.
-          const initialHabits: Habit[] = Object.entries(HABIT_DEFINITIONS).map(([habitName, subHabitNames], habitIndex) => ({
-            id: `${habitIndex + 1}`,
-            name: habitName,
-            subHabits: subHabitNames.map((subHabitName, subHabitIndex) => ({
-              id: `${habitIndex + 1}-${subHabitIndex + 1}`,
-              name: subHabitName,
-              score: 0,
-            })),
-          }));
-
-          await addDoc(collection(db, 'students'), {
-            name: profileData.name,
-            email: profileData.email,
-            nisn: profileData.nisn || '',
-            linkedUserUid: user.uid,
-            class: '', // IMPORTANT: Class is empty, forcing selection
-            habits: initialHabits,
-            createdAt: serverTimestamp(),
-            lockedDates: [],
+          studentUnsubscribe = onSnapshot(studentQuery, async (studentSnapshot) => {
+            if (!studentSnapshot.empty) {
+              const studentDoc = studentSnapshot.docs[0];
+              setStudentData({ id: studentDoc.id, ...studentDoc.data() } as Student);
+              setLoading(false); // Finish loading once we have student data
+            } else {
+              // **Crucial:** Student document doesn't exist, so we create it.
+              try {
+                const newStudentRef = await addDoc(collection(db, 'students'), {
+                  name: profile.name,
+                  email: profile.email,
+                  nisn: profile.nisn || '',
+                  linkedUserUid: user.uid,
+                  class: '', // Class is empty, forcing selection
+                  createdAt: serverTimestamp(),
+                  lockedDates: [],
+                });
+                // The onSnapshot will trigger again with the new data, so we just wait.
+              } catch (error) {
+                  console.error("Failed to auto-create student document:", error);
+                  setStudentData(null);
+                  setLoading(false);
+              }
+            }
+          }, (error) => {
+            console.error("Error fetching student data:", error);
+            setStudentData(null);
+            setLoading(false);
           });
+        } else {
+          // If user is not a student, clear student data and finish loading.
+          setStudentData(null);
+          setLoading(false);
         }
+      } else {
+        // UserProfile doesn't exist, this might happen during signup.
+        setUserProfile(null);
+        setStudentData(null);
+        setLoading(false);
       }
-      // --- END NEW LOGIC ---
-
-    } else {
-      setUserProfile(null);
-    }
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setLoading(true);
-      await fetchUserProfile(user);
-      setLoading(false);
+    }, (error) => {
+        console.error("Error fetching user profile:", error);
+        setUserProfile(null);
+        setStudentData(null);
+        setLoading(false);
     });
-
-    return () => unsubscribe();
-  }, [fetchUserProfile]);
+    
+    // Cleanup function
+    return () => {
+      unsubProfile();
+      if (studentUnsubscribe) {
+        studentUnsubscribe();
+      }
+    };
+  }, [user]);
   
   const login = async (email: string, pass: string) => {
      try {
@@ -133,17 +168,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = async () => {
     await signOut(auth);
-    setUser(null);
-    setUserProfile(null);
+    // State will be cleared by the onAuthStateChanged listener
     router.push('/login');
   };
 
   const value = { 
     user, 
     userProfile, 
+    studentData,
     loading, 
     login, 
-    signup, 
     signupAndCreateProfile, 
     logout,
   };

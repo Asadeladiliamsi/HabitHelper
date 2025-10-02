@@ -20,18 +20,15 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    // This effect runs only once on the client-side
+    setIsMounted(true);
     try {
       const storedLanguage = localStorage.getItem(STORAGE_KEY) as Language | null;
       if (storedLanguage && VALID_LANGUAGES.includes(storedLanguage)) {
         setLanguage(storedLanguage);
-      } else {
-        setLanguage('id'); // Default language
       }
     } catch (error) {
       console.error("Failed to read language from localStorage", error);
-      setLanguage('id');
-    } finally {
-      setIsMounted(true);
     }
   }, []);
 
@@ -54,8 +51,9 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
       }
     },
   };
-
-  // Do not render children until the component has mounted and the language is set
+  
+  // To prevent hydration mismatch, we don't render children until the component
+  // has mounted and has had a chance to read from localStorage.
   if (!isMounted) {
     return null;
   }

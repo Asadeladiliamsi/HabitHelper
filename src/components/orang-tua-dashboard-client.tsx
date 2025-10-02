@@ -56,7 +56,7 @@ const habitColors: { [key: string]: string } = {
 
 
 export function OrangTuaDashboardClient() {
-  const { userProfile } = useAuth();
+  const { userProfile, loading: authLoading } = useAuth();
   const [students, setStudents] = useState<Student[]>([]);
   const [habitEntries, setHabitEntries] = useState<HabitEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -209,7 +209,7 @@ export function OrangTuaDashboardClient() {
 
   }, [dateRange, selectedStudentData, habitEntries]);
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />

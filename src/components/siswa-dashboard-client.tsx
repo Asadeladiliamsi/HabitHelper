@@ -56,10 +56,8 @@ const habitColors: { [key: string]: string } = {
 
 
 export function SiswaDashboardClient() {
-  const { user } = useAuth();
-  const [studentData, setStudentData] = useState<Student | null>(null);
+  const { user, studentData, loading: authLoading } = useAuth();
   const [habitEntries, setHabitEntries] useState<HabitEntry[]>([]);
-  const [loading, setLoading] = useState(true);
   const [entriesLoading, setEntriesLoading] = useState(true);
   const router = useRouter();
 
@@ -73,35 +71,11 @@ export function SiswaDashboardClient() {
   });
 
   useEffect(() => {
-    if (user) {
-      setLoading(true);
-      const q = query(collection(db, 'students'), where('linkedUserUid', '==', user.uid));
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        if (!snapshot.empty) {
-          const doc = snapshot.docs[0];
-          const data = { id: doc.id, ...doc.data() } as Student;
-          setStudentData(data);
-          // --- KEY LOGIC ---
-          // If class is not set, force redirect. This is the definitive check.
-          if (!data.class) {
-            router.replace('/pilih-kelas');
-          }
-        } else {
-          // This might happen briefly while the student data is being auto-created.
-          // The onSnapshot will trigger again once it's created.
-          setStudentData(null);
-        }
-        setLoading(false);
-      }, (error) => {
-        console.error("Failed to fetch student data:", error);
-        setStudentData(null);
-        setLoading(false);
-      });
-      return () => unsubscribe();
-    } else if (!user) {
-        setLoading(false);
+    // Redirect if the user is a student but their class is not set
+    if (!authLoading && user && studentData && !studentData.class) {
+      router.replace('/pilih-kelas');
     }
-  }, [user, router]);
+  }, [authLoading, user, studentData, router]);
   
   useEffect(() => {
     if (!studentData) {
@@ -215,7 +189,7 @@ export function SiswaDashboardClient() {
 
   }, [dateRange, studentData, habitEntries]);
 
-  if (loading || !studentData) {
+  if (authLoading || !studentData) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -224,13 +198,12 @@ export function SiswaDashboardClient() {
     );
   }
   
-  // If student data exists but class is not set, we show a loader while redirecting.
-  // The redirect itself is handled in the useEffect.
+  // This is the crucial check. If the class is not set, we show a loader while redirecting.
   if (!studentData.class) {
       return (
-          <div className="flex h-full w-full items-center justify-center">
+          <div className="flex h-full w-full flex-col items-center justify-center gap-4">
               <Loader2 className="h-8 w-8 animate-spin" />
-              <p className="ml-4">Mengalihkan ke halaman pemilihan kelas...</p>
+              <p className="text-muted-foreground">Anda harus memilih kelas terlebih dahulu. Mengalihkan...</p>
           </div>
       );
   }
