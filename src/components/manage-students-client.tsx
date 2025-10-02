@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, PlusCircle, Pencil, Trash2, Search, Link2 } from 'lucide-react';
-import type { Student, UserProfile } from '@/lib/types';
+import type { Student, UserProfile, Habit } from '@/lib/types';
 import { StudentDialog } from '@/components/student-dialog';
 import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
@@ -76,7 +76,7 @@ export function ManageStudentsClient() {
   const addStudent = async (newStudentData: Omit<Student, 'id' | 'habits' | 'avatarUrl'>) => {
     const nisnQuery = query(collection(db, 'students'), where('nisn', '==', newStudentData.nisn));
     const nisnSnapshot = await getDocs(nisnQuery);
-    if (!nisnSnapshot.empty) {
+    if (!nisnSnapshot.empty && newStudentData.nisn) {
       throw new Error(`NISN ${newStudentData.nisn} sudah digunakan oleh siswa lain.`);
     }
 
@@ -98,6 +98,7 @@ export function ManageStudentsClient() {
 
     await addDoc(collection(db, 'students'), {
       ...newStudentData,
+      class: '', // Class is always empty on creation
       habits: initialHabits,
       createdAt: serverTimestamp(),
       lockedDates: [],
@@ -131,10 +132,10 @@ export function ManageStudentsClient() {
   const handleDialogSave = async (studentData: Omit<Student, 'id' | 'habits' | 'avatarUrl'>) => {
     try {
       if (selectedStudent) {
-        // Update existing student - only NISN and class can be updated
-        await updateStudent(selectedStudent.id, { nisn: studentData.nisn, class: studentData.class });
+        // Teachers can no longer edit class, so we remove it from the update object
+        await updateStudent(selectedStudent.id, { nisn: studentData.nisn });
       } else {
-        // Add new student from an existing user
+        // Add new student (link user)
         if (!studentData.linkedUserUid) {
             throw new Error("Pengguna siswa harus dipilih.");
         }
@@ -267,7 +268,11 @@ export function ManageStudentsClient() {
                         )}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary">{student.class}</Badge>
+                      {student.class ? (
+                        <Badge variant="secondary">{student.class}</Badge>
+                      ) : (
+                        <Badge variant="destructive">Belum Pilih Kelas</Badge>
+                      )}
                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
@@ -280,7 +285,7 @@ export function ManageStudentsClient() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => handleEditStudent(student)}>
                             <Pencil className="mr-2 h-4 w-4" />
-                            {t.edit}
+                            Lihat Detail
                           </DropdownMenuItem>
                            <DropdownMenuItem onClick={() => handleOpenLinkParentDialog(student)}>
                             <Link2 className="mr-2 h-4 w-4" />

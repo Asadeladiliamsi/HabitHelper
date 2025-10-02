@@ -22,7 +22,7 @@ import { StudentUserSearchDialog } from './student-user-search-dialog';
 
 const formSchema = z.object({
   name: z.string(), // Auto-filled
-  class: z.string().min(1, { message: 'Kelas harus diisi.' }),
+  class: z.string().optional(), // Class is now optional for the teacher/admin
   nisn: z.string(), // Auto-filled
   email: z.string(), // Auto-filled
   linkedUserUid: z.string().min(1, { message: 'Akun siswa harus dipilih.' }),
@@ -73,7 +73,7 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student, studentUs
         // Edit mode: Fill form with existing student data
         reset({ 
             name: student.name, 
-            class: student.class, 
+            class: student.class || '', 
             nisn: student.nisn || '', 
             email: student.email,
             linkedUserUid: student.linkedUserUid || ''
@@ -93,7 +93,6 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student, studentUs
     if (selectedUser) {
         setValue('name', selectedUser.name);
         setValue('email', selectedUser.email || '');
-        // When adding a new student, also populate NISN from the user profile
         if (!isEditMode) {
           setValue('nisn', selectedUser.nisn || '');
         }
@@ -105,7 +104,8 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student, studentUs
   const onSubmit = (data: FormValues) => {
     onSave({
       name: data.name,
-      class: data.class,
+      // When saving, ensure class is an empty string if not provided
+      class: data.class || '', 
       nisn: data.nisn,
       email: data.email,
       linkedUserUid: data.linkedUserUid
@@ -120,7 +120,7 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student, studentUs
         <DialogHeader className="flex-shrink-0">
             <DialogTitle>{student ? t.editTitle : t.addTitle}</DialogTitle>
             <DialogDescription>
-              {student ? "Ubah kelas untuk siswa yang sudah ada." : 'Pilih akun siswa yang sudah terdaftar, lalu lengkapi data kelasnya.'}
+              {student ? "Ubah data siswa yang sudah ada." : 'Pilih akun siswa yang sudah terdaftar untuk menautkannya ke sistem. Siswa akan memilih kelasnya sendiri setelah login.'}
             </DialogDescription>
         </DialogHeader>
         
@@ -165,19 +165,22 @@ export function StudentDialog({ isOpen, onOpenChange, onSave, student, studentUs
                     <Input id="nisn" {...register('nisn')} placeholder="Nomor Induk Siswa Nasional" readOnly className="bg-muted/50 cursor-not-allowed" />
                     {errors.nisn && <p className="text-sm text-destructive mt-1">{errors.nisn.message}</p>}
                 </div>
-                <div className="space-y-2">
-                    <Label htmlFor="class">
-                        {t.class}
-                    </Label>
-                    <Input id="class" {...register('class')} placeholder="Contoh: 7 Ruang 1" />
-                    {errors.class && <p className="text-sm text-destructive mt-1">{errors.class.message}</p>}
-                </div>
+
+                {/* Only show class input in edit mode, and make it read-only as students choose it */}
+                {isEditMode && (
+                    <div className="space-y-2">
+                        <Label htmlFor="class">
+                            {t.class}
+                        </Label>
+                        <Input id="class" {...register('class')} readOnly className="bg-muted/50 cursor-not-allowed" placeholder="Siswa belum memilih kelas" />
+                    </div>
+                )}
             </form>
         </div>
         
         <DialogFooter className="flex-shrink-0 pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>{t.cancel}</Button>
-            <Button type="submit" form="student-form" disabled={!isValid}>{t.save}</Button>
+            <Button type="submit" form="student-form" disabled={!isValid && !isEditMode}>{isEditMode ? 'Simpan' : t.save}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
