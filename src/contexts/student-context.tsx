@@ -25,6 +25,7 @@ interface StudentContextType {
   fetchHabitEntriesForRange: (dateRange: DateRange | undefined) => () => void;
   habitEntries: HabitEntry[];
   toggleDateLock: (studentId: string, date: Date, lock: boolean) => Promise<void>;
+  updateStudentClass: (studentId: string, className: string) => Promise<void>;
 }
 
 const StudentContext = createContext<StudentContextType | undefined>(undefined);
@@ -51,7 +52,8 @@ export const StudentProvider = ({ children }: { children: React.React.Node }) =>
     } else if (userProfile?.role === 'orangtua') {
       q = query(collection(db, 'students'), where('parentId', '==', user.uid));
     } else if (userProfile?.role === 'siswa' && user.email) {
-      q = query(collection(db, 'students'), where('email', '==', user.email));
+      // Siswa bisa melihat datanya sendiri, bahkan jika belum ada kelas, untuk proses pemilihan kelas.
+      q = query(collection(db, 'students'), where('linkedUserUid', '==', user.uid));
     } else {
        setLoading(false);
        setStudents([]);
@@ -134,6 +136,12 @@ export const StudentProvider = ({ children }: { children: React.React.Node }) =>
         ...updatedData,
         updatedAt: serverTimestamp(),
     });
+  };
+
+  const updateStudentClass = async (studentId: string, className: string) => {
+    if (!user) throw new Error("Authentication required");
+    const studentDocRef = doc(db, 'students', studentId);
+    await updateDoc(studentDocRef, { class: className });
   };
 
   const deleteStudent = async (studentId: string) => {
@@ -263,6 +271,7 @@ export const StudentProvider = ({ children }: { children: React.React.Node }) =>
     fetchHabitEntriesForRange,
     habitEntries,
     toggleDateLock,
+    updateStudentClass,
   };
 
   return (
