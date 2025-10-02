@@ -97,7 +97,7 @@ export function DashboardClient() {
   const [students, setStudents] = useState<Student[]>([]);
   const [habitEntries, setHabitEntries] = useState<HabitEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dateLoading, setDateLoading] = useState(false);
+  const [entriesLoading, setEntriesLoading] = useState(true);
   
   const { language } = useLanguage();
   const [selectedClass, setSelectedClass] = useState('all');
@@ -136,23 +136,9 @@ export function DashboardClient() {
     return () => unsubscribe();
   }, []);
 
-  const fetchHabitEntriesForRange = useCallback((dateRange: DateRange | undefined): (() => void) => {
-    if (!dateRange?.from) {
-      setHabitEntries([]);
-      return () => {};
-    }
-    
-    setDateLoading(true);
-    
-    const from = startOfDay(dateRange.from);
-    const to = dateRange.to ? startOfDay(dateRange.to) : startOfDay(dateRange.from);
-
-    const q = query(
-      collection(db, 'habit_entries'), 
-      where('date', '>=', from),
-      where('date', '<=', to)
-    );
-
+  useEffect(() => {
+    setEntriesLoading(true);
+    const q = query(collection(db, 'habit_entries'));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const entries: HabitEntry[] = [];
       querySnapshot.forEach(doc => {
@@ -166,13 +152,12 @@ export function DashboardClient() {
             } as HabitEntry);
         }
       });
-      
       setHabitEntries(entries);
-      setDateLoading(false);
+      setEntriesLoading(false);
     }, (error) => {
       console.error("Error fetching real-time habit entries:", error);
       setHabitEntries([]);
-      setDateLoading(false);
+      setEntriesLoading(false);
     });
 
     return unsubscribe;
@@ -228,16 +213,6 @@ export function DashboardClient() {
     return lockedCount > filteredStudents.length / 2;
   }, [filteredStudents, singleDate]);
   
-   useEffect(() => {
-    const unsubscribe = fetchHabitEntriesForRange({from: singleDate, to: singleDate});
-    return () => unsubscribe();
-  }, [singleDate, fetchHabitEntriesForRange]);
-
-  useEffect(() => {
-    const unsubscribe = fetchHabitEntriesForRange(dateRange);
-    return () => unsubscribe();
-  }, [dateRange, fetchHabitEntriesForRange]);
-
   const handleToggleAllLocks = async () => {
     const date = singleDate;
     if (!date) return;
@@ -282,7 +257,7 @@ export function DashboardClient() {
   };
 
   const classList = useMemo(() => {
-    const classes = new Set(students.map(s => s.class));
+    const classes = new Set(students.map(s => s.class).filter(Boolean));
     return ['all', ...Array.from(classes).sort()];
   }, [students]);
 
@@ -325,26 +300,30 @@ export function DashboardClient() {
   const chartData = useMemo(() => {
     if (!dateRange?.from || filteredStudents.length === 0) return [];
     
-    const toDate = dateRange.to || dateRange.from;
-    const intervalDays = eachDayOfInterval({ start: dateRange.from, end: toDate });
+    const from = startOfDay(dateRange.from);
+    const to = dateRange.to ? startOfDay(dateRange.to) : startOfDay(dateRange.from);
+    const intervalDays = eachDayOfInterval({ start: from, end: to });
     
+    const relevantEntries = habitEntries.filter(entry => entry.date >= from && entry.date <= to);
+
     const dataByDate = intervalDays.map(day => {
       const formattedDate = format(day, 'dd/MM');
       const dailyScores: { [habitName: string]: { total: number, count: number } } = {};
 
       for (const student of filteredStudents) {
-          const habitsForDay = getHabitsForDate(student.id, day);
-          for (const habit of habitsForDay) {
-              if (!dailyScores[habit.name]) {
-                  dailyScores[habit.name] = { total: 0, count: 0 };
+          const studentEntriesForDay = relevantEntries.filter(e => e.studentId === student.id && isSameDay(e.date, day));
+          
+          Object.keys(HABIT_DEFINITIONS).forEach(habitName => {
+              const habitEntriesForDay = studentEntriesForDay.filter(e => e.habitName === habitName);
+              if (habitEntriesForDay.length > 0) {
+                  if (!dailyScores[habitName]) {
+                      dailyScores[habitName] = { total: 0, count: 0 };
+                  }
+                  const habitAvg = habitEntriesForDay.reduce((sum, e) => sum + e.score, 0) / habitEntriesForDay.length;
+                  dailyScores[habitName].total += habitAvg;
+                  dailyScores[habitName].count += 1;
               }
-              const validSubHabits = habit.subHabits.filter(sh => sh.score > 0);
-              if (validSubHabits.length > 0) {
-                  const habitAvg = validSubHabits.reduce((sum, sh) => sum + sh.score, 0) / validSubHabits.length;
-                  dailyScores[habit.name].total += habitAvg;
-                  dailyScores[habit.name].count += 1;
-              }
-          }
+          });
       }
 
       const result: { date: string, [key: string]: any } = { date: formattedDate };
@@ -358,7 +337,7 @@ export function DashboardClient() {
 
     return dataByDate;
 
-  }, [dateRange, filteredStudents, habitEntries, getHabitsForDate]);
+  }, [dateRange, filteredStudents, habitEntries]);
 
   if (loading) {
     return (
@@ -431,7 +410,7 @@ export function DashboardClient() {
           </div>
         </CardHeader>
         <CardContent>
-          {dateLoading ? (
+          {entriesLoading ? (
             <div className="flex h-80 items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
@@ -508,6 +487,7 @@ export function DashboardClient() {
                     selected={singleDate}
                     onSelect={(date) => setSingleDate(date || new Date())}
                     initialFocus
+                    locale={id}
                     />
                 </PopoverContent>
               </Popover>
@@ -531,7 +511,7 @@ export function DashboardClient() {
           </div>
         </CardHeader>
         <CardContent>
-          {dateLoading ? (
+          {entriesLoading ? (
             <div className="flex h-64 items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>

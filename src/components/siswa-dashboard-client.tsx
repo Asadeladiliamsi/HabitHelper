@@ -58,9 +58,9 @@ const habitColors: { [key: string]: string } = {
 export function SiswaDashboardClient() {
   const { user } = useAuth();
   const [studentData, setStudentData] = useState<Student | null>(null);
-  const [habitEntries, setHabitEntries] = useState<HabitEntry[]>([]);
+  const [habitEntries, setHabitEntries] useState<HabitEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dateLoading, setDateLoading] = useState(false);
+  const [entriesLoading, setEntriesLoading] = useState(true);
   const router = useRouter();
 
   const { language } = useLanguage();
@@ -103,23 +103,13 @@ export function SiswaDashboardClient() {
     }
   }, [user, router]);
   
-  const fetchHabitEntriesForRange = useCallback((studentId: string, dateRange: DateRange | undefined): (() => void) => {
-    if (!studentId || !dateRange?.from) {
-      setHabitEntries([]);
-      return () => {};
-    }
-    
-    setDateLoading(true);
-    
-    const from = startOfDay(dateRange.from);
-    const to = dateRange.to ? startOfDay(dateRange.to) : startOfDay(dateRange.from);
-
-    const q = query(
-      collection(db, 'habit_entries'), 
-      where('studentId', '==', studentId),
-      where('date', '>=', from),
-      where('date', '<=', to)
-    );
+  useEffect(() => {
+    if (!studentData) {
+        setEntriesLoading(false);
+        return;
+    };
+    setEntriesLoading(true);
+    const q = query(collection(db, 'habit_entries'), where('studentId', '==', studentData.id));
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const entries: HabitEntry[] = [];
@@ -135,20 +125,20 @@ export function SiswaDashboardClient() {
         }
       });
       setHabitEntries(entries);
-      setDateLoading(false);
+      setEntriesLoading(false);
     }, (error) => {
       console.error("Error fetching habit entries for student:", error);
-      setDateLoading(false);
+      setEntriesLoading(false);
     });
 
     return unsubscribe;
-  }, []);
+  }, [studentData]);
 
   const getHabitsForDate = useCallback((studentId: string, date: Date): Habit[] => {
       if (!studentData || studentData.id !== studentId) return [];
       
       const relevantEntries = habitEntries.filter(entry => 
-        entry.studentId === studentId && isSameDay(entry.date, date)
+        isSameDay(entry.date, date)
       );
       
       const habitsFromDefs: Habit[] = Object.entries(HABIT_DEFINITIONS).map(([habitName, subHabitNames], habitIndex) => ({
@@ -169,19 +159,6 @@ export function SiswaDashboardClient() {
       return habitsFromDefs;
 
   }, [studentData, habitEntries]);
-
-
-  useEffect(() => {
-    if (studentData) {
-      const unsubscribeDaily = fetchHabitEntriesForRange(studentData.id, { from: selectedDate, to: selectedDate });
-      const unsubscribeRange = fetchHabitEntriesForRange(studentData.id, dateRange);
-
-      return () => {
-        unsubscribeDaily();
-        unsubscribeRange();
-      };
-    }
-  }, [studentData, selectedDate, dateRange, fetchHabitEntriesForRange]);
 
   const habitsForSelectedDate = studentData ? getHabitsForDate(studentData.id, selectedDate) : [];
 
@@ -208,27 +185,27 @@ export function SiswaDashboardClient() {
   const chartData = useMemo(() => {
     if (!dateRange?.from || !studentData) return [];
 
-    const toDate = dateRange.to || dateRange.from;
-    const intervalDays = eachDayOfInterval({ start: dateRange.from, end: toDate });
+    const from = startOfDay(dateRange.from);
+    const to = dateRange.to || startOfDay(dateRange.from);
+    const intervalDays = eachDayOfInterval({ start: from, end: to });
+    const relevantEntries = habitEntries.filter(entry => 
+        entry.date >= from &&
+        entry.date <= to
+    );
 
     const dataByDate = intervalDays.map(day => {
       const formattedDate = format(day, 'dd/MM');
-      const habitsForDay = getHabitsForDate(studentData.id, day);
+      const entriesForDay = relevantEntries.filter(e => isSameDay(e.date, day));
       
       const result: { date: string, [key: string]: any } = { date: formattedDate };
       
       Object.keys(HABIT_DEFINITIONS).forEach(habitName => {
-        const habit = habitsForDay.find(h => h.name === habitName);
-        if (habit) {
-          const validSubHabits = habit.subHabits.filter(sh => sh.score > 0);
-          if (validSubHabits.length > 0) {
-            const habitAvg = validSubHabits.reduce((sum, sh) => sum + sh.score, 0) / validSubHabits.length;
+        const habitEntriesForDay = entriesForDay.filter(e => e.habitName === habitName);
+        if (habitEntriesForDay.length > 0) {
+            const habitAvg = habitEntriesForDay.reduce((sum, e) => sum + e.score, 0) / habitEntriesForDay.length;
             result[habitName] = habitAvg;
-          } else {
-            result[habitName] = 0;
-          }
         } else {
-          result[habitName] = 0;
+            result[habitName] = 0;
         }
       });
       return result;
@@ -236,7 +213,7 @@ export function SiswaDashboardClient() {
     
     return dataByDate;
 
-  }, [dateRange, studentData, habitEntries, getHabitsForDate]);
+  }, [dateRange, studentData, habitEntries]);
 
   if (loading || !studentData) {
     return (
@@ -315,7 +292,7 @@ export function SiswaDashboardClient() {
           </div>
           </CardHeader>
           <CardContent>
-          {dateLoading && !chartData.length ? (
+          {entriesLoading && !chartData.length ? (
               <div className="flex h-80 items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
@@ -383,13 +360,14 @@ export function SiswaDashboardClient() {
                   selected={selectedDate}
                   onSelect={(date) => setSelectedDate(date || new Date())}
                   initialFocus
+                  locale={id}
                   />
               </PopoverContent>
             </Popover>
           </div>
         </CardHeader>
         <CardContent>
-          {dateLoading && habitsForSelectedDate.length === 0 ? (
+          {entriesLoading && habitsForSelectedDate.length === 0 ? (
              <div className="flex h-48 items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
              </div>
