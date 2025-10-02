@@ -437,21 +437,19 @@ export function DashboardClient() {
               const dailySummaryData = prepareDailySummaryChartData(studentHabitsOnDate);
 
               return (
-                <AccordionItem value={student.id} key={student.id} className="border rounded-md px-4">
-                   <AccordionTrigger className="hover:no-underline py-3">
+                <AccordionItem value={student.id} key={student.id} className="border rounded-md">
+                  <div className="flex items-center px-4 py-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => toggleDateLock(student.id, singleDate, !isLocked)}
+                    >
+                      {isLocked ? <Lock className="h-4 w-4 text-destructive" /> : <Unlock className="h-4 w-4 text-muted-foreground" />}
+                      <span className="sr-only">Toggle Lock</span>
+                    </Button>
+                    <AccordionTrigger className="flex-1 hover:no-underline py-2">
                       <div className="flex items-center gap-3 w-full">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={(e) => {
-                            e.stopPropagation(); // Prevent accordion from toggling
-                            toggleDateLock(student.id, singleDate, !isLocked);
-                          }}
-                        >
-                          {isLocked ? <Lock className="h-4 w-4 text-destructive" /> : <Unlock className="h-4 w-4 text-muted-foreground" />}
-                          <span className="sr-only">Toggle Lock</span>
-                        </Button>
                         <Avatar>
                           <AvatarImage
                             src={student.avatarUrl}
@@ -472,9 +470,10 @@ export function DashboardClient() {
                            <span className="font-mono text-lg font-bold">{overallAverage.toFixed(1)}</span>
                         </div>
                       </div>
-                   </AccordionTrigger>
+                    </AccordionTrigger>
+                  </div>
                    <AccordionContent>
-                      <div className="pl-12 pr-4 pt-2 pb-2 space-y-3">
+                      <div className="pl-12 pr-4 pt-2 pb-4 space-y-3">
                         {dailySummaryData.length > 0 ? (
                             <div className="bg-muted/50 p-4 rounded-lg">
                                 <h4 className="font-semibold text-sm mb-2 text-center">Ringkasan Rata-Rata per Kebiasaan</h4>
