@@ -34,7 +34,6 @@ import {
   Unlock,
 } from 'lucide-react';
 import type { Student, Habit, SubHabit, HabitEntry } from '@/lib/types';
-import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
@@ -99,7 +98,7 @@ export function DashboardClient() {
   const [loading, setLoading] = useState(true);
   const [entriesLoading, setEntriesLoading] = useState(true);
   
-  const { language } = useLanguage();
+  const language = 'id';
   const [selectedClass, setSelectedClass] = useState('all');
   const { toast } = useToast();
   

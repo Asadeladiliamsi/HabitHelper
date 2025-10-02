@@ -1,7 +1,7 @@
 'use client';
 
 import { DataInputClient } from '@/components/data-input-client';
-import { useAuth } from '@/contexts/auth-context';
+import { useUserProfile } from '@/hooks/use-user-profile';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -20,7 +20,7 @@ const PARENT_ALLOWED_HABITS = [
 ];
 
 export default function ParentInputDataPage() {
-  const { userProfile, loading: authLoading } = useAuth();
+  const { userProfile, loading: authLoading } = useUserProfile();
   const [students, setStudents] = useState<Student[]>([]);
   const [studentLoading, setStudentLoading] = useState(true);
   const router = useRouter();

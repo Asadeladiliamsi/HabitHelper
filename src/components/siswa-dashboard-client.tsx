@@ -1,10 +1,9 @@
 'use client';
 
-import { useAuth } from '@/contexts/auth-context';
+import { useUserProfile } from '@/hooks/use-user-profile';
 import { Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
 import {
   Sunrise,
@@ -29,7 +28,7 @@ import { DateRange } from 'react-day-picker';
 import { DateRangePicker } from './ui/date-range-picker';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, LabelList } from 'recharts';
 import { HABIT_DEFINITIONS } from '@/lib/types';
-import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, Timestamp, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 
@@ -56,12 +55,14 @@ const habitColors: { [key: string]: string } = {
 
 
 export function SiswaDashboardClient() {
-  const { user, studentData, loading: authLoading } = useAuth();
+  const { user, userProfile, loading: authLoading } = useUserProfile();
+  const [studentData, setStudentData] = useState<Student | null>(null);
+  const [studentLoading, setStudentLoading] = useState(true);
   const [habitEntries, setHabitEntries] useState<HabitEntry[]>([]);
   const [entriesLoading, setEntriesLoading] = useState(true);
   const router = useRouter();
 
-  const { language } = useLanguage();
+  const language = 'id';
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -71,11 +72,31 @@ export function SiswaDashboardClient() {
   });
 
   useEffect(() => {
-    // Redirect if the user is a student but their class is not set
-    if (!authLoading && user && studentData && !studentData.class) {
-      router.replace('/pilih-kelas');
-    }
-  }, [authLoading, user, studentData, router]);
+    if (authLoading || !user) return;
+
+    setStudentLoading(true);
+    const q = query(collection(db, "students"), where("linkedUserUid", "==", user.uid));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (!snapshot.empty) {
+        const studentDoc = snapshot.docs[0];
+        const data = studentDoc.data() as Omit<Student, 'id'>;
+        setStudentData({ id: studentDoc.id, ...data });
+
+        if (!data.class) {
+          router.replace('/pilih-kelas');
+        }
+      } else {
+        setStudentData(null); // Explicitly set to null if not found
+      }
+      setStudentLoading(false);
+    }, (error) => {
+        console.error("Error fetching student data:", error);
+        setStudentLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user, authLoading, router]);
+
   
   useEffect(() => {
     if (!studentData) {
@@ -189,7 +210,7 @@ export function SiswaDashboardClient() {
 
   }, [dateRange, studentData, habitEntries]);
 
-  if (authLoading || !studentData) {
+  if (authLoading || studentLoading) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -199,11 +220,17 @@ export function SiswaDashboardClient() {
   }
   
   // This is the crucial check. If the class is not set, we show a loader while redirecting.
-  if (!studentData.class) {
+  if (!studentData) {
       return (
           <div className="flex h-full w-full flex-col items-center justify-center gap-4">
-              <Loader2 className="h-8 w-8 animate-spin" />
-              <p className="text-muted-foreground">Anda harus memilih kelas terlebih dahulu. Mengalihkan...</p>
+               <Card>
+                <CardHeader>
+                    <CardTitle>Data Siswa Belum Ditautkan</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p>Akun Anda belum ditautkan dengan data siswa di sistem. Mohon hubungi admin atau wali kelas untuk menautkan akun Anda.</p>
+                </CardContent>
+              </Card>
           </div>
       );
   }

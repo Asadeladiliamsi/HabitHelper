@@ -4,15 +4,14 @@ import { DataInputClient } from '@/components/data-input-client';
 import { ManageStudentsClient } from '@/components/manage-students-client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useAuth } from '@/contexts/auth-context';
-import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 function DataMasterTabs() {
-  const { language } = useLanguage();
+  const language = 'id';
   const t = translations[language] || translations.en;
   
   return (
@@ -50,9 +49,9 @@ function DataMasterTabs() {
 }
 
 export default function DataMasterPage() {
-  const { language } = useLanguage();
+  const language = 'id';
   const t = translations[language] || translations.en;
-  const { userProfile, loading } = useAuth();
+  const { userProfile, loading } = useUserProfile();
   const router = useRouter();
 
   useEffect(() => {

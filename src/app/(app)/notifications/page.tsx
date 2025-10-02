@@ -2,13 +2,12 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { NotificationsClient } from '@/components/notifications-client';
-import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ComprehensiveAnalysisClient } from '@/components/comprehensive-analysis-client';
 
 export default function NotificationsPage() {
-  const { language } = useLanguage();
+  const language = 'id';
   const t = translations[language]?.notificationsPage || translations.en.notificationsPage;
 
   return (

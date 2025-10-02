@@ -1,13 +1,13 @@
 'use client';
 
 import { AdminDashboardClient } from '@/components/admin-dashboard-client';
-import { useAuth } from '@/contexts/auth-context';
+import { useUserProfile } from '@/hooks/use-user-profile';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 
 export default function AdminDashboardPage() {
-    const { userProfile, loading } = useAuth();
+    const { userProfile, loading } = useUserProfile();
     const router = useRouter();
 
     useEffect(() => {

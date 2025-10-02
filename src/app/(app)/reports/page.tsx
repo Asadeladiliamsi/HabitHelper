@@ -1,11 +1,10 @@
 'use client';
 
-import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
 import { ReportsClient } from '@/components/reports-client';
 
 export default function ReportsPage() {
-  const { language } = useLanguage();
+  const language = 'id';
   const t = translations[language]?.reportsPage || translations.en.reportsPage;
 
   return (

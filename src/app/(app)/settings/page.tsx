@@ -2,13 +2,11 @@
 'use client';
 
 import { ThemeSettings } from '@/components/theme-settings';
-import { LanguageSettings } from '@/components/language-settings';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
 
 export default function SettingsPage() {
-  const { language } = useLanguage();
+  const language = 'id';
   const t = translations[language]?.settingsPage || translations.en.settingsPage;
 
   return (
@@ -41,7 +39,11 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <LanguageSettings />
+             <div className="flex items-center justify-center p-8 border-2 border-dashed rounded-md bg-muted/50">
+              <p className="text-sm text-muted-foreground">
+                Pengaturan bahasa akan segera tersedia kembali.
+              </p>
+            </div>
           </CardContent>
         </Card>
 

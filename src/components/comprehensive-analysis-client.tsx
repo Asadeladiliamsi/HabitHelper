@@ -16,7 +16,6 @@ import {
 } from '@/components/ui/table';
 import { Badge } from './ui/badge';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -34,7 +33,7 @@ export function ComprehensiveAnalysisClient() {
   const [results, setResults] = useState<AnalysisResult[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [analysisTimestamp, setAnalysisTimestamp] = useState<string | null>(null);
-  const { language } = useLanguage();
+  const language = 'id';
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
 
   useEffect(() => {

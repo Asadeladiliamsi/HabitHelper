@@ -16,7 +16,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Student, UserProfile } from '@/lib/types';
 import { useEffect, useState } from 'react';
-import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
 import { StudentUserSearchDialog } from './student-user-search-dialog';
 
@@ -40,7 +39,7 @@ interface StudentDialogProps {
 
 
 export function StudentDialog({ isOpen, onOpenChange, onSave, student, studentUsers }: StudentDialogProps) {
-  const { language } = useLanguage();
+  const language = 'id';
   const t = translations[language]?.studentDialog || translations.en.studentDialog;
   const isEditMode = !!student;
   const [selectedUserName, setSelectedUserName] = useState('');

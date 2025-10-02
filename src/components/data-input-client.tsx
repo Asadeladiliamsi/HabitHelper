@@ -15,7 +15,6 @@ import { id, enUS } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { HABIT_DEFINITIONS } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
 import {
   Select,
@@ -25,7 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { StudentSearchDialog } from './student-search-dialog';
-import { useAuth } from '@/contexts/auth-context';
+import { useUserProfile } from '@/hooks/use-user-profile';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { collection, addDoc, serverTimestamp, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -57,8 +56,8 @@ export function DataInputClient({ studentId: lockedStudentId, allowedHabits }: D
   const [students, setStudents] = useState<Student[]>([]);
   const [studentsLoading, setStudentsLoading] = useState(true);
 
-  const { userProfile } = useAuth();
-  const { language } = useLanguage();
+  const { userProfile } = useUserProfile();
+  const language = 'id';
   const t = translations[language]?.dataInputClient || translations.en.dataInputClient;
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
   const locale = language === 'id' ? id : enUS;

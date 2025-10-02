@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useAuth } from '@/contexts/auth-context';
+import { useUserProfile } from '@/hooks/use-user-profile';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -30,7 +30,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export default function PilihKelasPage() {
-  const { userProfile, loading: authLoading } = useAuth();
+  const { user, userProfile, loading: authLoading } = useUserProfile();
   const [studentDocId, setStudentDocId] = useState<string | null>(null);
   const [studentLoading, setStudentLoading] = useState(true);
   const router = useRouter();
@@ -41,13 +41,13 @@ export default function PilihKelasPage() {
     // Only run this logic if auth is done and we have a user profile
     if (!authLoading && userProfile) {
       // Must be a student to be on this page
-      if (userProfile.role !== 'siswa') {
+      if (userProfile.role !== 'siswa' || !user) {
         router.replace('/dashboard');
         return;
       }
 
       setStudentLoading(true);
-      const q = query(collection(db, 'students'), where('linkedUserUid', '==', userProfile.uid));
+      const q = query(collection(db, 'students'), where('linkedUserUid', '==', user.uid));
       const unsubscribe = onSnapshot(q, (snapshot) => {
         if (!snapshot.empty) {
           const studentDoc = snapshot.docs[0];
@@ -71,7 +71,7 @@ export default function PilihKelasPage() {
         // If auth is done and there's no user, send to login
         router.replace('/login');
     }
-  }, [userProfile, authLoading, router]);
+  }, [user, userProfile, authLoading, router]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),

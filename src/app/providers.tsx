@@ -1,6 +1,6 @@
 'use client';
 
-import { ThemeProvider } from '@/contexts/theme-provider';
+import { ThemeProvider } from '@/components/theme-provider';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (

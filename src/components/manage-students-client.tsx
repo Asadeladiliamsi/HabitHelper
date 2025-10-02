@@ -10,7 +10,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MoreHorizontal, PlusCircle, Pencil, Trash2, Search, Link2 } from 'lucide-react';
 import type { Student, UserProfile, Habit } from '@/lib/types';
 import { StudentDialog } from '@/components/student-dialog';
-import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
@@ -28,7 +27,7 @@ export function ManageStudentsClient() {
   const [linkParentDialogOpen, setLinkParentDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const { language } = useLanguage();
+  const language = 'id';
   const { toast } = useToast();
   const t = translations[language]?.manageStudentsPage || translations.en.manageStudentsPage;
 

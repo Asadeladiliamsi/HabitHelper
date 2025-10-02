@@ -1,10 +1,9 @@
 'use client';
 
-import { useAuth } from '@/contexts/auth-context';
+import { useUserProfile } from '@/hooks/use-user-profile';
 import { Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
 import {
   Sunrise,
@@ -16,10 +15,10 @@ import {
   Bed,
   Calendar as CalendarIcon,
 } from 'lucide-react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { Student, Habit, HabitEntry } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Button } from './ui/button';
 import { Calendar } from './ui/calendar';
@@ -56,13 +55,13 @@ const habitColors: { [key: string]: string } = {
 
 
 export function OrangTuaDashboardClient() {
-  const { userProfile, loading: authLoading } = useAuth();
+  const { userProfile, loading: authLoading } = useUserProfile();
   const [students, setStudents] = useState<Student[]>([]);
   const [habitEntries, setHabitEntries] = useState<HabitEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [entriesLoading, setEntriesLoading] = useState(true);
 
-  const { language } = useLanguage();
+  const language = 'id';
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
 
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
@@ -100,6 +99,10 @@ export function OrangTuaDashboardClient() {
     setEntriesLoading(true);
 
     const studentIds = students.map(s => s.id);
+    if(studentIds.length === 0) {
+        setEntriesLoading(false);
+        return;
+    }
     const q = query(collection(db, 'habit_entries'), where('studentId', 'in', studentIds));
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {

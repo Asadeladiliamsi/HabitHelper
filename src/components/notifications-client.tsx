@@ -13,7 +13,6 @@ import { Lightbulb, AlertTriangle, Loader2 } from 'lucide-react';
 import { checkHabitDecline } from '@/app/actions';
 import { HABIT_NAMES, type Student } from '@/lib/types';
 import type { HabitDeclineNotificationOutput } from '@/ai/flows/habit-decline-notification';
-import { useLanguage } from '@/contexts/language-provider';
 import { translations } from '@/lib/translations';
 import { StudentSearchDialog } from './student-search-dialog';
 import { Input } from './ui/input';
@@ -36,7 +35,7 @@ export function NotificationsClient() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<HabitDeclineNotificationOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { language } = useLanguage();
+  const language = 'id';
   const t = translations[language]?.notificationsClient || translations.en.notificationsClient;
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
 
