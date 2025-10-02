@@ -16,10 +16,31 @@ function DashboardRouter() {
   const isLoading = authLoading || studentLoading;
 
   useEffect(() => {
-    if (!isLoading && !userProfile) {
+    if (isLoading) return;
+
+    if (!userProfile) {
       router.replace('/login');
+      return;
     }
-  }, [isLoading, userProfile, router]);
+
+    if (userProfile.role === 'admin') {
+      router.replace('/admin/dashboard');
+      return;
+    }
+
+    if (userProfile.role === 'orangtua') {
+      router.replace('/orangtua/dashboard');
+      return;
+    }
+    
+    if (userProfile.role === 'siswa') {
+      const studentData = students.find(s => s.linkedUserUid === userProfile.uid);
+      if (studentData && !studentData.class) {
+        router.replace('/pilih-kelas');
+        return;
+      }
+    }
+  }, [isLoading, userProfile, students, router]);
 
 
   if (isLoading || !userProfile) {
@@ -30,33 +51,37 @@ function DashboardRouter() {
     );
   }
 
-  // Redirect based on role after loading is complete
-  if (userProfile.role === 'admin') {
-    router.replace('/admin/dashboard');
-    return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
-  }
-
-  if (userProfile.role === 'orangtua') {
-    router.replace('/orangtua/dashboard');
-    return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
-  }
-
   if (userProfile.role === 'guru') {
     return <DashboardClient />;
   }
 
   if (userProfile.role === 'siswa') {
-    const studentData = students.find(s => s.linkedUserUid === userProfile.uid);
-    if (studentData && !studentData.class) {
-      router.replace('/pilih-kelas');
-       return <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
-    }
     return <SiswaDashboardClient />;
   }
 
+  // Fallback for roles that get redirected (admin, orangtua) while redirecting
+  if (userProfile.role === 'admin' || userProfile.role === 'orangtua') {
+      return (
+        <div className="flex h-full w-full items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      );
+  }
+  
+  // Fallback for student being redirected to class selection
+  const studentData = students.find(s => s.linkedUserUid === userProfile.uid);
+  if (userProfile.role === 'siswa' && studentData && !studentData.class) {
+     return (
+        <div className="flex h-full w-full items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      );
+  }
+
+
   return (
     <div className="flex h-full w-full items-center justify-center">
-      <p>Peran pengguna tidak dikenali. Mengalihkan...</p>
+      <p>Peran pengguna tidak dikenali atau sedang dialihkan...</p>
     </div>
   );
 }
