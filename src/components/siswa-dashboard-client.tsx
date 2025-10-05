@@ -23,7 +23,7 @@ import { Calendar } from './ui/calendar';
 import { format, subDays, eachDayOfInterval, startOfDay, isSameDay } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import type { Habit, Student, HabitEntry } from '@/lib/types';
+import type { Habit, HabitEntry } from '@/lib/types';
 import { DateRange } from 'react-day-picker';
 import { DateRangePicker } from './ui/date-range-picker';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, LabelList } from 'recharts';
@@ -56,7 +56,7 @@ const habitColors: { [key: string]: string } = {
 
 export function SiswaDashboardClient() {
   const { studentData, loading } = useAuth();
-  const [habitEntries, setHabitEntries] useState<HabitEntry[]>([]);
+  const [habitEntries, setHabitEntries] = useState<HabitEntry[]>([]);
   const [entriesLoading, setEntriesLoading] = useState(true);
   const router = useRouter();
 
@@ -73,11 +73,8 @@ export function SiswaDashboardClient() {
     if (loading) return;
 
     if (!studentData) {
-      // This could mean the student document is not created yet or not linked.
-      // The logic in useAuth now handles auto-creation, so we just wait.
       return;
     }
-    // If student data exists but class is not set, redirect.
     if (!studentData.class) {
       router.replace('/pilih-kelas');
     }
@@ -85,7 +82,7 @@ export function SiswaDashboardClient() {
 
   
   useEffect(() => {
-    if (!studentData) {
+    if (!studentData?.id) {
         setEntriesLoading(false);
         return;
     };

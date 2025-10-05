@@ -139,14 +139,12 @@ function UserTable({
 }
 
 function TeacherCodeManager() {
-    const { userProfile } = useAuth();
     const [teacherCode, setTeacherCode] = useState<string | null>(null);
     const [code, setCode] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const { toast } = useToast();
 
      const fetchTeacherCode = async () => {
-        if (!userProfile || userProfile.role !== 'admin') return;
         const settingsDocRef = doc(db, 'app_settings', 'registration');
         const docSnap = await getDoc(settingsDocRef);
         const code = docSnap.exists() ? docSnap.data().teacherCode : '';
@@ -156,14 +154,10 @@ function TeacherCodeManager() {
 
     useEffect(() => {
         fetchTeacherCode();
-    }, [userProfile]);
+    }, []);
 
 
     const handleSave = async () => {
-        if (!userProfile || userProfile.role !== 'admin') {
-            toast({ variant: 'destructive', title: 'Gagal', description: 'Izin tidak cukup.' });
-            return;
-        }
         setIsSaving(true);
         try {
             const settingsDocRef = doc(db, 'app_settings', 'registration');
@@ -221,7 +215,6 @@ function TeacherCodeManager() {
 
 
 export function AdminDashboardClient() {
-  const { userProfile } = useAuth();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
@@ -229,11 +222,6 @@ export function AdminDashboardClient() {
   const [searchTerm, setSearchTerm] = useState('');
 
    useEffect(() => {
-    if (!userProfile || userProfile.role !== 'admin') {
-      setLoading(false);
-      return;
-    }
-
     setLoading(true);
     const q = query(collection(db, 'users'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -246,7 +234,7 @@ export function AdminDashboardClient() {
     });
 
     return () => unsubscribe();
-  }, [userProfile]);
+  }, []);
 
   const handleRoleChange = async (uid: string, role: UserRole) => {
      const userDocRef = doc(db, 'users', uid);

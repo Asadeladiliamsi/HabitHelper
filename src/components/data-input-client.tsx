@@ -26,9 +26,9 @@ import {
 import { StudentSearchDialog } from './student-search-dialog';
 import { useAuth } from '@/firebase';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { collection, addDoc, serverTimestamp, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, onSnapshot, query, getDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Student } from '@/lib/types';
+import type { Student, UserProfile } from '@/lib/types';
 
 const formSchema = z.object({
   studentId: z.string().min(1, 'Siswa harus dipilih.'),
@@ -55,8 +55,9 @@ export function DataInputClient({ studentId: lockedStudentId, allowedHabits }: D
   const { toast } = useToast();
   const [students, setStudents] = useState<Student[]>([]);
   const [studentsLoading, setStudentsLoading] = useState(true);
-
   const { userProfile } = useAuth();
+
+
   const language = 'id';
   const t = translations[language]?.dataInputClient || translations.en.dataInputClient;
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;

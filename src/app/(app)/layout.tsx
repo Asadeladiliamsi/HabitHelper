@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -29,6 +28,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { useEffect } from 'react';
 
 export default function AppLayout({
   children,
@@ -66,7 +66,7 @@ export default function AppLayout({
     }
   };
   
-  if (loading || !user) {
+  if (loading || !userProfile) {
      return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />

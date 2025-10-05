@@ -1,59 +1,31 @@
 'use client';
 
 import { DataInputClient } from '@/components/data-input-client';
-import { useUserProfile } from '@/hooks/use-user-profile';
+import { useAuth } from '@/firebase';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import type { Student } from '@/lib/types';
-
+import { useEffect } from 'react';
 
 export default function InputDataPage() {
-  const { user, userProfile, loading: authLoading } = useUserProfile();
-  const [studentData, setStudentData] = useState<Student | null>(null);
-  const [studentLoading, setStudentLoading] = useState(true);
+  const { userProfile, studentData, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (authLoading) return;
+    if (loading) return;
 
-    if (userProfile?.role !== 'siswa') {
+    if (!userProfile || userProfile.role !== 'siswa') {
       router.replace('/dashboard');
       return;
     }
     
-    if (!user) {
-        router.replace('/login');
-        return;
+    if (studentData && !studentData.class) {
+      router.replace('/pilih-kelas');
     }
 
-    const studentDocRef = doc(db, 'students', user.uid);
-    const unsubscribe = onSnapshot(studentDocRef, (docSnap) => {
-        if (docSnap.exists()) {
-            const data = docSnap.data() as Omit<Student, 'id'>;
-            const currentStudentData = { id: docSnap.id, ...data };
-            setStudentData(currentStudentData);
-            if (!currentStudentData.class) {
-                router.replace('/pilih-kelas');
-            }
-        } else {
-             // This can happen if the student record is not yet created by an admin.
-             setStudentData(null);
-        }
-        setStudentLoading(false);
-    }, (error) => {
-        console.error("Error fetching student data:", error);
-        setStudentLoading(false);
-    });
-
-    return () => unsubscribe();
-
-  }, [user, userProfile, authLoading, router]);
+  }, [userProfile, studentData, loading, router]);
 
 
-  if (authLoading || studentLoading || !studentData) {
+  if (loading || !studentData) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -61,8 +33,7 @@ export default function InputDataPage() {
     );
   }
 
-  // This check is redundant due to useEffect, but good for safety
-  if (userProfile?.role !== 'siswa' || !studentData) {
+  if (userProfile?.role !== 'siswa') {
     return null;
   }
   

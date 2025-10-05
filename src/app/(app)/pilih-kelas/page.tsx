@@ -12,7 +12,7 @@ import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Student } from '@/lib/types';
 
@@ -29,40 +29,22 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export default function PilihKelasPage() {
-  const { user, loading: authLoading } = useAuth();
-  const [studentData, setStudentData] = useState<Student | null>(null);
-  const [dataLoading, setDataLoading] = useState(true);
+  const { user, studentData, loading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (authLoading) return;
+    if (loading) return;
     if (!user) {
       router.replace('/login');
       return;
     }
+    if (studentData?.class) {
+      router.replace('/dashboard');
+    }
     
-    const fetchStudentData = async () => {
-        setDataLoading(true);
-        const studentDocRef = doc(db, 'students', user.uid);
-        const studentDocSnap = await getDoc(studentDocRef);
-        if (studentDocSnap.exists()) {
-            const data = { id: studentDocSnap.id, ...studentDocSnap.data() } as Student;
-            setStudentData(data);
-             if (data.class) {
-                router.replace('/dashboard');
-            }
-        } else {
-             // This might happen in a race condition, wait for provider to create it
-             // Or user is not a student
-        }
-        setDataLoading(false);
-    };
-
-    fetchStudentData();
-
-  }, [user, authLoading, router]);
+  }, [user, studentData, loading, router]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -76,20 +58,12 @@ export default function PilihKelasPage() {
     await updateDoc(studentDocRef, { class: className });
   };
   
-  if (authLoading || dataLoading) {
+  if (loading || !studentData) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin" />
       </div>
     );
-  }
-
-  if (!studentData) {
-      return (
-          <div className="flex h-screen items-center justify-center">
-              <p>Data siswa tidak ditemukan. Silakan hubungi admin.</p>
-          </div>
-      )
   }
 
   const onSubmit = async (data: FormValues) => {

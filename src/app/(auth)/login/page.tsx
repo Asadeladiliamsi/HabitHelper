@@ -26,7 +26,7 @@ type FormValues = z.infer<typeof formSchema>;
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { user, loading } = useAuth();
 
   useEffect(() => {
@@ -45,7 +45,7 @@ export default function LoginPage() {
   });
 
   const onSubmit = async (data: FormValues) => {
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
       await signInWithEmailAndPassword(auth, data.email, data.password);
       toast({
@@ -65,7 +65,7 @@ export default function LoginPage() {
         description,
       });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
   
@@ -111,8 +111,8 @@ export default function LoginPage() {
               <p className="text-sm text-destructive mt-1">{form.formState.errors.password.message}</p>
             )}
           </div>
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Masuk'}
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Masuk'}
           </Button>
         </form>
         <div className="mt-4 text-center text-sm">

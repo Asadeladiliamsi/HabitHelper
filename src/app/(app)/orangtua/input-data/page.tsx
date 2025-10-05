@@ -1,7 +1,7 @@
 'use client';
 
 import { DataInputClient } from '@/components/data-input-client';
-import { useUserProfile } from '@/hooks/use-user-profile';
+import { useAuth } from '@/firebase';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -20,7 +20,7 @@ const PARENT_ALLOWED_HABITS = [
 ];
 
 export default function ParentInputDataPage() {
-  const { userProfile, loading: authLoading } = useUserProfile();
+  const { userProfile, loading: authLoading } = useAuth();
   const [students, setStudents] = useState<Student[]>([]);
   const [studentLoading, setStudentLoading] = useState(true);
   const router = useRouter();
@@ -34,7 +34,7 @@ export default function ParentInputDataPage() {
   }, [userProfile, authLoading, router]);
 
   useEffect(() => {
-    if (userProfile && userProfile.role === 'orangtua') {
+    if (userProfile && userProfile.role === 'orangtua' && userProfile.uid) {
       setStudentLoading(true);
       const q = query(collection(db, 'students'), where('parentId', '==', userProfile.uid));
       const unsubscribe = onSnapshot(q, (querySnapshot) => {

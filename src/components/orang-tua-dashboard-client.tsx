@@ -72,7 +72,7 @@ export function OrangTuaDashboardClient() {
   });
   
   useEffect(() => {
-    if (userProfile && userProfile.role === 'orangtua') {
+    if (userProfile && userProfile.role === 'orangtua' && userProfile.uid) {
       setLoading(true);
       const q = query(collection(db, 'students'), where('parentId', '==', userProfile.uid));
       const unsubscribe = onSnapshot(q, (snapshot) => {

@@ -1,7 +1,7 @@
 'use client';
 
 import { ThemeProvider } from 'next-themes';
-import { FirebaseProvider } from '@/firebase/provider';
+import React from 'react';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -10,9 +10,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       defaultTheme="system"
       enableSystem
     >
-      <FirebaseProvider>
         {children}
-      </FirebaseProvider>
     </ThemeProvider>
   );
 }
