@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { type User, onAuthStateChanged } from 'firebase/auth';
-import { doc, onSnapshot, collection, query, where } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
 import { auth, db } from '@/lib/firebase';
 import { errorEmitter } from '@/lib/error-emitter';
@@ -35,12 +35,11 @@ export const FirebaseProvider = ({ children }: { children: React.ReactNode }) =>
 
   useEffect(() => {
     if (!user) {
-        // If user is null, we are done loading as there's no profile to fetch.
         setLoading(false);
         return;
     }
 
-    setLoading(true); // Start loading profile
+    setLoading(true);
     const userDocRef = doc(db, 'users', user.uid);
     const unsubscribeProfile = onSnapshot(userDocRef, (docSnap) => {
         if (docSnap.exists()) {
@@ -48,20 +47,23 @@ export const FirebaseProvider = ({ children }: { children: React.ReactNode }) =>
         } else {
           setUserProfile(null);
         }
-        setLoading(false); // Finish loading profile
+        setLoading(false);
       }, (error) => {
-        console.error("Error fetching user profile:", error);
-         const permissionError = new FirestorePermissionError({
+        console.error("Firestore Error fetching user profile:", error);
+        
+        // Create and emit a rich, contextual error for debugging.
+        const permissionError = new FirestorePermissionError({
           path: userDocRef.path,
           operation: 'get',
         });
         errorEmitter.emit('permission-error', permissionError);
+        
         setUserProfile(null);
-        setLoading(false); // Finish loading even if there's an error
+        setLoading(false);
       });
 
     return () => unsubscribeProfile();
-  }, [user]); // This effect depends only on the user object.
+  }, [user]);
 
   
   const value = { user, userProfile, loading };
