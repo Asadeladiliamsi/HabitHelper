@@ -44,12 +44,6 @@ export default function AppLayout({
   const [profileLoading, setProfileLoading] = useState(true);
   
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/login');
-    }
-  }, [authLoading, user, router]);
-
-  useEffect(() => {
     if (user) {
       setProfileLoading(true);
       const unsub = onSnapshot(doc(db, 'users', user.uid), (doc) => {
@@ -65,12 +59,23 @@ export default function AppLayout({
         setProfileLoading(false);
       });
       return () => unsub();
-    } else {
+    } else if (!authLoading) {
       setUserProfile(null);
       setProfileLoading(false);
     }
-  }, [user]);
+  }, [user, authLoading]);
   
+  const loading = authLoading || profileLoading;
+
+  useEffect(() => {
+    // This is the safe place to perform side effects like redirection.
+    if (!loading && (!user || !userProfile)) {
+       if (pathname !== '/login') {
+           router.push('/login');
+       }
+    }
+  }, [loading, user, userProfile, router, pathname]);
+
   const handleLogout = async () => {
     await signOut(auth);
     router.push('/login');
@@ -92,21 +97,9 @@ export default function AppLayout({
     }
   };
   
-  const loading = authLoading || profileLoading;
-
-  if (loading) {
-     return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-  
-  // After all loading is done, if there's still no user or profile, redirect.
-  if (!user || !userProfile) {
-    if (pathname !== '/login') router.push('/login');
+  if (loading || !user || !userProfile) {
     return (
-       <div className="flex h-screen items-center justify-center">
+      <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
         <p className="ml-2">Mengalihkan ke halaman login...</p>
       </div>
