@@ -12,8 +12,9 @@ import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import type { Student } from '@/lib/types';
 
 const KELAS_LIST = [
     "7 Ruang 1", "7 Ruang 2", "7 Ruang 3", "7 Ruang 4", "7 Ruang 5", "7 Ruang 6", "7 Ruang 7", "7 Ruang 8", "7 Ruang 9",
@@ -28,26 +29,40 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export default function PilihKelasPage() {
-  const { user, userProfile, studentData, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const [studentData, setStudentData] = useState<Student | null>(null);
+  const [dataLoading, setDataLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!loading) {
-      if (!user) {
-        router.replace('/login');
-        return;
-      }
-      if (userProfile?.role !== 'siswa') {
-        router.replace('/dashboard');
-        return;
-      }
-      if (studentData?.class) {
-        router.replace('/dashboard');
-      }
+    if (authLoading) return;
+    if (!user) {
+      router.replace('/login');
+      return;
     }
-  }, [user, userProfile, studentData, loading, router]);
+    
+    const fetchStudentData = async () => {
+        setDataLoading(true);
+        const studentDocRef = doc(db, 'students', user.uid);
+        const studentDocSnap = await getDoc(studentDocRef);
+        if (studentDocSnap.exists()) {
+            const data = { id: studentDocSnap.id, ...studentDocSnap.data() } as Student;
+            setStudentData(data);
+             if (data.class) {
+                router.replace('/dashboard');
+            }
+        } else {
+             // This might happen in a race condition, wait for provider to create it
+             // Or user is not a student
+        }
+        setDataLoading(false);
+    };
+
+    fetchStudentData();
+
+  }, [user, authLoading, router]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -61,12 +76,20 @@ export default function PilihKelasPage() {
     await updateDoc(studentDocRef, { class: className });
   };
   
-  if (loading || !studentData) {
+  if (authLoading || dataLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin" />
       </div>
     );
+  }
+
+  if (!studentData) {
+      return (
+          <div className="flex h-screen items-center justify-center">
+              <p>Data siswa tidak ditemukan. Silakan hubungi admin.</p>
+          </div>
+      )
   }
 
   const onSubmit = async (data: FormValues) => {
@@ -79,6 +102,7 @@ export default function PilihKelasPage() {
         description: `Anda telah terdaftar di kelas ${data.kelas}. Mengalihkan ke dasbor...`,
       });
       router.push('/dashboard');
+      router.refresh(); // Force a refresh to ensure layout re-evaluates
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -96,7 +120,7 @@ export default function PilihKelasPage() {
         <CardHeader>
             <CardTitle>Pilih Kelas Anda</CardTitle>
             <CardDescription>
-            Selamat datang, {userProfile?.name}! Untuk melanjutkan, silakan pilih kelas Anda dari daftar di bawah ini.
+            Selamat datang, {studentData?.name}! Untuk melanjutkan, silakan pilih kelas Anda dari daftar di bawah ini.
             </CardDescription>
         </CardHeader>
         <CardContent>

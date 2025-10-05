@@ -1,13 +1,13 @@
 'use client';
 
 import { OrangTuaDashboardClient } from '@/components/orang-tua-dashboard-client';
-import { useUserProfile } from '@/hooks/use-user-profile';
+import { useAuth } from '@/firebase';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 export default function OrangTuaDashboardPage() {
-    const { userProfile, loading } = useUserProfile();
+    const { userProfile, loading } = useAuth();
     const router = useRouter();
 
     useEffect(() => {

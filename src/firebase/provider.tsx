@@ -14,7 +14,12 @@ interface FirebaseContextValue {
   loading: boolean;
 }
 
-const FirebaseContext = createContext<FirebaseContextValue | null>(null);
+const FirebaseContext = createContext<FirebaseContextValue>({
+  user: null,
+  userProfile: null,
+  studentData: null,
+  loading: true,
+});
 
 export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -71,9 +76,14 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
                 createdAt: serverTimestamp(),
                 lockedDates: [],
               };
-              // Set the document. The snapshot listener above will pick it up and set the state.
-              // We don't set loading to false here to wait for the listener to trigger.
-              await setDoc(studentDocRef, newStudentData);
+              try {
+                // Set the document. The snapshot listener above will pick it up and set the state.
+                // We don't set loading to false here to wait for the listener to trigger.
+                await setDoc(studentDocRef, newStudentData);
+              } catch (e) {
+                console.error("Failed to create student data:", e);
+                setLoading(false); // Stop loading on error
+              }
             }
           });
           return () => unsubscribeStudent();
@@ -85,8 +95,11 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       } else {
         // User document doesn't exist yet, can happen right after signup.
         // The signup flow now creates this, so we just wait.
-        // We don't set loading to false to avoid flicker.
+        // We don't set loading to false here to avoid flicker.
       }
+    }, (error) => {
+        console.error("Error fetching user profile:", error);
+        setLoading(false);
     });
 
     return () => unsubscribeProfile();
@@ -103,7 +116,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
 export const useAuth = () => {
   const context = useContext(FirebaseContext);
-  if (context === null) {
+  if (context === undefined) {
     throw new Error('useAuth must be used within a FirebaseProvider');
   }
   return context;
@@ -111,7 +124,7 @@ export const useAuth = () => {
 
 export const useUser = () => {
   const context = useContext(FirebaseContext);
-  if (context === null) {
+  if (context === undefined) {
     throw new Error('useUser must be used within a FirebaseProvider');
   }
   return context.user;
