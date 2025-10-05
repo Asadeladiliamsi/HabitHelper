@@ -5,12 +5,12 @@ import { DashboardClient } from '@/components/dashboard-client';
 import { SiswaDashboardClient } from '@/components/siswa-dashboard-client';
 import { AdminDashboardClient } from '@/components/admin-dashboard-client';
 import { OrangTuaDashboardClient } from '@/components/orang-tua-dashboard-client';
-import { useUserProfile } from '@/hooks/use-user-profile';
+import { useAuth } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 export default function DashboardPage() {
-  const { user, userProfile, loading } = useUserProfile();
+  const { user, userProfile, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {

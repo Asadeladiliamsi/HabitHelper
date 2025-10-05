@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { StudentSearchDialog } from './student-search-dialog';
-import { useUserProfile } from '@/hooks/use-user-profile';
+import { useAuth } from '@/firebase';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { collection, addDoc, serverTimestamp, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -56,7 +56,7 @@ export function DataInputClient({ studentId: lockedStudentId, allowedHabits }: D
   const [students, setStudents] = useState<Student[]>([]);
   const [studentsLoading, setStudentsLoading] = useState(true);
 
-  const { userProfile } = useUserProfile();
+  const { userProfile } = useAuth();
   const language = 'id';
   const t = translations[language]?.dataInputClient || translations.en.dataInputClient;
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;

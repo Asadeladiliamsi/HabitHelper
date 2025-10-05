@@ -1,6 +1,6 @@
 'use client';
 
-import { useUserProfile } from '@/hooks/use-user-profile';
+import { useAuth } from '@/firebase';
 import { Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -28,7 +28,7 @@ import { DateRange } from 'react-day-picker';
 import { DateRangePicker } from './ui/date-range-picker';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, LabelList } from 'recharts';
 import { HABIT_DEFINITIONS } from '@/lib/types';
-import { collection, query, where, onSnapshot, Timestamp, doc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 
@@ -55,9 +55,7 @@ const habitColors: { [key: string]: string } = {
 
 
 export function SiswaDashboardClient() {
-  const { user, userProfile, loading: authLoading } = useUserProfile();
-  const [studentData, setStudentData] = useState<Student | null>(null);
-  const [studentLoading, setStudentLoading] = useState(true);
+  const { studentData, loading } = useAuth();
   const [habitEntries, setHabitEntries] useState<HabitEntry[]>([]);
   const [entriesLoading, setEntriesLoading] = useState(true);
   const router = useRouter();
@@ -72,30 +70,18 @@ export function SiswaDashboardClient() {
   });
 
   useEffect(() => {
-    if (authLoading || !user) return;
+    if (loading) return;
 
-    setStudentLoading(true);
-    const q = query(collection(db, "students"), where("linkedUserUid", "==", user.uid));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      if (!snapshot.empty) {
-        const studentDoc = snapshot.docs[0];
-        const data = studentDoc.data() as Omit<Student, 'id'>;
-        setStudentData({ id: studentDoc.id, ...data });
-
-        if (!data.class) {
-          router.replace('/pilih-kelas');
-        }
-      } else {
-        setStudentData(null); // Explicitly set to null if not found
-      }
-      setStudentLoading(false);
-    }, (error) => {
-        console.error("Error fetching student data:", error);
-        setStudentLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [user, authLoading, router]);
+    if (!studentData) {
+      // This could mean the student document is not created yet or not linked.
+      // The logic in useAuth now handles auto-creation, so we just wait.
+      return;
+    }
+    // If student data exists but class is not set, redirect.
+    if (!studentData.class) {
+      router.replace('/pilih-kelas');
+    }
+  }, [studentData, loading, router]);
 
   
   useEffect(() => {
@@ -210,29 +196,13 @@ export function SiswaDashboardClient() {
 
   }, [dateRange, studentData, habitEntries]);
 
-  if (authLoading || studentLoading) {
+  if (loading || !studentData?.class) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
-        <p className="ml-4 text-muted-foreground">Memuat data siswa...</p>
+        <p className="ml-4 text-muted-foreground">Memuat data dan mengarahkan...</p>
       </div>
     );
-  }
-  
-  // This is the crucial check. If the class is not set, we show a loader while redirecting.
-  if (!studentData) {
-      return (
-          <div className="flex h-full w-full flex-col items-center justify-center gap-4">
-               <Card>
-                <CardHeader>
-                    <CardTitle>Data Siswa Belum Ditautkan</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p>Akun Anda belum ditautkan dengan data siswa di sistem. Mohon hubungi admin atau wali kelas untuk menautkan akun Anda.</p>
-                </CardContent>
-              </Card>
-          </div>
-      );
   }
   
   const calculateOverallAverage = (habits: Habit[]) => {

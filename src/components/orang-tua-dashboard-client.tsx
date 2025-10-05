@@ -1,6 +1,6 @@
 'use client';
 
-import { useUserProfile } from '@/hooks/use-user-profile';
+import { useAuth } from '@/firebase';
 import { Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -55,7 +55,7 @@ const habitColors: { [key: string]: string } = {
 
 
 export function OrangTuaDashboardClient() {
-  const { userProfile, loading: authLoading } = useUserProfile();
+  const { userProfile, loading: authLoading } = useAuth();
   const [students, setStudents] = useState<Student[]>([]);
   const [habitEntries, setHabitEntries] = useState<HabitEntry[]>([]);
   const [loading, setLoading] = useState(true);

@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { auth } from '@/lib/firebase';
 import { EmailAuthProvider } from 'firebase/auth';
 import { StyledFirebaseAuth } from '@/components/firebase-auth';
-import { useUserProfile } from '@/hooks/use-user-profile';
+import { useAuth } from '@/firebase';
 
 const uiConfig = {
   signInFlow: 'popup',
@@ -20,7 +20,7 @@ const uiConfig = {
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user, loading } = useUserProfile();
+  const { user, loading } = useAuth();
 
   useEffect(() => {
     if (!loading && user) {

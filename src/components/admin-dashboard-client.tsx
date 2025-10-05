@@ -35,7 +35,7 @@ import { Input } from './ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { collection, onSnapshot, updateDoc, doc, deleteDoc, getDoc, setDoc, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { useUserProfile } from '@/hooks/use-user-profile';
+import { useAuth } from '@/firebase';
 
 function UserTable({
   users,
@@ -139,7 +139,7 @@ function UserTable({
 }
 
 function TeacherCodeManager() {
-    const { userProfile } = useUserProfile();
+    const { userProfile } = useAuth();
     const [teacherCode, setTeacherCode] = useState<string | null>(null);
     const [code, setCode] = useState('');
     const [isSaving, setIsSaving] = useState(false);
@@ -221,7 +221,7 @@ function TeacherCodeManager() {
 
 
 export function AdminDashboardClient() {
-  const { userProfile } = useUserProfile();
+  const { userProfile } = useAuth();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);

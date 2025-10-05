@@ -8,7 +8,7 @@ import { translations } from '@/lib/translations';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { useUserProfile } from '@/hooks/use-user-profile';
+import { useAuth } from '@/firebase';
 
 function DataMasterTabs() {
   const language = 'id';
@@ -49,7 +49,7 @@ function DataMasterTabs() {
 }
 
 export default function DataMasterPage() {
-  const { userProfile, loading } = useUserProfile();
+  const { userProfile, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {

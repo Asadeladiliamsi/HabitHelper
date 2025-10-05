@@ -26,10 +26,9 @@ import {
   SidebarInset,
 } from '@/components/ui/sidebar';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { useUserProfile } from '@/hooks/use-user-profile';
-import { auth } from '@/lib/firebase';
+import { useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
-
+import { auth } from '@/lib/firebase';
 
 export default function AppLayout({
   children,
@@ -38,7 +37,7 @@ export default function AppLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, userProfile, loading } = useUserProfile();
+  const { user, userProfile, loading } = useAuth();
   
   useEffect(() => {
     if (!loading && !user) {

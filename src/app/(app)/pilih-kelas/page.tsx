@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useUserProfile } from '@/hooks/use-user-profile';
+import { useAuth } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -30,48 +30,25 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export default function PilihKelasPage() {
-  const { user, userProfile, loading: authLoading } = useUserProfile();
-  const [studentDocId, setStudentDocId] = useState<string | null>(null);
-  const [studentLoading, setStudentLoading] = useState(true);
+  const { user, userProfile, studentData, loading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     // Only run this logic if auth is done and we have a user profile
-    if (!authLoading && userProfile) {
+    if (!loading) {
       // Must be a student to be on this page
-      if (userProfile.role !== 'siswa' || !user) {
+      if (userProfile?.role !== 'siswa' || !user) {
         router.replace('/dashboard');
         return;
       }
-
-      setStudentLoading(true);
-      const q = query(collection(db, 'students'), where('linkedUserUid', '==', user.uid));
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        if (!snapshot.empty) {
-          const studentDoc = snapshot.docs[0];
-          const data = studentDoc.data() as Student;
-          setStudentDocId(studentDoc.id);
-          // If student already has a class, they should not be on this page. Redirect them.
-          if (data.class) {
-            router.replace('/dashboard');
-          }
-        } else {
-          // This case should be rare now with auto-creation, but handle it just in case
-          setStudentDocId(null);
-        }
-        setStudentLoading(false);
-      }, (error) => {
-        console.error("Error fetching student data for class selection:", error);
-        setStudentLoading(false);
-      });
-      return () => unsubscribe();
-    } else if (!authLoading && !userProfile) {
-        // If auth is done and there's no user, send to login
-        router.replace('/login');
+      // If student already has a class, they should not be on this page. Redirect them.
+      if (studentData?.class) {
+        router.replace('/dashboard');
+      }
     }
-  }, [user, userProfile, authLoading, router]);
+  }, [user, userProfile, studentData, loading, router]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -86,7 +63,7 @@ export default function PilihKelasPage() {
   };
   
 
-  if (authLoading || studentLoading) {
+  if (loading || !studentData) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin" />
@@ -94,29 +71,11 @@ export default function PilihKelasPage() {
     );
   }
 
-  // This can happen if the student's account was just created and the student document
-  // hasn't been created yet by the AuthProvider logic. It's a temporary state.
-  if (!studentDocId) {
-     return (
-        <div className="flex items-center justify-center h-screen">
-            <Card className="mx-auto max-w-lg">
-                <CardHeader>
-                    <CardTitle>Menyiapkan Akun Anda</CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col items-center gap-4">
-                    <Loader2 className="h-8 w-8 animate-spin" />
-                    <p>Data siswa Anda sedang disiapkan. Halaman akan dimuat ulang secara otomatis...</p>
-                </CardContent>
-            </Card>
-        </div>
-     )
-  }
-
   const onSubmit = async (data: FormValues) => {
-    if (!studentDocId) return;
+    if (!studentData) return;
     setIsSubmitting(true);
     try {
-      await updateStudentClass(studentDocId, data.kelas);
+      await updateStudentClass(studentData.id, data.kelas);
       toast({
         title: 'Kelas Berhasil Disimpan',
         description: `Anda telah terdaftar di kelas ${data.kelas}. Mengalihkan ke dasbor...`,
