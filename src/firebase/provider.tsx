@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, onSnapshot, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import type { UserProfile, Student, Habit } from '@/lib/types';
 import { HABIT_DEFINITIONS } from '@/lib/types';
@@ -14,12 +14,7 @@ interface FirebaseContextValue {
   loading: boolean;
 }
 
-const FirebaseContext = createContext<FirebaseContextValue>({
-  user: null,
-  userProfile: null,
-  studentData: null,
-  loading: true,
-});
+const FirebaseContext = createContext<FirebaseContextValue | null>(null);
 
 export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -28,82 +23,73 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setLoading(true);
-      setUser(currentUser);
+      
       if (!currentUser) {
+        setUser(null);
         setUserProfile(null);
         setStudentData(null);
         setLoading(false);
+        return;
       }
-    });
-    return () => unsubscribeAuth();
-  }, []);
 
-  useEffect(() => {
-    if (!user) return;
+      setUser(currentUser);
 
-    const userDocRef = doc(db, 'users', user.uid);
-    const unsubscribeProfile = onSnapshot(userDocRef, (userDocSnap) => {
+      // Fetch user profile
+      const userDocRef = doc(db, 'users', currentUser.uid);
+      const userDocSnap = await getDoc(userDocRef);
+
       if (userDocSnap.exists()) {
         const profile = userDocSnap.data() as UserProfile;
         setUserProfile(profile);
 
         if (profile.role === 'siswa') {
-          // Now handle student data part
-          const studentDocRef = doc(db, 'students', user.uid);
-          const unsubscribeStudent = onSnapshot(studentDocRef, async (studentDocSnap) => {
-            if (studentDocSnap.exists()) {
-              setStudentData({ id: studentDocSnap.id, ...studentDocSnap.data() } as Student);
-              setLoading(false);
-            } else {
-              // Student role but no student data yet. This happens right after signup.
-              // Let's create it.
-              const initialHabits: Habit[] = Object.entries(HABIT_DEFINITIONS).map(([name, subHabits]) => ({
+          // It's a student, now fetch or create student data
+          const studentDocRef = doc(db, 'students', currentUser.uid);
+          const studentDocSnap = await getDoc(studentDocRef);
+
+          if (studentDocSnap.exists()) {
+            setStudentData({ id: studentDocSnap.id, ...studentDocSnap.data() } as Student);
+          } else {
+            // Student role but no student data. This happens right after signup.
+            // Create it now.
+            const initialHabits: Habit[] = Object.entries(HABIT_DEFINITIONS).map(([name, subHabits]) => ({
                 id: name.replace(/\s+/g, ''),
                 name: name,
                 subHabits: subHabits.map(subName => ({ id: subName.replace(/\s+/g, ''), name: subName, score: 0 }))
               }));
 
-              const newStudentData: Omit<Student, 'id'> = {
-                name: profile.name,
-                email: profile.email || '',
-                nisn: profile.nisn || '',
-                avatarUrl: user.photoURL || `https://placehold.co/100x100.png?text=${profile.name.charAt(0)}`,
-                class: '', // IMPORTANT: Class is empty, forcing user to select it
-                habits: initialHabits,
-                linkedUserUid: profile.uid,
-                createdAt: serverTimestamp(),
-                lockedDates: [],
-              };
-              try {
-                // Set the document. The snapshot listener above will pick it up and set the state.
-                // We don't set loading to false here to wait for the listener to trigger.
-                await setDoc(studentDocRef, newStudentData);
-              } catch (e) {
-                console.error("Failed to create student data:", e);
-                setLoading(false); // Stop loading on error
-              }
-            }
-          });
-          return () => unsubscribeStudent();
+            const newStudentData: Omit<Student, 'id'> = {
+              name: profile.name,
+              email: profile.email || '',
+              nisn: profile.nisn || '',
+              avatarUrl: currentUser.photoURL || `https://placehold.co/100x100.png?text=${profile.name.charAt(0)}`,
+              class: '', // IMPORTANT: Class is empty, forcing user to select it
+              habits: initialHabits,
+              linkedUserUid: profile.uid,
+              createdAt: serverTimestamp(),
+              lockedDates: [],
+            };
+            await setDoc(studentDocRef, newStudentData);
+            setStudentData({ id: studentDocRef.id, ...newStudentData } as Student);
+          }
         } else {
-          // Not a student, no student data to fetch.
+          // Not a student, clear student data
           setStudentData(null);
-          setLoading(false);
         }
       } else {
-        // User document doesn't exist yet, can happen right after signup.
-        // The signup flow now creates this, so we just wait.
-        // We don't set loading to false here to avoid flicker.
+         // User profile doesn't exist. This can happen right after signup.
+         // Signup flow is responsible for creating it. We'll wait.
+         setUserProfile(null);
+         setStudentData(null);
       }
-    }, (error) => {
-        console.error("Error fetching user profile:", error);
-        setLoading(false);
+      
+      setLoading(false);
     });
 
-    return () => unsubscribeProfile();
-  }, [user]);
+    return () => unsubscribe();
+  }, []);
 
   const value = { user, userProfile, studentData, loading };
 
@@ -116,7 +102,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
 export const useAuth = () => {
   const context = useContext(FirebaseContext);
-  if (context === undefined) {
+  if (context === null) {
     throw new Error('useAuth must be used within a FirebaseProvider');
   }
   return context;
@@ -124,7 +110,7 @@ export const useAuth = () => {
 
 export const useUser = () => {
   const context = useContext(FirebaseContext);
-  if (context === undefined) {
+  if (context === null) {
     throw new Error('useUser must be used within a FirebaseProvider');
   }
   return context.user;
