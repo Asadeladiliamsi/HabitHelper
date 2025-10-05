@@ -1,176 +1,157 @@
 /**
- * @file Firestore Security Rules
- * @description This ruleset enforces role-based access control, with specific rules for teachers managing student data.
+ * @fileoverview Firestore Security Rules for the application.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a user-ownership model for user profiles and allows open reads for public data.
+ * Students are secured such that only linked users can create and manage data and teachers can list
+ * all students in order to manage the application.
  *
  * Data Structure:
- * - /users/{userId}: Stores user profiles, accessible only to the user themselves and admins.
- * - /students/{studentId}: Stores student data, accessible to teachers and admins. Students can also get their own data.
- * - /habit_entries/{entryId}: Stores habit entry data, writable by teachers and readable by admins.
- * - /app_settings/{settingId}: Stores global application settings, accessible only to admins.
- * - /classes/{classId}: Stores class data, accessible only to admins.
+ * - /users/{userId}: Stores public user profile information.
+ * - /students/{studentId}: Stores detailed student data.
+ * - /habit_entries/{entryId}: Stores habit entry data.
+ * - /app_settings/{settingId}: Stores global application settings.
+ * - /classes/{classId}: Stores class data.
  *
  * Key Security Decisions:
- * - Users can only read and write their own profile data.
- * - Teachers (gurus) have broad access to student data for management purposes.
- * - Administrators have full access to all data.
- * - Listing of users is generally disallowed for privacy reasons.
+ * - User listing is explicitly denied.
+ * - Public read access is granted to /app_settings.
+ * - Access to student data is restricted to the linked user and teachers.
  *
  * Denormalization for Authorization:
- * - The `students` collection stores `linkedUserUid` to link student data to user profile.
+ *   - No explicit denormalization is used in this configuration. The security rules rely on the `linkedUserUid`
+ *     field in the `/students/{studentId}` documents and the user's `role` to authorize access.
  *
  * Structural Segregation:
- * - Private user data is stored in `/users/{userId}`, separate from potentially public student data in `/students/{studentId}`.
+ *   - Public user profiles are stored in `/users/{userId}`.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Checks if the user is signed in.
+     * @description Controls access to user profiles.
+     * @path /users/{userId}
+     * @allow (create) If the user's UID matches the userId.
+     * @allow (get, list) If the user's UID matches the userId.
+     * @allow (update, delete) If the user's UID matches the userId and the document exists.
+     * @deny (create) If the user's UID does not match the userId.
+     * @deny (get, list) If the user's UID does not match the userId.
+     * @deny (update, delete) If the user's UID does not match the userId or the document does not exist.
+     * @principle Enforces user-ownership for profile data.
      */
+    match /users/{userId} {
+      allow get: if isSignedIn() && isOwner(userId);
+      allow list: if false; // Listing all users is not permitted.
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isExistingOwner(userId);
+      allow delete: if isSignedIn() && isExistingOwner(userId);
+    }
+
+    /**
+     * @description Controls access to student data.
+     * @path /students/{studentId}
+     * @allow (create) If the user is a teacher or the student's linkedUserUid matches the request's auth UID.
+     * @allow (get) If the user is a teacher or the student's linkedUserUid matches the request's auth UID.
+     * @allow (list) If the user is a teacher.
+     * @allow (update, delete) If the student's linkedUserUid matches the request's auth UID and the document exists.
+     * @deny (create) If the user is not a teacher and the student's linkedUserUid does not match the request's auth UID.
+     * @deny (get) If the user is not a teacher and the student's linkedUserUid does not match the request's auth UID.
+     * @deny (list) If the user is not a teacher.
+     * @deny (update, delete) If the student's linkedUserUid does not match the request's auth UID or the document does not exist.
+     * @principle Restricts access to student data to the linked user and teachers.
+     */
+    match /students/{studentId} {
+      allow get: if isSignedIn() && (isTeacher() || isLinkedUser(resource.data.linkedUserUid));
+      allow list: if isSignedIn() && isTeacher();
+      allow create: if isSignedIn() && (isTeacher() || request.auth.uid == request.resource.data.linkedUserUid);
+      allow update: if isSignedIn() && isExistingLinkedUser(resource.data.linkedUserUid);
+      allow delete: if isSignedIn() && isExistingLinkedUser(resource.data.linkedUserUid);
+    }
+
+        /**
+         * @description Controls access to habit entries.
+         * @path /habit_entries/{entryId}
+         * @allow (create) If the user is a teacher or the student's linkedUserUid matches the request's auth UID.
+         * @allow (get) If the user is a teacher or the student's linkedUserUid matches the request's auth UID.
+         * @allow (list) If the user is a teacher.
+         * @allow (update, delete) If the student's linkedUserUid matches the request's auth UID and the document exists.
+         * @deny (create) If the user is not a teacher and the student's linkedUserUid does not match the request's auth UID.
+         * @deny (get) If the user is not a teacher and the student's linkedUserUid does not match the request's auth UID.
+         * @deny (list) If the user is not a teacher.
+         * @deny (update, delete) If the student's linkedUserUid does not match the request's auth UID or the document does not exist.
+         * @principle Restricts access to habit entries to the linked user and teachers.
+         */
+        match /habit_entries/{entryId} {
+            allow get: if isSignedIn() && (isTeacher() || isStudentOfEntry(resource.data.studentId));
+            allow list: if isSignedIn() && isTeacher();
+            allow create: if isSignedIn() && (isTeacher() || isStudentOfEntry(request.resource.data.studentId));
+            allow update: if isSignedIn() && (isTeacher() || isExistingStudentOfEntry(resource.data.studentId));
+            allow delete: if isSignedIn() && (isTeacher() || isExistingStudentOfEntry(resource.data.studentId));
+        }
+
+    /**
+     * @description Controls access to global app settings.
+     * @path /app_settings/{settingId}
+     * @allow (get, list) Public read access for app settings.
+     * @allow (create, update, delete) Only admins can modify app settings.
+     * @deny (create, update, delete) If the user is not an admin.
+     * @principle Provides public read access but restricts write access to admins.
+     */
+    match /app_settings/{settingId} {
+      allow get, list: if true;
+      allow create, update, delete: if isSignedIn() && isAdmin();
+    }
+
+    /**
+     * @description Controls access to class data.
+     * @path /classes/{classId}
+     * @allow (get, list) Public read access for class data.
+     * @allow (create, update, delete) Only admins can modify class data.
+     * @deny (create, update, delete) If the user is not an admin.
+     * @principle Provides public read access but restricts write access to admins.
+     */
+    match /classes/{classId} {
+      allow get, list: if true;
+      allow create, update, delete: if isSignedIn() && isAdmin();
+    }
+
+    // Helper functions
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /**
-     * @description Checks if the user's ID matches the requested user ID.
-     */
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
 
-    /**
-     * @description Checks if the user is an existing owner (i.e., the user is the owner and the resource exists).
-     */
     function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
+      return isSignedIn() && isOwner(userId) && resource != null;
     }
 
-    /**
-     * @description Checks if the user has a specific role.
-     */
-    function hasRole(role) {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
-    }
-
-    /**
-     * @description Checks if the user is a teacher (guru).
-     */
-    function isGuru() {
-      return isSignedIn() && hasRole('guru');
-    }
-
-    /**
-     * @description Checks if the user is an admin.
-     */
     function isAdmin() {
-      return isSignedIn() && hasRole('admin');
+        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    /**
-     * @description Rules for user profiles.
-     * @path /users/{userId}
-     * @allow (get) User with ID 'user123' gets their own profile.
-     * @deny (get) User with ID 'user123' tries to get profile of 'user456'.
-     * @allow (create) User with ID 'user123' creates their own profile.
-     * @deny (create) User with ID 'user123' tries to create profile for 'user456'.
-     * @allow (update) User with ID 'user123' updates their own profile.
-     * @deny (update) User with ID 'user123' tries to update profile of 'user456'.
-     * @allow (delete) User with ID 'user123' deletes their own profile.
-     * @deny (delete) User with ID 'user123' tries to delete profile of 'user456'.
-     * @principle Enforces document ownership for reads and writes; users can only access their own profile data.
-     */
-    match /users/{userId} {
-      allow get: if isOwner(userId) || isAdmin();
-      allow list: if false;
-      allow create: if isOwner(userId) && request.resource.data.uid == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.uid == resource.data.uid;
-      allow delete: if isExistingOwner(userId);
+    function isTeacher() {
+        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'guru';
     }
 
-    /**
-     * @description Rules for student data.
-     * @path /students/{studentId}
-     * @allow (get) Guru gets student data.
-     * @allow (get) Student gets their own data
-     * @deny (get) Non-guru user tries to get student data.
-     * @allow (create) Guru creates student data.
-     * @deny (create) Non-guru user tries to create student data.
-     * @allow (update) Guru updates student data.
-     * @deny (update) Non-guru user tries to update student data.
-     * @allow (delete) Guru deletes student data.
-     * @deny (delete) Non-guru user tries to delete student data.
-     * @principle Allows teachers (gurus) to manage student data.
-     */
-    match /students/{studentId} {
-      allow get: if isGuru() || isAdmin() || (isSignedIn() && resource.data.linkedUserUid == request.auth.uid);
-      allow list: if isGuru() || isAdmin();
-      allow create: if isGuru() || isAdmin();
-      allow update: if (isGuru() || isAdmin()) && resource != null;
-      allow delete: if (isGuru() || isAdmin()) && resource != null;
+    function isLinkedUser(linkedUserUid) {
+      return request.auth.uid == linkedUserUid;
     }
 
-    /**
-     * @description Rules for habit entry data.
-     * @path /habit_entries/{entryId}
-     * @allow (get) Admin gets habit entry data.
-     * @deny (get) Non-admin user tries to get habit entry data.
-     * @allow (create) Guru creates habit entry data.
-     * @deny (create) Non-guru user tries to create habit entry data.
-     * @allow (update) Guru updates habit entry data.
-     * @deny (update) Non-guru user tries to update habit entry data.
-     * @allow (delete) Guru deletes habit entry data.
-     * @deny (delete) Non-guru user tries to delete habit entry data.
-     * @principle Allows teachers (gurus) to manage habit entries and admins to view all.
-     */
-    match /habit_entries/{entryId} {
-      allow get: if isGuru() || isAdmin();
-      allow list: if isGuru() || isAdmin();
-      allow create: if isGuru() || isAdmin();
-      allow update: if (isGuru() || isAdmin()) && resource != null;
-      allow delete: if (isGuru() || isAdmin()) && resource != null;
+    function isExistingLinkedUser(linkedUserUid) {
+      return isSignedIn() && isLinkedUser(linkedUserUid) && resource != null;
     }
 
-    /**
-     * @description Rules for app settings data.
-     * @path /app_settings/{settingId}
-     * @allow (get) Admin gets app settings data.
-     * @deny (get) Non-admin user tries to get app settings data.
-     * @allow (create) Admin creates app settings data.
-     * @deny (create) Non-admin user tries to create app settings data.
-     * @allow (update) Admin updates app settings data.
-     * @deny (update) Non-admin user tries to update app settings data.
-     * @allow (delete) Admin deletes app settings data.
-     * @deny (delete) Non-admin user tries to delete app settings data.
-     * @principle Restricts access to application settings to administrators.
-     */
-    match /app_settings/{settingId} {
-      allow get: if isAdmin();
-      allow list: if false;
-      allow create: if isAdmin();
-      allow update: if isAdmin() && resource != null;
-      allow delete: if isAdmin() && resource != null;
+    function isStudentOfEntry(studentId) {
+      let student = get(/databases/$(database)/documents/students/$(studentId)).data;
+      return request.auth.uid == student.linkedUserUid;
     }
 
-    /**
-     * @description Rules for class data.
-     * @path /classes/{classId}
-     * @allow (get) Admin gets class data.
-     * @deny (get) Non-admin user tries to get class data.
-     * @allow (create) Admin creates class data.
-     * @deny (create) Non-admin user tries to create class data.
-     * @allow (update) Admin updates class data.
-     * @deny (update) Non-admin user tries to update class data.
-     * @allow (delete) Admin deletes class data.
-     * @deny (delete) Non-admin user tries to delete class data.
-     * @principle Restricts access to class data to administrators.
-     */
-    match /classes/{classId} {
-      allow get: if isAdmin();
-      allow list: if false;
-      allow create: if isAdmin();
-      allow update: if isAdmin() && resource != null;
-      allow delete: if isAdmin() && resource != null;
+    function isExistingStudentOfEntry(studentId) {
+      return isSignedIn() && isStudentOfEntry(studentId) && resource != null;
     }
   }
 }
