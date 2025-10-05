@@ -1,7 +1,7 @@
 'use client';
 
 import { DataInputClient } from '@/components/data-input-client';
-import { useAuth } from '@/firebase';
+import { useAuth } from '@/firebase/provider';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';

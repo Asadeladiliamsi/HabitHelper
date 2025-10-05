@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/firebase';
+import { useAuth } from '@/firebase/provider';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, doc, updateDoc, onSnapshot, writeBatch } from 'firebase/firestore';
 import type { UserProfile, Student } from '@/lib/types';

@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { useAuth } from '@/firebase';
+import { useAuth } from '@/firebase/provider';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Email tidak valid.' }),

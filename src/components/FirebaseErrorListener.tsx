@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { errorEmitter } from '@/firebase/error-emitter';
+import { errorEmitter } from '@/lib/error-emitter';
 
 /**
  * A client component that listens for Firestore permission errors and

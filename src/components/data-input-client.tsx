@@ -24,13 +24,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { StudentSearchDialog } from './student-search-dialog';
-import { useAuth } from '@/firebase';
+import { useAuth } from '@/firebase/provider';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { collection, addDoc, serverTimestamp, onSnapshot, query, doc, writeBatch, setDoc, getDocs, where, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Student, UserProfile } from '@/lib/types';
-import { FirestorePermissionError } from '@/firebase/errors';
-import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/lib/errors';
+import { errorEmitter } from '@/lib/error-emitter';
 
 const formSchema = z.object({
   studentId: z.string().min(1, 'Siswa harus dipilih.'),

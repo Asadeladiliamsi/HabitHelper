@@ -1,7 +1,7 @@
 'use client';
 
 import { AdminDashboardClient } from '@/components/admin-dashboard-client';
-import { useAuth } from '@/firebase';
+import { useAuth } from '@/firebase/provider';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';

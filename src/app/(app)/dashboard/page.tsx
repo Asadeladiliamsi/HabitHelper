@@ -4,7 +4,7 @@ import { Loader2 } from 'lucide-react';
 import { DashboardClient } from '@/components/dashboard-client';
 import { SiswaDashboardClient } from '@/components/siswa-dashboard-client';
 import { OrangTuaDashboardClient } from '@/components/orang-tua-dashboard-client';
-import { useAuth } from '@/firebase';
+import { useAuth } from '@/firebase/provider';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState } from 'react';
@@ -22,7 +22,12 @@ export default function DashboardPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!userProfile) return;
+    if (profileLoading) return;
+    if (!userProfile) {
+        // If profile is still loading or not found, data loading is not yet complete.
+        setDataLoading(true);
+        return;
+    }
 
     let unsubStudents: () => void = () => {};
     const role = userProfile.role;
@@ -52,7 +57,7 @@ export default function DashboardPage() {
     
     return () => unsubStudents();
 
-  }, [userProfile]);
+  }, [profileLoading, userProfile]);
 
   useEffect(() => {
     let studentIds: string[] = [];
@@ -63,7 +68,7 @@ export default function DashboardPage() {
     }
     
     if (studentIds.length === 0) {
-        setHabitEntries([]);
+        if (!dataLoading) setHabitEntries([]);
         return;
     }
 
@@ -74,7 +79,7 @@ export default function DashboardPage() {
 
     return () => unsubEntries();
 
-  }, [studentData, childStudents]);
+  }, [studentData, childStudents, dataLoading]);
 
 
   if (profileLoading || dataLoading) {
@@ -87,7 +92,8 @@ export default function DashboardPage() {
   }
 
   if (!userProfile) {
-     // This case should be handled by the AppLayout, but as a fallback:
+     // This case is handled by the AppLayout, but as a fallback:
+     router.replace('/login');
      return (
         <div className="flex h-full w-full items-center justify-center">
             <p>Profil pengguna tidak ditemukan. Mengalihkan...</p>

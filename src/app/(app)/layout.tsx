@@ -25,7 +25,7 @@ import {
   SidebarInset,
 } from '@/components/ui/sidebar';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { useAuth } from '@/firebase';
+import { useAuth } from '@/firebase/provider';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useEffect } from 'react';
