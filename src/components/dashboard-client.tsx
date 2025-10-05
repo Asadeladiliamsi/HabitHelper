@@ -70,6 +70,7 @@ import { DateRangePicker } from './ui/date-range-picker';
 import { useToast } from '@/hooks/use-toast';
 import { collection, onSnapshot, query, doc, updateDoc, arrayUnion, arrayRemove, where, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useAuth } from '@/firebase';
 
 const habitIcons: { [key: string]: React.ReactNode } = {
   'Bangun Pagi': <Sunrise className="h-5 w-5 text-yellow-500" />,
@@ -93,10 +94,7 @@ const habitColors: { [key: string]: string } = {
 
 
 export function DashboardClient() {
-  const [students, setStudents] = useState<Student[]>([]);
-  const [habitEntries, setHabitEntries] = useState<HabitEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [entriesLoading, setEntriesLoading] = useState(true);
+  const { students, habitEntries, loading } = useAuth();
   
   const language = 'id';
   const [selectedClass, setSelectedClass] = useState('all');
@@ -113,54 +111,6 @@ export function DashboardClient() {
   const tHabits =
     translations[language]?.landingPage.habits ||
     translations.en.landingPage.habits;
-
-  useEffect(() => {
-    setLoading(true);
-    const q = query(collection(db, 'students'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const studentData = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          avatarUrl: data.avatarUrl || `https://placehold.co/100x100.png?text=${data.name.charAt(0)}`
-        } as Student;
-      });
-      setStudents(studentData);
-      setLoading(false);
-    }, (error) => {
-      console.error("Failed to fetch students:", error);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    setEntriesLoading(true);
-    const q = query(collection(db, 'habit_entries'));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const entries: HabitEntry[] = [];
-      querySnapshot.forEach(doc => {
-        const data = doc.data();
-        if (data.date && data.timestamp) {
-            entries.push({
-            id: doc.id,
-            ...data,
-            date: (data.date as Timestamp).toDate(),
-            timestamp: data.timestamp,
-            } as HabitEntry);
-        }
-      });
-      setHabitEntries(entries);
-      setEntriesLoading(false);
-    }, (error) => {
-      console.error("Error fetching real-time habit entries:", error);
-      setHabitEntries([]);
-      setEntriesLoading(false);
-    });
-
-    return unsubscribe;
-  }, []);
 
   const getHabitsForDate = useCallback((studentId: string, date: Date): Habit[] => {
       const student = students.find(s => s.id === studentId);
@@ -409,7 +359,7 @@ export function DashboardClient() {
           </div>
         </CardHeader>
         <CardContent>
-          {entriesLoading ? (
+          {loading ? (
             <div className="flex h-80 items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
@@ -510,7 +460,7 @@ export function DashboardClient() {
           </div>
         </CardHeader>
         <CardContent>
-          {entriesLoading ? (
+          {loading ? (
             <div className="flex h-64 items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>

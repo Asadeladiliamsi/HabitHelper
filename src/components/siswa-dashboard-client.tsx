@@ -28,8 +28,7 @@ import { DateRange } from 'react-day-picker';
 import { DateRangePicker } from './ui/date-range-picker';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, LabelList } from 'recharts';
 import { HABIT_DEFINITIONS } from '@/lib/types';
-import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { Timestamp } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 
 
@@ -55,9 +54,7 @@ const habitColors: { [key: string]: string } = {
 
 
 export function SiswaDashboardClient() {
-  const { studentData, loading } = useAuth();
-  const [habitEntries, setHabitEntries] = useState<HabitEntry[]>([]);
-  const [entriesLoading, setEntriesLoading] = useState(true);
+  const { studentData, habitEntries, loading } = useAuth();
   const router = useRouter();
 
   const language = 'id';
@@ -79,38 +76,6 @@ export function SiswaDashboardClient() {
       router.replace('/pilih-kelas');
     }
   }, [studentData, loading, router]);
-
-  
-  useEffect(() => {
-    if (!studentData?.id) {
-        setEntriesLoading(false);
-        return;
-    };
-    setEntriesLoading(true);
-    const q = query(collection(db, 'habit_entries'), where('studentId', '==', studentData.id));
-
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const entries: HabitEntry[] = [];
-      querySnapshot.forEach(doc => {
-        const data = doc.data();
-        if (data.date && data.timestamp) {
-            entries.push({
-            id: doc.id,
-            ...data,
-            date: (data.date as Timestamp).toDate(),
-            timestamp: data.timestamp,
-            } as HabitEntry);
-        }
-      });
-      setHabitEntries(entries);
-      setEntriesLoading(false);
-    }, (error) => {
-      console.error("Error fetching habit entries for student:", error);
-      setEntriesLoading(false);
-    });
-
-    return unsubscribe;
-  }, [studentData]);
 
   const getHabitsForDate = useCallback((studentId: string, date: Date): Habit[] => {
       if (!studentData || studentData.id !== studentId) return [];
@@ -193,7 +158,7 @@ export function SiswaDashboardClient() {
 
   }, [dateRange, studentData, habitEntries]);
 
-  if (loading || !studentData?.class) {
+  if (loading || (studentData && !studentData.class)) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -239,6 +204,15 @@ export function SiswaDashboardClient() {
   
   const dailySummaryData = prepareDailySummaryChartData(habitsForSelectedDate);
 
+  if (!studentData) {
+      return (
+          <div className="flex h-full w-full items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <p className="ml-4 text-muted-foreground">Memuat data siswa...</p>
+          </div>
+      )
+  }
+
   return (
     <>
       <header>
@@ -259,7 +233,7 @@ export function SiswaDashboardClient() {
           </div>
           </CardHeader>
           <CardContent>
-          {entriesLoading && !chartData.length ? (
+          {loading ? (
               <div className="flex h-80 items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
@@ -334,7 +308,7 @@ export function SiswaDashboardClient() {
           </div>
         </CardHeader>
         <CardContent>
-          {entriesLoading && habitsForSelectedDate.length === 0 ? (
+          {loading ? (
              <div className="flex h-48 items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
              </div>

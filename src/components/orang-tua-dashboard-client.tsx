@@ -29,8 +29,7 @@ import { DateRange } from 'react-day-picker';
 import { DateRangePicker } from './ui/date-range-picker';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Bar, BarChart, LabelList } from 'recharts';
 import { HABIT_DEFINITIONS } from '@/lib/types';
-import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { Timestamp } from 'firebase/firestore';
 
 
 const habitIcons: { [key: string]: React.ReactNode } = {
@@ -55,11 +54,7 @@ const habitColors: { [key: string]: string } = {
 
 
 export function OrangTuaDashboardClient() {
-  const { userProfile, loading: authLoading } = useAuth();
-  const [students, setStudents] = useState<Student[]>([]);
-  const [habitEntries, setHabitEntries] = useState<HabitEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [entriesLoading, setEntriesLoading] = useState(true);
+  const { userProfile, students, habitEntries, loading } = useAuth();
 
   const language = 'id';
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
@@ -72,61 +67,11 @@ export function OrangTuaDashboardClient() {
   });
   
   useEffect(() => {
-    if (userProfile && userProfile.role === 'orangtua' && userProfile.uid) {
-      setLoading(true);
-      const q = query(collection(db, 'students'), where('parentId', '==', userProfile.uid));
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const studentData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
-        setStudents(studentData);
-        if (studentData.length > 0 && !selectedStudentId) {
-          setSelectedStudentId(studentData[0].id);
-        }
-        setLoading(false);
-      }, (error) => {
-        console.error("Failed to fetch parent's students:", error);
-        setLoading(false);
-      });
+      if (!loading && students.length > 0 && !selectedStudentId) {
+          setSelectedStudentId(students[0].id);
+      }
+  }, [loading, students, selectedStudentId]);
 
-      return () => unsubscribe();
-    }
-  }, [userProfile, selectedStudentId]);
-
- useEffect(() => {
-    if (students.length === 0) {
-      setEntriesLoading(false);
-      return;
-    };
-    setEntriesLoading(true);
-
-    const studentIds = students.map(s => s.id);
-    if(studentIds.length === 0) {
-        setEntriesLoading(false);
-        return;
-    }
-    const q = query(collection(db, 'habit_entries'), where('studentId', 'in', studentIds));
-
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const entries: HabitEntry[] = [];
-      querySnapshot.forEach(doc => {
-        const data = doc.data();
-        if (data.date && data.timestamp) {
-            entries.push({
-            id: doc.id,
-            ...data,
-            date: (data.date as Timestamp).toDate(),
-            timestamp: data.timestamp,
-            } as HabitEntry);
-        }
-      });
-      setHabitEntries(entries);
-      setEntriesLoading(false);
-    }, (error) => {
-      console.error("Error fetching habit entries for parent:", error);
-      setEntriesLoading(false);
-    });
-
-    return unsubscribe;
-  }, [students]);
 
   const getHabitsForDate = useCallback((studentId: string, date: Date): Habit[] => {
       const student = students.find(s => s.id === studentId);
@@ -212,7 +157,7 @@ export function OrangTuaDashboardClient() {
 
   }, [dateRange, selectedStudentData, habitEntries]);
 
-  if (loading || authLoading) {
+  if (loading) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -315,7 +260,7 @@ export function OrangTuaDashboardClient() {
                 </div>
                 </CardHeader>
                 <CardContent>
-                {entriesLoading && !chartData.length ? (
+                {loading && !chartData.length ? (
                     <div className="flex h-80 items-center justify-center">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                     </div>
@@ -387,7 +332,7 @@ export function OrangTuaDashboardClient() {
                 </div>
                 </CardHeader>
                 <CardContent>
-                {entriesLoading && habitsForSelectedDate.length === 0 ? (
+                {loading ? (
                 <div className="flex h-48 items-center justify-center">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
