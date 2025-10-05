@@ -5,7 +5,7 @@ import { useAuth } from '@/firebase';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Student, UserProfile } from '@/lib/types';
 
@@ -40,7 +40,7 @@ export default function InputDataPage() {
   }, [user, authLoading, router]);
 
   useEffect(() => {
-    if (userProfile?.role === 'siswa') {
+    if (userProfile?.role === 'siswa' && userProfile.uid) {
       const q = query(collection(db, 'students'), where('linkedUserUid', '==', userProfile.uid));
       const unsubStudent = onSnapshot(q, (snapshot) => {
         if (!snapshot.empty) {
