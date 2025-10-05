@@ -51,6 +51,10 @@ export default function DashboardPage() {
                 } as HabitEntry));
                 setHabitEntries(entries);
                 setDataLoading(false);
+              }, (error) => {
+                console.error("Error fetching habit entries:", error);
+                toast({ variant: 'destructive', title: 'Error', description: 'Gagal memuat data kebiasaan.' });
+                setDataLoading(false);
               });
               return () => unsubEntries();
             } else {
@@ -63,6 +67,10 @@ export default function DashboardPage() {
                });
                router.replace('/login');
             }
+          }, (error) => {
+            console.error("Error fetching student data:", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Gagal memuat data siswa.' });
+            setDataLoading(false);
           });
           return () => unsubStudent();
         } else {
@@ -75,6 +83,10 @@ export default function DashboardPage() {
         setDataLoading(false);
         router.replace('/login');
       }
+    }, (error) => {
+      console.error("Error fetching user profile:", error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Gagal memuat profil pengguna.' });
+      setDataLoading(false);
     });
 
     return () => unsubProfile();
@@ -92,7 +104,7 @@ export default function DashboardPage() {
   }
 
   if (!userProfile) {
-     return null; // AppLayout will handle the redirect.
+     return null;
   }
 
   switch (userProfile.role) {

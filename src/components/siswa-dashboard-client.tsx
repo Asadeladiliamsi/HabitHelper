@@ -49,7 +49,7 @@ const habitColors: { [key: string]: string } = {
 };
 
 interface SiswaDashboardClientProps {
-  studentData: Student;
+  studentData: Student | null;
   habitEntries: HabitEntry[];
 }
 
@@ -192,7 +192,7 @@ export function SiswaDashboardClient({ studentData, habitEntries }: SiswaDashboa
   }
 
   return (
-    <>
+    <div className="flex flex-col gap-6">
       <header>
         <h1 className="text-3xl font-bold tracking-tight">Halo, {studentData.name}!</h1>
         <p className="text-muted-foreground">Selamat datang di dasbor pribadimu. Pantau terus perkembanganmu!</p>
@@ -360,6 +360,6 @@ export function SiswaDashboardClient({ studentData, habitEntries }: SiswaDashboa
           )}
         </CardContent>
       </Card>
-    </>
+    </div>
   );
 }
