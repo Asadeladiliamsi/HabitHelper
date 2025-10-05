@@ -67,6 +67,14 @@ export default function AppLayout({
     }
   };
   
+  if (loading || !user) {
+     return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+  
   const dashboardTitle = getDashboardTitle();
   const dashboardPath = userProfile?.role === 'admin' ? '/admin/dashboard' : '/dashboard';
 
@@ -78,14 +86,6 @@ export default function AppLayout({
     { href: '/notifications', icon: Bell, label: 'Notifikasi', roles: ['guru', 'admin'] },
     { href: '/reports', icon: FileText, label: 'Laporan', roles: ['guru', 'admin'] },
   ];
-
-  if (loading || !user) {
-     return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
 
   return (
     <SidebarProvider>

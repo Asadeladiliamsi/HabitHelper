@@ -49,8 +49,6 @@ function DataMasterTabs() {
 }
 
 export default function DataMasterPage() {
-  const language = 'id';
-  const t = translations[language] || translations.en;
   const { userProfile, loading } = useUserProfile();
   const router = useRouter();
 
@@ -67,6 +65,9 @@ export default function DataMasterPage() {
       </div>
     );
   }
+
+  const language = 'id';
+  const t = translations[language] || translations.en;
 
   return (
     <div className="flex flex-col gap-6">

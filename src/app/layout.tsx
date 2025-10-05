@@ -10,10 +10,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-  params: _params,
 }: Readonly<{
   children: React.ReactNode;
-  params: any;
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
