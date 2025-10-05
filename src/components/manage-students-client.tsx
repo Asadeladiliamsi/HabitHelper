@@ -89,13 +89,7 @@ export function ManageStudentsClient() {
     setLinkParentDialogOpen(true);
   };
   
-  const addStudent = async (newStudentData: Omit<Student, 'id' | 'habits' | 'avatarUrl' | 'linkedUserUid'>) => {
-    const nisnQuery = query(collection(db, 'students'), where('nisn', '==', newStudentData.nisn));
-    const nisnSnapshot = await getDocs(nisnQuery);
-    if (!nisnSnapshot.empty && newStudentData.nisn) {
-      throw new Error(`NISN ${newStudentData.nisn} sudah digunakan oleh siswa lain.`);
-    }
-
+  const addStudent = (newStudentData: Omit<Student, 'id' | 'habits' | 'avatarUrl' | 'linkedUserUid'>) => {
     const initialHabits: Habit[] = Object.entries(HABIT_DEFINITIONS).map(([habitName, subHabitNames], habitIndex) => ({
       id: `${habitIndex + 1}`,
       name: habitName,
@@ -108,40 +102,30 @@ export function ManageStudentsClient() {
     
     const finalData = {
       ...newStudentData,
-      avatarUrl: `https://avatar.vercel.sh/${newStudentData.nisn}.png`, // Generate avatar from NISN
+      avatarUrl: `https://avatar.vercel.sh/${newStudentData.nisn}.png`,
       habits: initialHabits,
       createdAt: serverTimestamp(),
       lockedDates: [],
     };
 
-    addDoc(collection(db, 'students'), finalData)
-    .catch(async (serverError) => {
+    return addDoc(collection(db, 'students'), finalData)
+      .catch(async (serverError) => {
         const permissionError = new FirestorePermissionError({
           path: 'students',
           operation: 'create',
           requestResourceData: finalData,
         });
         errorEmitter.emit('permission-error', permissionError);
-        // Throw a user-facing error to be caught by handleDialogSave
         throw new Error("Gagal menambahkan siswa karena masalah izin.");
       });
   };
 
-  const updateStudent = async (studentId: string, updatedData: Partial<Omit<Student, 'id' | 'habits' | 'avatarUrl' | 'linkedUserUid'>>) => {
-     if (updatedData.nisn) {
-      const q = query(collection(db, 'students'), where('nisn', '==', updatedData.nisn));
-      const querySnapshot = await getDocs(q);
-      const isDuplicate = !querySnapshot.empty && querySnapshot.docs.some(doc => doc.id !== studentId);
-      if (isDuplicate) {
-        throw new Error(`NISN ${updatedData.nisn} sudah digunakan.`);
-      }
-    }
-    
+  const updateStudent = (studentId: string, updatedData: Partial<Omit<Student, 'id' | 'habits' | 'avatarUrl' | 'linkedUserUid'>>) => {
     const studentDocRef = doc(db, 'students', studentId);
     const finalData = { ...updatedData, updatedAt: serverTimestamp() };
     
-    updateDoc(studentDocRef, finalData)
-    .catch(async (serverError) => {
+    return updateDoc(studentDocRef, finalData)
+      .catch(async (serverError) => {
         const permissionError = new FirestorePermissionError({
           path: studentDocRef.path,
           operation: 'update',
@@ -149,25 +133,24 @@ export function ManageStudentsClient() {
         });
         errorEmitter.emit('permission-error', permissionError);
         throw new Error("Gagal memperbarui data siswa karena masalah izin.");
-    });
+      });
   }
 
-  const deleteStudent = async (studentId: string) => {
+  const deleteStudent = (studentId: string) => {
     const studentDocRef = doc(db, 'students', studentId);
     
-    deleteDoc(studentDocRef)
-    .catch(async (serverError) => {
-      const permissionError = new FirestorePermissionError({
-        path: studentDocRef.path,
-        operation: 'delete',
+    return deleteDoc(studentDocRef)
+      .catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: studentDocRef.path,
+          operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        throw new Error("Tidak dapat menghapus siswa karena masalah izin.");
       });
-      errorEmitter.emit('permission-error', permissionError);
-       // Throw a user-facing error to be caught by the calling function
-       throw new Error("Tidak dapat menghapus siswa karena masalah izin.");
-    });
   };
   
-  const linkParentToStudent = async (studentId: string, parentId: string) => {
+  const linkParentToStudent = (studentId: string, parentId: string) => {
     const parent = parentUsers.find(u => u.uid === parentId);
     if (!parent) {
         throw new Error("Akun orang tua tidak ditemukan.");
@@ -175,25 +158,36 @@ export function ManageStudentsClient() {
     const studentDocRef = doc(db, 'students', studentId);
     const updateData = { parentId, parentName: parent.name };
 
-    updateDoc(studentDocRef, updateData)
-    .catch(async (serverError) => {
-      const permissionError = new FirestorePermissionError({
-        path: studentDocRef.path,
-        operation: 'update',
-        requestResourceData: updateData,
+    return updateDoc(studentDocRef, updateData)
+      .catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: studentDocRef.path,
+          operation: 'update',
+          requestResourceData: updateData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        throw new Error("Gagal menautkan orang tua karena masalah izin.");
       });
-      errorEmitter.emit('permission-error', permissionError);
-      throw new Error("Gagal menautkan orang tua karena masalah izin.");
-    });
   };
-
 
   const handleDialogSave = async (studentData: Omit<Student, 'id' | 'habits' | 'avatarUrl' | 'linkedUserUid'>) => {
     try {
       if (selectedStudent) {
+        if (studentData.nisn && studentData.nisn !== selectedStudent.nisn) {
+            const nisnQuery = query(collection(db, 'students'), where('nisn', '==', studentData.nisn));
+            const nisnSnapshot = await getDocs(nisnQuery);
+            if (!nisnSnapshot.empty) {
+                throw new Error(`NISN ${studentData.nisn} sudah digunakan oleh siswa lain.`);
+            }
+        }
         await updateStudent(selectedStudent.id, studentData);
-         toast({ title: "Sukses", description: "Data siswa berhasil diperbarui." });
+        toast({ title: "Sukses", description: "Data siswa berhasil diperbarui." });
       } else {
+        const nisnQuery = query(collection(db, 'students'), where('nisn', '==', studentData.nisn));
+        const nisnSnapshot = await getDocs(nisnQuery);
+        if (!nisnSnapshot.empty) {
+          throw new Error(`NISN ${studentData.nisn} sudah digunakan oleh siswa lain.`);
+        }
         await addStudent(studentData);
         toast({ title: "Sukses", description: `Siswa ${studentData.name} berhasil ditambahkan.` });
       }
@@ -226,7 +220,6 @@ export function ManageStudentsClient() {
   };
 
   const handleDeleteStudent = (student: Student) => {
-    // You might want to add a confirmation dialog here
     deleteStudent(student.id).then(() => {
         toast({
             title: "Siswa Dihapus",
