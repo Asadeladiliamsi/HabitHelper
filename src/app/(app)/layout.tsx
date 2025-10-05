@@ -60,14 +60,29 @@ export default function AppLayout({
     );
   }
    
-  if (!user || !userProfile) {
-     // This state should be brief as the useEffect above will redirect.
+  // Jangan redirect di sini. Biarkan useEffect di atas yang menangani.
+  // Jika user null, redirect akan terjadi. Jika user ada tapi profil null,
+  // halaman akan menampilkan state loading-nya sendiri.
+  if (!user) {
      return (
        <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
         <p className="ml-2">Mengalihkan ke halaman login...</p>
       </div>
      );
+  }
+  
+  // Jangan render apapun jika profil sedang dimuat atau tidak ada,
+  // kecuali children (halaman) yang akan menampilkan state loading-nya sendiri.
+  if (!userProfile) {
+    return (
+        <div className="flex h-screen items-center justify-center">
+            <div className="flex flex-col items-center gap-4">
+                <Loader2 className="h-8 w-8 animate-spin" />
+                <p className="text-muted-foreground">Memuat profil pengguna...</p>
+            </div>
+        </div>
+    );
   }
   
   const dashboardPath = userProfile.role === 'admin' ? '/admin/dashboard' : '/dashboard';

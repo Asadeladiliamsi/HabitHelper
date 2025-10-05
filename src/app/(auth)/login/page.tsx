@@ -12,9 +12,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { signInWithEmailAndPassword, User } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
 import { useAuth } from '@/firebase/provider';
+import type { UserProfile } from '@/lib/types';
+
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Email tidak valid.' }),
@@ -38,16 +41,68 @@ export default function LoginPage() {
     },
   });
 
+  const handleLoginSuccess = async (user: User) => {
+    try {
+        const userDocRef = doc(db, 'users', user.uid);
+        const docSnap = await getDoc(userDocRef);
+
+        if (docSnap.exists()) {
+            const profile = docSnap.data() as UserProfile;
+            
+            // Logika Pengalihan Cerdas Berdasarkan Peran
+            if (profile.role === 'siswa') {
+                // Periksa apakah siswa sudah memiliki kelas.
+                const studentQuery = query(collection(db, 'students'), where('linkedUserUid', '==', user.uid));
+                const studentSnapshot = await getDocs(studentQuery);
+
+                if (!studentSnapshot.empty) {
+                    const studentData = studentSnapshot.docs[0].data();
+                    if (studentData.class) {
+                        router.push('/dashboard');
+                    } else {
+                        // Jika siswa ada tapi belum punya kelas
+                        router.push('/pilih-kelas');
+                    }
+                } else {
+                    // Jika data siswa belum ada (mungkin baru daftar), arahkan ke link-account
+                    router.push('/link-account');
+                }
+            } else if (profile.role === 'admin') {
+                router.push('/admin/dashboard');
+            } else {
+                // Untuk guru dan orangtua
+                router.push('/dashboard');
+            }
+        } else {
+            // Profil tidak ditemukan, mungkin siswa yang baru mendaftar
+            // dan datanya dibuat oleh guru. Arahkan ke halaman penautan.
+            toast({
+              title: 'Profil Tidak Ditemukan',
+              description: 'Mengarahkan Anda untuk menautkan akun dengan data siswa.',
+            });
+            router.push('/link-account');
+        }
+    } catch (e: any) {
+        console.error("Error fetching user profile after login:", e);
+        toast({
+            variant: "destructive",
+            title: "Gagal Mengambil Profil",
+            description: "Tidak dapat memuat data profil setelah login. Mengarahkan ke dasbor umum.",
+        });
+        // Fallback ke dasbor umum jika ada error saat fetch profil
+        router.push('/dashboard');
+    }
+  }
+
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
     try {
-      await signInWithEmailAndPassword(auth, data.email, data.password);
+      const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
       toast({
         title: 'Login Berhasil',
-        description: 'Anda akan diarahkan ke dasbor.',
+        description: 'Memuat data profil Anda...',
       });
-      // The main AppLayout will handle the redirection automatically
-      // after the auth state changes.
+      await handleLoginSuccess(userCredential.user);
     } catch (error: any) {
       console.error(error);
       let description = 'Terjadi kesalahan. Silakan coba lagi.';
@@ -59,15 +114,20 @@ export default function LoginPage() {
         title: 'Login Gagal',
         description,
       });
-    } finally {
       setIsSubmitting(false);
-    }
+    } 
+    // isSubmitting akan tetap true saat redirect, ini tidak masalah.
   };
   
-  // The main layout handles showing a loader while auth state is being determined.
-  // This page can render its content. If the user is already logged in,
-  // the main layout's useEffect will redirect them away from this page.
-  if (loading) {
+  // Jika pengguna sudah login, arahkan mereka
+  useEffect(() => {
+    if (!loading && user) {
+        handleLoginSuccess(user);
+    }
+  }, [loading, user]);
+
+
+  if (loading || user) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin" />
