@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/firebase/provider';
-import { auth } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 import { EmailAuthProvider } from 'firebase/auth';
 import { StyledFirebaseAuth } from '@/components/firebase-auth';
 import { Loader2 } from 'lucide-react';
