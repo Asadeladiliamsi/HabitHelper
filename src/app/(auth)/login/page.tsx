@@ -11,12 +11,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
 import { signInWithEmailAndPassword, User } from 'firebase/auth';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useAuth } from '@/firebase/provider';
 import type { UserProfile } from '@/lib/types';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
 const formSchema = z.object({
@@ -30,6 +31,7 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { user, loading } = useAuth();
 
 
@@ -69,8 +71,6 @@ export default function LoginPage() {
                 router.replace('/dashboard');
             }
         } else {
-            // This case might happen if a user is created in Auth but not in Firestore.
-            // For a student, the most likely scenario is needing to link their account.
             toast({
               title: 'Profil Tidak Ditemukan',
               description: 'Profil Anda belum lengkap. Mari kita tautkan akun Anda.',
@@ -90,31 +90,20 @@ export default function LoginPage() {
 
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
-    form.clearErrors();
+    setErrorMessage(null); // Reset error message on new submission
     try {
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
       toast({
         title: 'Login Berhasil',
         description: 'Memuat data profil Anda...',
       });
-      // The useEffect will handle redirection on successful login
+      await handleLoginSuccess(userCredential.user);
     } catch (error: any) {
       console.error(error);
-      // This is the most common error for bad credentials.
       if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-        form.setError('email', {
-          type: 'manual',
-          message: 'Email atau kata sandi yang Anda masukkan salah.',
-        });
-        form.setError('password', {
-          type: 'manual',
-          message: 'Mohon periksa kembali kredensial Anda.',
-        });
+        setErrorMessage('Email atau kata sandi yang Anda masukkan salah. Mohon periksa kembali kredensial Anda.');
       } else {
-         form.setError('root', {
-          type: 'manual',
-          message: 'Terjadi kesalahan yang tidak diketahui. Silakan coba lagi.'
-        });
+         setErrorMessage('Terjadi kesalahan yang tidak diketahui. Silakan coba lagi.');
       }
     } finally {
         setIsSubmitting(false);
@@ -122,13 +111,15 @@ export default function LoginPage() {
   };
   
   useEffect(() => {
+    // This effect handles redirection for users who are already logged in when they visit the page.
     if (!loading && user) {
         handleLoginSuccess(user);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, user, router]);
+  }, [loading, user]);
 
 
+  // Show loading indicator while checking auth state or if user object exists (which means we are about to redirect)
   if (loading || user) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -175,10 +166,14 @@ export default function LoginPage() {
             )}
           </div>
 
-          {form.formState.errors.root && (
-              <p className="text-sm font-medium text-destructive text-center">
-                  {form.formState.errors.root.message}
-              </p>
+          {errorMessage && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Login Gagal</AlertTitle>
+              <AlertDescription>
+                {errorMessage}
+              </AlertDescription>
+            </Alert>
           )}
           
           <Button type="submit" className="w-full" disabled={isSubmitting}>
