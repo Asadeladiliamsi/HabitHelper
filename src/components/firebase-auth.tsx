@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import 'firebaseui/dist/firebaseui.css';
-import type { auth } from 'firebaseui';
+import type { auth as FirebaseAuth } from 'firebaseui';
 
 // This is a wrapper around the official firebaseui-react library
 // It's needed because the official library is not compatible with Next.js App Router
@@ -12,7 +12,7 @@ import type { auth } from 'firebaseui';
 interface Props {
   // The Firebase UI Web UI Config object.
   // See: https://github.com/firebase/firebaseui-web#configuration
-  uiConfig: auth.Config;
+  uiConfig: FirebaseAuth.Config;
   // The Firebase App auth instance to use.
   firebaseAuth: any;
   className?: string;
@@ -31,6 +31,7 @@ export const StyledFirebaseAuth = ({
 
   useEffect(() => {
     // Firebase UI only works on the Client. So we're loading the package only on the client-side.
+    // We can't use dynamic import for this because it's a CJS module.
     setFirebaseui(require('firebaseui'));
   }, []);
 
@@ -51,13 +52,16 @@ export const StyledFirebaseAuth = ({
     });
 
     // Trigger the sign-in flow.
-    firebaseUiWidget.start(elementRef.current!, uiConfig);
+    if (elementRef.current) {
+      firebaseUiWidget.start(elementRef.current, uiConfig);
+    }
 
     return () => {
       unregisterAuthObserver();
       firebaseUiWidget.reset();
     };
-  }, [firebaseui, uiConfig, firebaseAuth, userSignedIn]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [firebaseui, uiConfig]);
 
   return <div className={className} ref={elementRef} />;
 };
