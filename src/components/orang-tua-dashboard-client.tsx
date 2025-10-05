@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import type { Student, Habit, HabitEntry } from '@/lib/types';
+import type { Student, Habit, HabitEntry, UserProfile } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Button } from './ui/button';
@@ -29,7 +29,7 @@ import { DateRange } from 'react-day-picker';
 import { DateRangePicker } from './ui/date-range-picker';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Bar, BarChart, LabelList } from 'recharts';
 import { HABIT_DEFINITIONS } from '@/lib/types';
-import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, Timestamp, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 
@@ -55,9 +55,12 @@ const habitColors: { [key: string]: string } = {
 
 
 export function OrangTuaDashboardClient() {
-  const { userProfile, students: initialStudents, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [initialStudents, setInitialStudents] = useState<Student[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
   const [habitEntries, setHabitEntries] = useState<HabitEntry[]>([]);
-  const [entriesLoading, setEntriesLoading] = useState(true);
+  
   const language = 'id';
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
 
@@ -69,18 +72,39 @@ export function OrangTuaDashboardClient() {
   });
   
   useEffect(() => {
-      if (!authLoading && initialStudents.length > 0 && !selectedStudentId) {
-          setSelectedStudentId(initialStudents[0].id);
-      }
-  }, [authLoading, initialStudents, selectedStudentId]);
+    if (user) {
+      const unsub = onSnapshot(doc(db, 'users', user.uid), (doc) => {
+        if (doc.exists()) {
+          setUserProfile(doc.data() as UserProfile);
+        }
+      });
+      return () => unsub();
+    }
+  }, [user]);
 
   useEffect(() => {
-    if (authLoading || initialStudents.length === 0) {
-      setEntriesLoading(false);
+    if (userProfile?.role === 'orangtua') {
+      setDataLoading(true);
+      const q = query(collection(db, 'students'), where('parentId', '==', userProfile.uid));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const studentData = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Student));
+        setInitialStudents(studentData);
+        if (studentData.length > 0 && !selectedStudentId) {
+          setSelectedStudentId(studentData[0].id);
+        }
+        setDataLoading(false);
+      });
+      return () => unsubscribe();
+    } else {
+      setDataLoading(false);
+    }
+  }, [userProfile, selectedStudentId]);
+
+  useEffect(() => {
+    if (initialStudents.length === 0) {
+      setHabitEntries([]);
       return;
     }
-    
-    setEntriesLoading(true);
     const studentIds = initialStudents.map(s => s.id);
     const q = query(collection(db, 'habit_entries'), where('studentId', 'in', studentIds));
 
@@ -91,14 +115,10 @@ export function OrangTuaDashboardClient() {
           date: (d.data().date as Timestamp).toDate()
         } as HabitEntry));
         setHabitEntries(entries);
-        setEntriesLoading(false);
-    }, (error) => {
-      console.error("Error fetching habit entries for parent:", error);
-      setEntriesLoading(false);
     });
 
     return () => unsubscribe();
-  }, [authLoading, initialStudents]);
+  }, [initialStudents]);
 
 
   const getHabitsForDate = useCallback((studentId: string, date: Date): Habit[] => {
@@ -184,8 +204,10 @@ export function OrangTuaDashboardClient() {
     return dataByDate;
 
   }, [dateRange, selectedStudentData, habitEntries]);
+  
+  const loading = authLoading || dataLoading;
 
-  if (authLoading) {
+  if (loading) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -288,7 +310,7 @@ export function OrangTuaDashboardClient() {
                 </div>
                 </CardHeader>
                 <CardContent>
-                {entriesLoading ? (
+                {dataLoading ? (
                     <div className="flex h-80 items-center justify-center">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                     </div>
@@ -360,7 +382,7 @@ export function OrangTuaDashboardClient() {
                 </div>
                 </CardHeader>
                 <CardContent>
-                {entriesLoading ? (
+                {dataLoading ? (
                 <div className="flex h-48 items-center justify-center">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>

@@ -23,7 +23,7 @@ import { Calendar } from './ui/calendar';
 import { format, subDays, eachDayOfInterval, startOfDay, isSameDay } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import type { Habit, HabitEntry } from '@/lib/types';
+import type { Habit, HabitEntry, Student } from '@/lib/types';
 import { DateRange } from 'react-day-picker';
 import { DateRangePicker } from './ui/date-range-picker';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, LabelList } from 'recharts';
@@ -55,9 +55,10 @@ const habitColors: { [key: string]: string } = {
 
 
 export function SiswaDashboardClient() {
-  const { studentData, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const [studentData, setStudentData] = useState<Student | null>(null);
+  const [dataLoading, setDataLoading] = useState(true);
   const [habitEntries, setHabitEntries] = useState<HabitEntry[]>([]);
-  const [entriesLoading, setEntriesLoading] = useState(true);
   const router = useRouter();
 
   const language = 'id';
@@ -71,36 +72,53 @@ export function SiswaDashboardClient() {
 
   useEffect(() => {
     if (authLoading) return;
-
-    if (!studentData) {
-      setEntriesLoading(false);
+    if (!user) {
+      router.replace('/login');
       return;
     }
-    if (!studentData.class) {
-      router.replace('/pilih-kelas');
-    }
     
-    setEntriesLoading(true);
-    const q = query(collection(db, 'habit_entries'), where('studentId', '==', studentData.id));
+    setDataLoading(true);
+    const q = query(collection(db, 'students'), where('linkedUserUid', '==', user.uid));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (!snapshot.empty) {
+        const studentDoc = snapshot.docs[0];
+        const sData = { id: studentDoc.id, ...studentDoc.data() } as Student;
+        setStudentData(sData);
+        if (!sData.class) {
+          router.replace('/pilih-kelas');
+        }
+      } else {
+        setStudentData(null);
+      }
+      setDataLoading(false);
+    }, (error) => {
+      console.error("Error fetching student data:", error);
+      setDataLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user, authLoading, router]);
+
+  useEffect(() => {
+    if (!studentData) return;
+
+    const entriesQuery = query(collection(db, 'habit_entries'), where('studentId', '==', studentData.id));
+    const unsubEntries = onSnapshot(entriesQuery, (snapshot) => {
       const entries = snapshot.docs.map(d => ({
         ...d.data(),
         id: d.id,
         date: (d.data().date as Timestamp).toDate()
       } as HabitEntry));
       setHabitEntries(entries);
-      setEntriesLoading(false);
-    }, (error) => {
-      console.error("Error fetching habit entries for student:", error);
-      setEntriesLoading(false);
     });
 
-    return () => unsubscribe();
-  }, [studentData, authLoading, router]);
+    return () => unsubEntries();
+  }, [studentData]);
 
-  const getHabitsForDate = useCallback((studentId: string, date: Date): Habit[] => {
-      if (!studentData || studentData.id !== studentId) return [];
+
+  const getHabitsForDate = useCallback((date: Date): Habit[] => {
+      if (!studentData) return [];
       
       const relevantEntries = habitEntries.filter(entry => 
         isSameDay(entry.date, date)
@@ -125,7 +143,7 @@ export function SiswaDashboardClient() {
 
   }, [studentData, habitEntries]);
 
-  const habitsForSelectedDate = studentData ? getHabitsForDate(studentData.id, selectedDate) : [];
+  const habitsForSelectedDate = getHabitsForDate(selectedDate);
 
   const habitTranslationMapping: Record<string, string> = {
     'Bangun Pagi': tHabits.bangunPagi.name,
@@ -179,12 +197,14 @@ export function SiswaDashboardClient() {
     return dataByDate;
 
   }, [dateRange, studentData, habitEntries]);
+  
+  const loading = authLoading || dataLoading;
 
-  if (authLoading || (studentData && !studentData.class)) {
+  if (loading) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
-        <p className="ml-4 text-muted-foreground">Memuat data dan mengarahkan...</p>
+        <p className="ml-4 text-muted-foreground">Memuat data siswa...</p>
       </div>
     );
   }
@@ -255,7 +275,7 @@ export function SiswaDashboardClient() {
           </div>
           </CardHeader>
           <CardContent>
-          {entriesLoading ? (
+          {loading ? (
               <div className="flex h-80 items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
@@ -330,7 +350,7 @@ export function SiswaDashboardClient() {
           </div>
         </CardHeader>
         <CardContent>
-          {entriesLoading ? (
+          {loading ? (
              <div className="flex h-48 items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
              </div>

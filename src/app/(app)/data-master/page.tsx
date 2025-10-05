@@ -7,8 +7,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { translations } from '@/lib/translations';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import type { UserProfile } from '@/lib/types';
+
 
 function DataMasterTabs() {
   const language = 'id';
@@ -49,14 +53,33 @@ function DataMasterTabs() {
 }
 
 export default function DataMasterPage() {
-  const { userProfile, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && userProfile && (userProfile.role === 'orangtua' || userProfile.role === 'siswa')) {
-      router.replace('/dashboard');
+    if (user) {
+      const unsub = onSnapshot(doc(db, 'users', user.uid), (doc) => {
+        if (doc.exists()) {
+          const profile = doc.data() as UserProfile;
+          setUserProfile(profile);
+          if (profile.role === 'orangtua' || profile.role === 'siswa') {
+            router.replace('/dashboard');
+          }
+        } else {
+          setUserProfile(null);
+        }
+        setProfileLoading(false);
+      });
+      return () => unsub();
+    } else if (!authLoading) {
+      setProfileLoading(false);
+      router.replace('/login');
     }
-  }, [userProfile, loading, router]);
+  }, [user, authLoading, router]);
+
+  const loading = authLoading || profileLoading;
 
   if (loading || !userProfile || userProfile.role === 'orangtua' || userProfile.role === 'siswa') {
     return (

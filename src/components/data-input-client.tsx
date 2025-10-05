@@ -55,13 +55,25 @@ export function DataInputClient({ studentId: lockedStudentId, allowedHabits }: D
   const { toast } = useToast();
   const [students, setStudents] = useState<Student[]>([]);
   const [studentsLoading, setStudentsLoading] = useState(true);
-  const { userProfile } = useAuth();
+  const { user } = useAuth();
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
 
   const language = 'id';
   const t = translations[language]?.dataInputClient || translations.en.dataInputClient;
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
   const locale = language === 'id' ? id : enUS;
+
+  useEffect(() => {
+    if (user) {
+      const unsub = onSnapshot(doc(db, 'users', user.uid), (doc) => {
+        if (doc.exists()) {
+          setUserProfile(doc.data() as UserProfile);
+        }
+      });
+      return () => unsub();
+    }
+  }, [user]);
 
   useEffect(() => {
     setStudentsLoading(true);
@@ -127,10 +139,10 @@ export function DataInputClient({ studentId: lockedStudentId, allowedHabits }: D
   }, [lockedStudentId, form]);
 
   const addHabitEntry = async (data: Omit<FormValues, 'id' | 'timestamp' | 'recordedBy'>) => {
-    if (!userProfile) throw new Error("Authentication required.");
+    if (!user) throw new Error("Authentication required.");
     await addDoc(collection(db, 'habit_entries'), {
       ...data,
-      recordedBy: userProfile.uid,
+      recordedBy: user.uid,
       timestamp: serverTimestamp()
     });
   };

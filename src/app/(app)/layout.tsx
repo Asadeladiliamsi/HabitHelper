@@ -27,8 +27,10 @@ import {
 import { ThemeToggle } from '@/components/theme-toggle';
 import { useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import { useEffect } from 'react';
+import { auth, db } from '@/lib/firebase';
+import { useEffect, useState } from 'react';
+import type { UserProfile } from '@/lib/types';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 export default function AppLayout({
   children,
@@ -37,13 +39,37 @@ export default function AppLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, userProfile, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
   
   useEffect(() => {
-    if (!loading && !user) {
+    if (!authLoading && !user) {
       router.push('/login');
     }
-  }, [loading, user, router]);
+  }, [authLoading, user, router]);
+
+  useEffect(() => {
+    if (user) {
+      setProfileLoading(true);
+      const unsub = onSnapshot(doc(db, 'users', user.uid), (doc) => {
+        if (doc.exists()) {
+          setUserProfile(doc.data() as UserProfile);
+        } else {
+          setUserProfile(null);
+        }
+        setProfileLoading(false);
+      }, (error) => {
+        console.error("Error fetching user profile:", error);
+        setUserProfile(null);
+        setProfileLoading(false);
+      });
+      return () => unsub();
+    } else {
+      setUserProfile(null);
+      setProfileLoading(false);
+    }
+  }, [user]);
   
   const handleLogout = async () => {
     await signOut(auth);
@@ -66,10 +92,23 @@ export default function AppLayout({
     }
   };
   
-  if (loading || !userProfile) {
+  const loading = authLoading || profileLoading;
+
+  if (loading) {
      return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+  
+  // After all loading is done, if there's still no user or profile, redirect.
+  if (!user || !userProfile) {
+    if (pathname !== '/login') router.push('/login');
+    return (
+       <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <p className="ml-2">Mengalihkan ke halaman login...</p>
       </div>
     );
   }

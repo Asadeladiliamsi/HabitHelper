@@ -35,7 +35,6 @@ import { Input } from './ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { collection, onSnapshot, updateDoc, doc, deleteDoc, getDoc, setDoc, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { useAuth } from '@/firebase';
 
 function UserTable({
   users,

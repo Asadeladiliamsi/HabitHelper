@@ -6,10 +6,41 @@ import { SiswaDashboardClient } from '@/components/siswa-dashboard-client';
 import { OrangTuaDashboardClient } from '@/components/orang-tua-dashboard-client';
 import { useAuth } from '@/firebase';
 import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import type { UserProfile } from '@/lib/types';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 export default function DashboardPage() {
-  const { userProfile, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
   const router = useRouter();
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      router.replace('/login');
+      return;
+    }
+
+    setProfileLoading(true);
+    const unsub = onSnapshot(doc(db, 'users', user.uid), (doc) => {
+      if (doc.exists()) {
+        setUserProfile(doc.data() as UserProfile);
+      } else {
+        setUserProfile(null);
+      }
+      setProfileLoading(false);
+    }, () => {
+      setUserProfile(null);
+      setProfileLoading(false);
+    });
+
+    return () => unsub();
+  }, [user, authLoading, router]);
+
+  const loading = authLoading || profileLoading;
 
   if (loading) {
     return (
@@ -19,14 +50,12 @@ export default function DashboardPage() {
     );
   }
 
-  // After loading, if there's no profile, redirect to login.
-  // This handles the case where the user is not logged in.
   if (!userProfile) {
     router.replace('/login');
     return (
         <div className="flex h-full w-full items-center justify-center">
              <Loader2 className="h-8 w-8 animate-spin" />
-             <p className="ml-2">Mengalihkan ke halaman login...</p>
+             <p className="ml-2">Profil tidak ditemukan. Mengalihkan ke halaman login...</p>
         </div>
     );
   }
@@ -42,7 +71,6 @@ export default function DashboardPage() {
     case 'siswa':
       return <SiswaDashboardClient />;
     default:
-       // Redirect to login if role is unknown
       router.replace('/login');
       return (
         <div className="flex h-full w-full items-center justify-center">

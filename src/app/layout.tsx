@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from '@/components/theme-provider';
-import { FirebaseProvider } from '@/firebase/provider';
 
 export const metadata: Metadata = {
   title: 'Kaih.Spensa id',
@@ -27,9 +26,7 @@ export default function RootLayout({
           defaultTheme="system"
           enableSystem
         >
-          <FirebaseProvider>
-            {children}
-          </FirebaseProvider>
+          {children}
           <Toaster />
         </ThemeProvider>
       </body>

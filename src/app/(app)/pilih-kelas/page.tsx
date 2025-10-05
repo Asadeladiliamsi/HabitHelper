@@ -12,7 +12,7 @@ import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
-import { doc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { doc, updateDoc, onSnapshot, query, collection, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Student } from '@/lib/types';
 
@@ -29,22 +29,38 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export default function PilihKelasPage() {
-  const { user, studentData, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const [studentData, setStudentData] = useState<Student | null>(null);
+  const [dataLoading, setDataLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (loading) return;
+    if (authLoading) return;
     if (!user) {
       router.replace('/login');
       return;
     }
-    if (studentData?.class) {
-      router.replace('/dashboard');
-    }
     
-  }, [user, studentData, loading, router]);
+    setDataLoading(true);
+    const q = query(collection(db, 'students'), where('linkedUserUid', '==', user.uid));
+    const unsub = onSnapshot(q, (snapshot) => {
+      if (!snapshot.empty) {
+        const studentDoc = snapshot.docs[0];
+        const sData = { id: studentDoc.id, ...studentDoc.data() } as Student;
+        setStudentData(sData);
+        if (sData.class) {
+          router.replace('/dashboard');
+        }
+      } else {
+        setStudentData(null);
+      }
+      setDataLoading(false);
+    });
+
+    return () => unsub();
+  }, [user, authLoading, router]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -58,6 +74,8 @@ export default function PilihKelasPage() {
     await updateDoc(studentDocRef, { class: className });
   };
   
+  const loading = authLoading || dataLoading;
+
   if (loading || !studentData) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -76,7 +94,7 @@ export default function PilihKelasPage() {
         description: `Anda telah terdaftar di kelas ${data.kelas}. Mengalihkan ke dasbor...`,
       });
       router.push('/dashboard');
-      router.refresh(); // Force a refresh to ensure layout re-evaluates
+      router.refresh(); 
     } catch (error: any) {
       toast({
         variant: 'destructive',

@@ -70,7 +70,6 @@ import { DateRangePicker } from './ui/date-range-picker';
 import { useToast } from '@/hooks/use-toast';
 import { collection, onSnapshot, query, doc, updateDoc, arrayUnion, arrayRemove, where, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { useAuth } from '@/firebase';
 
 const habitIcons: { [key: string]: React.ReactNode } = {
   'Bangun Pagi': <Sunrise className="h-5 w-5 text-yellow-500" />,
@@ -94,7 +93,8 @@ const habitColors: { [key: string]: string } = {
 
 
 export function DashboardClient() {
-  const { students: initialStudents, loading: authLoading } = useAuth();
+  const [initialStudents, setInitialStudents] = useState<Student[]>([]);
+  const [studentsLoading, setStudentsLoading] = useState(true);
   const [habitEntries, setHabitEntries] = useState<HabitEntry[]>([]);
   const [entriesLoading, setEntriesLoading] = useState(true);
   
@@ -114,6 +114,18 @@ export function DashboardClient() {
     translations[language]?.landingPage.habits ||
     translations.en.landingPage.habits;
 
+  useEffect(() => {
+    setStudentsLoading(true);
+    const q = query(collection(db, 'students'));
+    const unsub = onSnapshot(q, (snapshot) => {
+      setInitialStudents(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Student)));
+      setStudentsLoading(false);
+    }, () => {
+      setStudentsLoading(false);
+    });
+    return () => unsub();
+  }, []);
+
   const filteredStudents = useMemo(() => {
     if (selectedClass === 'all') {
       return initialStudents;
@@ -122,7 +134,7 @@ export function DashboardClient() {
   }, [initialStudents, selectedClass]);
   
   useEffect(() => {
-    if (authLoading || filteredStudents.length === 0) {
+    if (studentsLoading || filteredStudents.length === 0) {
       setEntriesLoading(false);
       return;
     };
@@ -160,7 +172,7 @@ export function DashboardClient() {
     return () => {
       unsubscribers.forEach(unsub => unsub());
     };
-  }, [authLoading, filteredStudents, toast]);
+  }, [studentsLoading, filteredStudents, toast]);
 
   const getHabitsForDate = useCallback((studentId: string, date: Date): Habit[] => {
       const student = initialStudents.find(s => s.id === studentId);
@@ -331,7 +343,7 @@ export function DashboardClient() {
 
   }, [dateRange, filteredStudents, habitEntries]);
 
-  if (authLoading) {
+  if (studentsLoading) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
