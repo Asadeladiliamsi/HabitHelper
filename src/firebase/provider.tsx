@@ -23,93 +23,74 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setLoading(true);
-      if (currentUser) {
-        setUser(currentUser);
-        // User is logged in, listen to their profile
-        const userDocRef = doc(db, 'users', currentUser.uid);
-        const unsubscribeProfile = onSnapshot(userDocRef, async (userDocSnap) => {
-          if (userDocSnap.exists()) {
-            setUserProfile(userDocSnap.data() as UserProfile);
-          } else {
-            // New user, create a user profile with 'siswa' as default role
-            const newUserProfile: UserProfile = {
-              uid: currentUser.uid,
-              email: currentUser.email,
-              name: currentUser.displayName || 'Siswa Baru',
-              role: 'siswa',
-              nisn: '',
-            };
-            // This will trigger the snapshot listener again
-            await setDoc(userDocRef, newUserProfile);
-          }
-        }, (error) => {
-          console.error("Error listening to user profile:", error);
-          setUserProfile(null);
-          setLoading(false);
-        });
-        return () => unsubscribeProfile();
-      } else {
-        // User is logged out
-        setUser(null);
+      setUser(currentUser);
+      if (!currentUser) {
         setUserProfile(null);
         setStudentData(null);
         setLoading(false);
       }
     });
-
     return () => unsubscribeAuth();
   }, []);
 
   useEffect(() => {
-    if (!user || !userProfile) {
-      if (!user) setLoading(false);
-      return;
-    }
+    if (!user) return;
 
-    if (userProfile.role === 'siswa') {
-      const studentDocRef = doc(db, 'students', user.uid);
-      const unsubscribeStudent = onSnapshot(studentDocRef, async (docSnap) => {
-        if (docSnap.exists()) {
-          setStudentData({ id: docSnap.id, ...docSnap.data() } as Student);
-          setLoading(false);
-        } else {
-            // Student data not linked by admin/teacher yet, OR it's a brand new 'siswa' user
-            // Let's create it automatically.
-            const initialHabits: Habit[] = Object.entries(HABIT_DEFINITIONS).map(([name, subHabits]) => ({
+    const userDocRef = doc(db, 'users', user.uid);
+    const unsubscribeProfile = onSnapshot(userDocRef, (userDocSnap) => {
+      if (userDocSnap.exists()) {
+        const profile = userDocSnap.data() as UserProfile;
+        setUserProfile(profile);
+
+        if (profile.role === 'siswa') {
+          // Now handle student data part
+          const studentDocRef = doc(db, 'students', user.uid);
+          const unsubscribeStudent = onSnapshot(studentDocRef, async (studentDocSnap) => {
+            if (studentDocSnap.exists()) {
+              setStudentData({ id: studentDocSnap.id, ...studentDocSnap.data() } as Student);
+              setLoading(false);
+            } else {
+              // Student role but no student data yet. This happens right after signup.
+              // Let's create it.
+              const initialHabits: Habit[] = Object.entries(HABIT_DEFINITIONS).map(([name, subHabits]) => ({
                 id: name.replace(/\s+/g, ''),
                 name: name,
                 subHabits: subHabits.map(subName => ({ id: subName.replace(/\s+/g, ''), name: subName, score: 0 }))
-            }));
+              }));
 
-            const newStudentData: Omit<Student, 'id'> = {
-                name: userProfile.name,
-                email: userProfile.email || '',
-                nisn: userProfile.nisn || '',
-                avatarUrl: user?.photoURL || `https://placehold.co/100x100.png?text=${userProfile.name.charAt(0)}`,
+              const newStudentData: Omit<Student, 'id'> = {
+                name: profile.name,
+                email: profile.email || '',
+                nisn: profile.nisn || '',
+                avatarUrl: user.photoURL || `https://placehold.co/100x100.png?text=${profile.name.charAt(0)}`,
                 class: '', // IMPORTANT: Class is empty, forcing user to select it
                 habits: initialHabits,
-                linkedUserUid: userProfile.uid,
+                linkedUserUid: profile.uid,
                 createdAt: serverTimestamp(),
                 lockedDates: [],
-            };
-            // Set the document, the snapshot listener will pick it up and set loading to false.
-            await setDoc(studentDocRef, newStudentData);
+              };
+              // Set the document. The snapshot listener above will pick it up and set the state.
+              // We don't set loading to false here to wait for the listener to trigger.
+              await setDoc(studentDocRef, newStudentData);
+            }
+          });
+          return () => unsubscribeStudent();
+        } else {
+          // Not a student, no student data to fetch.
+          setStudentData(null);
+          setLoading(false);
         }
-      }, (error) => {
-        console.error("Error listening to student data:", error);
-        setStudentData(null);
-        setLoading(false);
-      });
+      } else {
+        // User document doesn't exist yet, can happen right after signup.
+        // The signup flow now creates this, so we just wait.
+        // We don't set loading to false to avoid flicker.
+      }
+    });
 
-      return () => unsubscribeStudent();
-    } else {
-      // Not a student, no need to fetch student data for them.
-      setStudentData(null);
-      setLoading(false);
-    }
-  }, [user, userProfile]);
+    return () => unsubscribeProfile();
+  }, [user]);
 
   const value = { user, userProfile, studentData, loading };
 
@@ -130,7 +111,7 @@ export const useAuth = () => {
 
 export const useUser = () => {
   const context = useContext(FirebaseContext);
-   if (context === null) {
+  if (context === null) {
     throw new Error('useUser must be used within a FirebaseProvider');
   }
   return context.user;
