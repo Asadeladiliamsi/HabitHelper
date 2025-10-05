@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from '@/components/theme-provider';
-import { AuthProvider } from '@/firebase/auth-provider';
 import { FirebaseProvider } from '@/firebase/provider';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 
@@ -30,12 +29,10 @@ export default function RootLayout({
           defaultTheme="system"
           enableSystem
         >
-          <AuthProvider>
-            <FirebaseProvider>
-              <FirebaseErrorListener />
-              {children}
-            </FirebaseProvider>
-          </AuthProvider>
+          <FirebaseProvider>
+            <FirebaseErrorListener />
+            {children}
+          </FirebaseProvider>
           <Toaster />
         </ThemeProvider>
       </body>

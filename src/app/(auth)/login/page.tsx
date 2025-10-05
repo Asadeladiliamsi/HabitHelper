@@ -79,12 +79,7 @@ export default function LoginPage() {
         }
     } catch (e: any) {
         console.error("Error fetching user profile after login:", e);
-        toast({
-            variant: "destructive",
-            title: "Gagal Mengambil Profil",
-            description: "Tidak dapat memuat data profil setelah login. Mengarahkan ke dasbor umum.",
-        });
-        router.replace('/dashboard');
+        setErrorMessage("Gagal mengambil data profil setelah login. Pastikan Anda memiliki koneksi internet dan coba lagi.");
     }
   }
 
