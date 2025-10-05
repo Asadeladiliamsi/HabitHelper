@@ -17,6 +17,8 @@ import { LinkParentDialog } from './link-parent-dialog';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, serverTimestamp, getDocs, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { HABIT_DEFINITIONS } from '@/lib/types';
+import { errorEmitter } from '@/lib/error-emitter';
+import { FirestorePermissionError } from '@/lib/errors';
 
 export function ManageStudentsClient() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -36,25 +38,45 @@ export function ManageStudentsClient() {
     const studentsQuery = query(collection(db, 'students'));
     const usersQuery = query(collection(db, 'users'));
 
-    const unsubStudents = onSnapshot(studentsQuery, (snapshot) => {
-      const studentData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
-      setStudents(studentData);
-    });
+    const unsubStudents = onSnapshot(studentsQuery, 
+      (snapshot) => {
+        const studentData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
+        setStudents(studentData);
+        if (users.length > 0) setLoading(false);
+      },
+      (error) => {
+        console.error("Student listener failed:", error);
+        const permissionError = new FirestorePermissionError({
+          path: 'students',
+          operation: 'list',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        setLoading(false);
+      }
+    );
 
-    const unsubUsers = onSnapshot(usersQuery, (snapshot) => {
-      const userData = snapshot.docs.map(doc => doc.data() as UserProfile);
-      setUsers(userData);
-    });
-    
-    // Combine loading state, could be more refined
-    Promise.all([new Promise(res => onSnapshot(studentsQuery, res)), new Promise(res => onSnapshot(usersQuery, res))])
-      .then(() => setLoading(false))
-      .catch(() => setLoading(false));
+    const unsubUsers = onSnapshot(usersQuery,
+      (snapshot) => {
+        const userData = snapshot.docs.map(doc => doc.data() as UserProfile);
+        setUsers(userData);
+        if (students.length > 0 || snapshot.docs.length > 0) setLoading(false);
+      },
+      (error) => {
+        console.error("User listener failed:", error);
+        const permissionError = new FirestorePermissionError({
+          path: 'users',
+          operation: 'list',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        setLoading(false);
+      }
+    );
 
     return () => {
       unsubStudents();
       unsubUsers();
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleAddStudent = () => {
