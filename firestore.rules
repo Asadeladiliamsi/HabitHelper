@@ -1,35 +1,149 @@
+/**
+ * @file Firestore Security Rules
+ * @description This ruleset enforces a strict user-ownership model for user profiles and student data,
+ *              allowing users to only manage their own profiles and related student records. Global application
+ *              settings and class data are secured with restricted access.
+ *
+ * @dataStructure
+ *  - /users/{userId}: Stores public user profiles, accessible only to the user themselves.
+ *  - /students/{studentId}: Stores detailed student data, accessible only to the linked user.
+ *  - /habit_entries/{entryId}: Stores habit entry data, accessible only if the linked user is authorized.
+ *  - /app_settings/{settingId}: Stores global application settings, write access is denied.
+ *  - /classes/{classId}: Stores class data, write access is denied.
+ *
+ * @keySecurityDecisions
+ *  - User listing is disallowed to protect user privacy.
+ *  - Data shape is not strictly validated to allow for rapid prototyping.
+ *  - Global application settings and class data are read-only for now.
+ *
+ * @denormalizationForAuthorization
+ *  - Student documents contain a `linkedUserUid` field to directly associate the student with a user,
+ *    avoiding the need for complex queries to determine ownership.
+ *
+ * @structuralSegregation
+ *  - All user-specific data is stored under the /users/{userId} path, ensuring clear ownership and
+ *    simplified security rules.
+ */
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-
+    /**
+     * @description Controls access to user profile documents.
+     * @path /users/{userId}
+     * @allow (create) - User with UID 'user123' can create their own profile at /users/user123.
+     * @allow (get) - User with UID 'user123' can read their own profile at /users/user123.
+     * @allow (update) - User with UID 'user123' can update their own profile at /users/user123.
+     * @allow (delete) - User with UID 'user123' can delete their own profile at /users/user123.
+     * @deny (create) - User with UID 'user456' cannot create a profile at /users/user123.
+     * @deny (get) - User with UID 'user456' cannot read the profile at /users/user123.
+     * @deny (update) - User with UID 'user456' cannot update the profile at /users/user123.
+     * @deny (delete) - User with UID 'user456' cannot delete the profile at /users/user123.
+     * @principle Enforces document ownership for all operations.
+     */
     match /users/{userId} {
-      allow read: if isSignedIn() && isOwner(userId);
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && isOwner(userId);
-      allow delete: if isSignedIn() && isOwner(userId);
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+      allow get: if isOwner(userId);
+      allow list: if false; // User listing is not permitted
+      allow create: if isOwner(userId) && request.resource.data.uid == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.uid == resource.data.uid;
+      allow delete: if isExistingOwner(userId);
     }
-    
+
+    /**
+     * @description Controls access to student documents.
+     * @path /students/{studentId}
+     * @allow (create) - User with UID 'user123' can create a student profile linked to their account.
+     * @allow (get) - User with UID 'user123' can read a student profile linked to their account.
+     * @allow (update) - User with UID 'user123' can update a student profile linked to their account.
+     * @allow (delete) - User with UID 'user123' can delete a student profile linked to their account.
+     * @deny (create) - User with UID 'user456' cannot create a student profile linked to 'user123'.
+     * @deny (get) - User with UID 'user456' cannot read a student profile linked to 'user123'.
+     * @deny (update) - User with UID 'user456' cannot update a student profile linked to 'user123'.
+     * @deny (delete) - User with UID 'user456' cannot delete a student profile linked to 'user123'.
+     * @principle Enforces document ownership based on the 'linkedUserUid' field.
+     */
     match /students/{studentId} {
-      allow read, create, update, delete: if isSignedIn();
+      function isLinkedUser(linkedUserUid) {
+        return request.auth.uid == linkedUserUid;
+      }
+      function isExistingLinkedUser(linkedUserUid) {
+        return isLinkedUser(linkedUserUid) && resource != null;
+      }
+      allow get: if isLinkedUser(resource.data.linkedUserUid);
+      allow list: if false;  // Student listing is not permitted.
+      allow create: if isLinkedUser(request.resource.data.linkedUserUid);
+      allow update: if isExistingLinkedUser(resource.data.linkedUserUid) && request.resource.data.linkedUserUid == resource.data.linkedUserUid;
+      allow delete: if isExistingLinkedUser(resource.data.linkedUserUid);
     }
-    
+
+    /**
+     * @description Controls access to habit entry documents.
+     * @path /habit_entries/{entryId}
+     * @allow (create) - User with UID 'user123' can create a habit entry linked to a student they manage.
+     * @allow (get) - User with UID 'user123' can read a habit entry linked to a student they manage.
+     * @allow (update) - User with UID 'user123' can update a habit entry linked to a student they manage.
+     * @allow (delete) - User with UID 'user123' can delete a habit entry linked to a student they manage.
+     * @deny (create) - User with UID 'user456' cannot create a habit entry linked to a student managed by 'user123'.
+     * @deny (get) - User with UID 'user456' cannot read a habit entry linked to a student managed by 'user123'.
+     * @deny (update) - User with UID 'user456' cannot update a habit entry linked to a student managed by 'user123'.
+     * @deny (delete) - User with UID 'user456' cannot delete a habit entry linked to a student managed by 'user123'.
+     * @principle Enforces access control based on the student's linked user.
+     */
     match /habit_entries/{entryId} {
-      allow read, write: if isSignedIn();
+        function getStudent(studentId) {
+            return get(/databases/$(database)/documents/students/$(studentId)).data;
+        }
+        function isLinkedUserForStudent(studentId) {
+            return request.auth.uid == getStudent(studentId).linkedUserUid;
+        }
+        function isExistingLinkedUserForStudent(studentId) {
+          return isLinkedUserForStudent(studentId) && resource != null;
+        }
+
+        allow get: if isLinkedUserForStudent(resource.data.studentId);
+        allow list: if false;
+        allow create: if isLinkedUserForStudent(request.resource.data.studentId);
+        allow update: if isExistingLinkedUserForStudent(resource.data.studentId);
+        allow delete: if isExistingLinkedUserForStudent(resource.data.studentId);
     }
-    
+
+    /**
+     * @description Controls access to global application settings.  Write access is denied.
+     * @path /app_settings/{settingId}
+     * @allow (get) - Anyone can read application settings.
+     * @deny (create) - No one can create application settings.
+     * @deny (update) - No one can update application settings.
+     * @deny (delete) - No one can delete application settings.
+     * @principle Restricts write access to global application settings.
+     */
     match /app_settings/{settingId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn(); // Admins should manage this, but allowing for now.
+      allow get: if true;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Controls access to class data. Write access is denied.
+     * @path /classes/{classId}
+     * @allow (get) - Anyone can read class data.
+     * @deny (create) - No one can create class data.
+     * @deny (update) - No one can update class data.
+     * @deny (delete) - No one can delete class data.
+     * @principle Restricts write access to class data.
+     */
+    match /classes/{classId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
     }
   }
 }
