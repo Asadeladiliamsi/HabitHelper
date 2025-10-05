@@ -29,11 +29,13 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user, loading } = useAuth();
 
-  useEffect(() => {
-    if (!loading && user) {
-      router.push('/dashboard');
-    }
-  }, [user, loading, router]);
+  // The main layout now handles redirection, so this useEffect can be removed
+  // to avoid conflicting navigation logic.
+  // useEffect(() => {
+  //   if (!loading && user) {
+  //     router.push('/dashboard');
+  //   }
+  // }, [user, loading, router]);
 
 
   const form = useForm<FormValues>({
@@ -52,7 +54,8 @@ export default function LoginPage() {
         title: 'Login Berhasil',
         description: 'Anda akan diarahkan ke dasbor.',
       });
-      // Redirect is now handled by the useEffect hook watching the user state
+      // The AppLayout's redirect logic will handle moving the user to the dashboard.
+      // No need for a manual push here.
     } catch (error: any) {
       console.error(error);
       let description = 'Terjadi kesalahan. Silakan coba lagi.';

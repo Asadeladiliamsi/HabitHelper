@@ -11,7 +11,6 @@ import {
   Loader2,
   Database,
   PencilLine,
-  Link2,
 } from 'lucide-react';
 import {
   SidebarProvider,
@@ -51,6 +50,8 @@ export default function AppLayout({
         if (doc.exists()) {
           setUserProfile(doc.data() as UserProfile);
         } else {
+          // This can happen if the user exists in Auth but not in Firestore.
+          // For example, if the Firestore document creation failed during signup.
           setUserProfile(null);
         }
         setProfileLoading(false);
@@ -61,6 +62,7 @@ export default function AppLayout({
       });
       return () => unsub();
     } else if (!authLoading) {
+      // If there's no user and auth is not loading, then profile is also not loading.
       setUserProfile(null);
       setProfileLoading(false);
     }
@@ -69,13 +71,23 @@ export default function AppLayout({
   const loading = authLoading || profileLoading;
 
   useEffect(() => {
-    const allowedPaths = ['/login', '/signup', '/link-account'];
-    if (!loading && (!user || !userProfile)) {
-       if (!allowedPaths.includes(pathname)) {
-           router.push('/login');
-       }
+    if (loading) return; // Wait until all loading is done
+
+    const isAuthPage = pathname === '/login' || pathname === '/signup';
+
+    if (!user && !isAuthPage) {
+      // If no user and not on an auth page, redirect to login
+      router.push('/login');
+    } else if (user && !userProfile) {
+      // If user exists in Auth but no profile found in Firestore (e.g., failed signup),
+      // it's an error state. Redirect to login to be safe.
+      console.error("Auth user exists but Firestore profile is missing.");
+      router.push('/login');
+    } else if (user && userProfile && isAuthPage) {
+      // If user is logged in and on an auth page, redirect to dashboard
+      router.push('/dashboard');
     }
-  }, [loading, user, userProfile, router, pathname]);
+  }, [loading, user, userProfile, pathname, router]);
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -98,22 +110,29 @@ export default function AppLayout({
     }
   };
   
-  if (loading || (!user && !pathname.startsWith('/link-account'))) {
-     if (pathname === '/login' || pathname === '/signup') return <>{children}</>;
+  // If we're loading, or if we're not loading but have no user (and are not on an auth page), show a loader.
+  // The useEffect above will handle the redirect.
+  if (loading || (!user && pathname !== '/login' && pathname !== '/signup')) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
-        <p className="ml-2">Mengalihkan ke halaman login...</p>
+        <p className="ml-2">Memuat...</p>
       </div>
     );
   }
-   if (!userProfile && !loading && !pathname.startsWith('/link-account')) {
-      if (pathname === '/login' || pathname === '/signup') return <>{children}</>;
-      router.push('/login');
-      return (
+   
+  // Let the auth pages render themselves without the main layout
+  if (pathname === '/login' || pathname === '/signup') {
+     return <>{children}</>;
+  }
+
+  // After all checks, if we still don't have a profile, it's an invalid state.
+  // The useEffect will redirect, but we need to render something in the meantime.
+  if (!userProfile) {
+     return (
           <div className="flex h-screen items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin" />
-              <p className="ml-2">Profil tidak ditemukan. Mengalihkan...</p>
+              <p className="ml-2">Sesi tidak valid. Mengalihkan...</p>
           </div>
       );
   }
@@ -128,7 +147,6 @@ export default function AppLayout({
     { href: '/data-master', icon: Database, label: 'Data Master', roles: ['guru', 'admin'] },
     { href: '/notifications', icon: Bell, label: 'Notifikasi', roles: ['guru', 'admin'] },
     { href: '/reports', icon: FileText, label: 'Laporan', roles: ['guru', 'admin'] },
-    { href: '/link-account', icon: Link2, label: 'Tautkan Akun', roles: ['siswa'] },
   ];
 
   return (
@@ -146,8 +164,6 @@ export default function AppLayout({
           <SidebarMenu>
             {navItems.map((item) => {
               if (!userProfile || !item.roles.includes(userProfile.role)) return null;
-              // Hide "Tautkan Akun" if already linked, but that logic is complex here.
-              // We'll rely on redirection for now.
               return (
                 <SidebarMenuItem key={item.href}>
                   <Link href={item.href}>

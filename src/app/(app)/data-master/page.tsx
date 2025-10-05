@@ -59,6 +59,11 @@ export default function DataMasterPage() {
   const router = useRouter();
 
   useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace('/login');
+      return;
+    }
+    
     if (user) {
       const unsub = onSnapshot(doc(db, 'users', user.uid), (doc) => {
         if (doc.exists()) {
@@ -69,13 +74,11 @@ export default function DataMasterPage() {
           }
         } else {
           setUserProfile(null);
+          router.replace('/login');
         }
         setProfileLoading(false);
       });
       return () => unsub();
-    } else if (!authLoading) {
-      setProfileLoading(false);
-      router.replace('/login');
     }
   }, [user, authLoading, router]);
 

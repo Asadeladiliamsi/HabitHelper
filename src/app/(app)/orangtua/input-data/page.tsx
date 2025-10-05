@@ -7,9 +7,9 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Student } from '@/lib/types';
+import type { Student, UserProfile } from '@/lib/types';
 
 
 const PARENT_ALLOWED_HABITS = [
@@ -20,7 +20,9 @@ const PARENT_ALLOWED_HABITS = [
 ];
 
 export default function ParentInputDataPage() {
-  const { userProfile, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
   const [students, setStudents] = useState<Student[]>([]);
   const [studentLoading, setStudentLoading] = useState(true);
   const router = useRouter();
@@ -28,10 +30,29 @@ export default function ParentInputDataPage() {
   const [selectedStudentId, setSelectedStudentId] = useState<string>('');
 
   useEffect(() => {
-    if (!authLoading && userProfile?.role !== 'orangtua') {
-      router.replace('/dashboard');
+    if (authLoading) return;
+    if (!user) {
+      router.replace('/login');
+      return;
     }
-  }, [userProfile, authLoading, router]);
+    
+    setProfileLoading(true);
+    const unsubProfile = onSnapshot(doc(db, 'users', user.uid), (profileDoc) => {
+      if (profileDoc.exists()) {
+        const profile = profileDoc.data() as UserProfile;
+        setUserProfile(profile);
+        if (profile.role !== 'orangtua') {
+          router.replace('/dashboard');
+        }
+      } else {
+        router.replace('/login');
+      }
+      setProfileLoading(false);
+    });
+
+    return () => unsubProfile();
+  }, [user, authLoading, router]);
+
 
   useEffect(() => {
     if (userProfile && userProfile.role === 'orangtua' && userProfile.uid) {
@@ -52,13 +73,15 @@ export default function ParentInputDataPage() {
         setStudentLoading(false);
       });
       return () => unsubscribe();
-    } else {
+    } else if (userProfile) { // If profile is loaded but not a parent
       setStudentLoading(false);
     }
   }, [userProfile, selectedStudentId]);
 
 
-  if (authLoading || studentLoading) {
+  const loading = authLoading || profileLoading || studentLoading;
+
+  if (loading) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -67,7 +90,9 @@ export default function ParentInputDataPage() {
   }
   
   if (userProfile?.role !== 'orangtua') {
-    return null; // Or a redirect
+    // This case should be handled by the redirect in the first useEffect,
+    // but as a fallback, we render nothing.
+    return null; 
   }
   
   if (students.length === 0) {

@@ -76,6 +76,10 @@ export function DataInputClient({ studentId: lockedStudentId, allowedHabits }: D
   }, [user]);
 
   useEffect(() => {
+    if (lockedStudentId) {
+      setStudentsLoading(false);
+      return;
+    }
     setStudentsLoading(true);
     const q = query(collection(db, 'students'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -87,7 +91,7 @@ export function DataInputClient({ studentId: lockedStudentId, allowedHabits }: D
       setStudentsLoading(false);
     });
     return () => unsubscribe();
-  }, []);
+  }, [lockedStudentId]);
 
   const isStudentRole = userProfile?.role === 'siswa';
   const isParentRole = userProfile?.role === 'orangtua';
@@ -96,6 +100,8 @@ export function DataInputClient({ studentId: lockedStudentId, allowedHabits }: D
   const habitsToShow = allowedHabits ? HABIT_NAMES.filter(h => allowedHabits.includes(h)) : HABIT_NAMES;
   
   const [availableSubHabits, setAvailableSubHabits] = useState<string[]>([]);
+  
+  const [studentForLockCheck, setStudentForLockCheck] = useState<Student | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -110,17 +116,29 @@ export function DataInputClient({ studentId: lockedStudentId, allowedHabits }: D
   
   const selectedHabitName = form.watch('habitName');
   const selectedDate = form.watch('date');
-  const studentIdToWatch = lockedStudentId || form.watch('studentId');
+  const studentIdToWatch = form.watch('studentId');
 
-  const studentData = useMemo(() => {
-    return students.find(s => s.id === studentIdToWatch);
-  }, [students, studentIdToWatch]);
+  // Effect to fetch the specific student for lock checking
+  useEffect(() => {
+    if (studentIdToWatch) {
+      const unsub = onSnapshot(doc(db, 'students', studentIdToWatch), (doc) => {
+        if (doc.exists()) {
+          setStudentForLockCheck({ id: doc.id, ...doc.data() } as Student);
+        } else {
+          setStudentForLockCheck(null);
+        }
+      });
+      return () => unsub();
+    } else {
+      setStudentForLockCheck(null);
+    }
+  }, [studentIdToWatch]);
   
   const isDateLocked = useMemo(() => {
-    if (!studentData || !selectedDate) return false;
+    if (!studentForLockCheck || !selectedDate) return false;
     const formattedDate = format(selectedDate, 'yyyy-MM-dd');
-    return studentData.lockedDates?.includes(formattedDate) || false;
-  }, [studentData, selectedDate]);
+    return studentForLockCheck.lockedDates?.includes(formattedDate) || false;
+  }, [studentForLockCheck, selectedDate]);
 
 
   useEffect(() => {
@@ -149,7 +167,7 @@ export function DataInputClient({ studentId: lockedStudentId, allowedHabits }: D
 
   const onSubmit = async (data: FormValues) => {
     setIsLoading(true);
-    const selectedStudent = students.find(s => s.id === data.studentId);
+    const selectedStudent = students.find(s => s.id === data.studentId) || studentForLockCheck;
     const studentName = selectedStudent?.name || 'Siswa';
     const translatedHabitName = habitTranslationMapping[data.habitName] || data.habitName;
 
@@ -163,8 +181,6 @@ export function DataInputClient({ studentId: lockedStudentId, allowedHabits }: D
       
       form.reset({
         ...form.getValues(),
-        studentId: lockedStudentId || form.getValues('studentId'),
-        habitName: form.getValues('habitName'),
         subHabitName: '',
         score: 4,
       });
@@ -181,7 +197,7 @@ export function DataInputClient({ studentId: lockedStudentId, allowedHabits }: D
     }
   };
   
-  const selectedStudentName = students.find(s => s.id === form.watch('studentId'))?.name || '';
+  const selectedStudentName = students.find(s => s.id === form.watch('studentId'))?.name || studentForLockCheck?.name || '';
   
   const habitTranslationMapping: Record<string, string> = {
     'Bangun Pagi': tHabits.bangunPagi.name,
@@ -204,12 +220,11 @@ export function DataInputClient({ studentId: lockedStudentId, allowedHabits }: D
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {studentsLoading && (
+        {studentsLoading ? (
           <div className="flex h-64 items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>
-        )}
-        {!studentsLoading && (
+        ) : (
           <>
             {isDateLocked && (
                 <Alert variant="destructive" className="mb-6">

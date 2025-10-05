@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react';
 import type { UserProfile, Student, HabitEntry } from '@/lib/types';
 import { doc, onSnapshot, query, collection, where, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useToast } from '@/hooks/use-toast';
 
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
@@ -18,6 +19,7 @@ export default function DashboardPage() {
   const [habitEntries, setHabitEntries] = useState<HabitEntry[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (authLoading) return;
@@ -33,7 +35,6 @@ export default function DashboardPage() {
         setUserProfile(profile);
 
         if (profile.role === 'siswa') {
-          // Jika role adalah siswa, cari data siswa yang tertaut
           const studentQuery = query(collection(db, 'students'), where('linkedUserUid', '==', user.uid));
           const unsubStudent = onSnapshot(studentQuery, (studentSnapshot) => {
             if (!studentSnapshot.empty) {
@@ -41,7 +42,6 @@ export default function DashboardPage() {
               const sData = { id: studentDoc.id, ...studentDoc.data() } as Student;
               setStudentData(sData);
 
-              // Ambil juga habit entries untuk siswa ini
               const entriesQuery = query(collection(db, 'habit_entries'), where('studentId', '==', sData.id));
               const unsubEntries = onSnapshot(entriesQuery, (entriesSnapshot) => {
                 const entries = entriesSnapshot.docs.map(d => ({
@@ -50,14 +50,10 @@ export default function DashboardPage() {
                   date: (d.data().date as Timestamp).toDate(),
                 } as HabitEntry));
                 setHabitEntries(entries);
-                setDataLoading(false); // Semua data siswa sudah siap
+                setDataLoading(false);
               });
-              
-              // Return a function to unsubscribe from entries when student changes
               return () => unsubEntries();
             } else {
-              // This case should ideally not happen with the new signup flow,
-              // but as a fallback, we can treat it as an error or incomplete setup.
               setStudentData(null);
               setDataLoading(false);
                toast({
@@ -68,16 +64,13 @@ export default function DashboardPage() {
                router.replace('/login');
             }
           });
-          // Return a function to unsubscribe from student data when profile changes
           return () => unsubStudent();
         } else {
-          // Untuk role lain, kita anggap data siap setelah profil didapat
           setStudentData(null);
           setHabitEntries([]);
           setDataLoading(false);
         }
       } else {
-        // Profil tidak ditemukan
         setUserProfile(null);
         setDataLoading(false);
         router.replace('/login');
@@ -85,7 +78,7 @@ export default function DashboardPage() {
     });
 
     return () => unsubProfile();
-  }, [user, authLoading, router]);
+  }, [user, authLoading, router, toast]);
 
   const loading = authLoading || dataLoading;
 
@@ -99,13 +92,7 @@ export default function DashboardPage() {
   }
 
   if (!userProfile) {
-     router.replace('/login');
-     return (
-         <div className="flex h-full w-full items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin" />
-              <p className="ml-2">Profil tidak ditemukan. Mengalihkan ke halaman login...</p>
-         </div>
-     );
+     return null; // AppLayout will handle the redirect.
   }
 
   switch (userProfile.role) {
@@ -123,7 +110,7 @@ export default function DashboardPage() {
          return (
              <div className="flex h-full w-full items-center justify-center">
                  <Loader2 className="h-8 w-8 animate-spin" />
-                 <p className="ml-2">Memuat data siswa...</p>
+                 <p className="ml-2">Data siswa tidak ditemukan. Mengalihkan...</p>
              </div>
          );
       }
