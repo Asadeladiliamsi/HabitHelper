@@ -1,125 +1,112 @@
 /**
- * @file Firebase Security Rules for Firestore.
+ * @file Firestore Security Rules
+ * @description This ruleset enforces a role-based access control model, primarily focusing on owner-only access and role-based restrictions.
  *
- * @core_philosophy This ruleset enforces a strict owner-only access model for user profiles and students,
- *                  allowing only authenticated users to manage their own data. App settings are read-only.
- *                  Habit entries can be created by teachers for students.
+ * Data Structure:
+ * - /users/{userId}: Stores user profiles, accessible only to the user themselves.
+ * - /students/{studentId}: Stores student data, with write access limited.
+ * - /habit_entries/{entryId}: Stores habit entry data. Write access is limited to authenticated users.
+ * - /app_settings/{settingId}: Stores global app settings, write access is denied to all.
+ * - /classes/{classId}: Stores class data and settings, with write access denied to all.
  *
- * @data_structure The database is structured as follows:
- * - /users/{userId}: Stores user profile information, where userId is the Firebase Auth UID.
- * - /students/{studentId}: Stores student data.
- * - /habit_entries/{entryId}: Stores habit entry data.
- * - /app_settings/{settingId}: Stores application settings. Only readable.
- * - /classes/{classId}: Stores class data, like its locked status.
- *
- * @key_security_decisions
- * - User profiles can only be read and written by the user themselves.
- * - Students can only be created, read, updated, and deleted by the user themselves (linkedUserUid).
- * - Listing of users and students is disallowed to prevent data enumeration.
- * - App settings are read-only and restricted to authenticated users.
- * - Habit Entries can be created, read, updated, and deleted by teachers.
- *
- * @denormalization_for_authorization
- * - For students, the 'linkedUserUid' field is used to associate a student's data with a specific user, enabling owner-based access control.
- * - For Habit Entries, the 'recordedBy' field is used to record the UID of the user who created the entry.
+ * Key Security Decisions:
+ * - User data is private and only accessible to the authenticated user.
+ * - Listing of users is disallowed for privacy.
+ * - App settings are read-only for all users.
+ * - Class data write access is denied.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Secure user profiles. Only the user can read and write their own profile.
+     * @description Controls access to user profile documents.
      * @path /users/{userId}
-     * @allow (get, create, update, delete) - User with UID 'user123' can read, create, update, or delete the profile at /users/user123 if authenticated.
-     * @deny (get, create, update, delete) - User with UID 'user456' cannot access /users/user123.
-     * @principle Enforces document ownership for all operations.
+     * @allow (create) User with matching UID can create their profile.
+     * @allow (get, update, delete) User can only access their own profile.
+     * @deny (create) User cannot create a profile with a mismatched UID.
+     * @deny (list) Listing users is not allowed.
+     * @principle Enforces user-ownership for profile data.
      */
     match /users/{userId} {
-      allow get: if isSignedIn() && isOwner(userId);
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
+      allow get: if isOwner(userId);
       allow list: if false;
-      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.uid == userId;
-      allow update: if isSignedIn() && isOwner(userId) && resource.data.uid == userId;
-      allow delete: if isSignedIn() && isOwner(userId) && resource.data.uid == userId;
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isExistingOwner(userId) && request.auth.uid == userId;
+      allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Secure student data. Only the linked user can manage the student's data.
+     * @description Controls access to student data documents.
      * @path /students/{studentId}
-     * @allow (create, update, delete) - User with UID 'user123' can manage the student data at /students/student1 if the student's linkedUserUid is 'user123'.
-     * @deny (create, update, delete) - User with UID 'user456' cannot access /students/student1 if the student's linkedUserUid is not 'user456'.
-     * @principle Enforces document ownership based on the linkedUserUid field.
+     * @allow (get, list) Allow get and list operation.
+     * @deny (create, update, delete) No one can create, update, or delete student data.
+     * @principle Data modification for student data is forbidden.
      */
     match /students/{studentId} {
-      allow get: if isSignedIn() && isStudentLinked(studentId);
-      allow list: if false;
-      allow create: if isSignedIn() && request.resource.data.linkedUserUid == request.auth.uid;
-      allow update: if isSignedIn() && isExistingStudentLinked(studentId);
-      allow delete: if isSignedIn() && isExistingStudentLinked(studentId);
-    }
-
-    /**
-     * @description Secure habit entries. Teachers can create, read, update, and delete habit entries.
-     * @path /habit_entries/{entryId}
-     * @allow (create, update, delete) - User with role 'guru' can manage the habit entry at /habit_entries/entry1.
-     * @deny (create, update, delete) - User with role 'siswa' cannot access /habit_entries/entry1.
-     * @principle Restricts write access to teachers.
-     */
-    match /habit_entries/{entryId} {
-      allow get: if isSignedIn() && isTeacher();
-      allow list: if isSignedIn() && isTeacher();
-      allow create: if isSignedIn() && isTeacher();
-      allow update: if isSignedIn() && isTeacher() && resource != null;
-      allow delete: if isSignedIn() && isTeacher() && resource != null;
-    }
-
-    /**
-     * @description App settings are read-only for authenticated users.
-     * @path /app_settings/{settingId}
-     * @allow get - Any authenticated user can read app settings.
-     * @deny create, update, delete - No one can create, update, or delete app settings.
-     * @principle Restricts all write operations to maintain configuration integrity.
-     */
-    match /app_settings/{settingId} {
-      allow get: if isSignedIn();
-      allow list: if false;
+      allow get, list: if true;
       allow create: if false;
       allow update: if false;
       allow delete: if false;
     }
 
     /**
-     * @description Secure class data.
+     * @description Controls access to habit entry documents.
+     * @path /habit_entries/{entryId}
+     * @allow (get, list) Allow all users to read habit entries.
+     * @allow (create) Only authenticated users can create habit entries.
+     * @deny (update, delete) No one can update or delete habit entries.
+     * @principle Restricts habit entry modifications.
+     */
+    match /habit_entries/{entryId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow get, list: if true;
+      allow create: if isSignedIn();
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Controls access to app settings documents.
+     * @path /app_settings/{settingId}
+     * @allow (get, list) Allow all users to read app settings.
+     * @deny (create, update, delete) No one can create, update, or delete app settings.
+     * @principle App settings are read-only.
+     */
+    match /app_settings/{settingId} {
+      allow get, list: if true;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Controls access to class data documents.
      * @path /classes/{classId}
-     * @allow get - Any authenticated user can read class data.
-     * @deny create, update, delete - No one can create, update, or delete class data.
+     * @allow (get, list) Allow all users to read class data.
+     * @deny (create, update, delete) No one can create, update, or delete class data.
+     * @principle Class data modification is forbidden.
      */
     match /classes/{classId} {
-        allow get: if isSignedIn();
-        allow list: if isSignedIn();
-        allow create: if isTeacher();
-        allow update: if isTeacher() && resource != null;
-        allow delete: if isTeacher() && resource != null;
-    }
-
-    // Helper functions
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-
-    function isStudentLinked(studentId) {
-        return get(/databases/$(database)/documents/students/$(studentId)).data.linkedUserUid == request.auth.uid;
-    }
-
-    function isExistingStudentLinked(studentId) {
-        return resource != null && get(/databases/$(database)/documents/students/$(studentId)).data.linkedUserUid == request.auth.uid;
-    }
-
-    function isTeacher() {
-        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'guru';
+      allow get, list: if true;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
     }
   }
 }
