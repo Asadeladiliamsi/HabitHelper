@@ -29,14 +29,6 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user, loading } = useAuth();
 
-  // The main layout now handles redirection, so this useEffect can be removed
-  // to avoid conflicting navigation logic.
-  // useEffect(() => {
-  //   if (!loading && user) {
-  //     router.push('/dashboard');
-  //   }
-  // }, [user, loading, router]);
-
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -54,8 +46,8 @@ export default function LoginPage() {
         title: 'Login Berhasil',
         description: 'Anda akan diarahkan ke dasbor.',
       });
-      // The AppLayout's redirect logic will handle moving the user to the dashboard.
-      // No need for a manual push here.
+      // The main AppLayout will handle the redirection automatically
+      // after the auth state changes.
     } catch (error: any) {
       console.error(error);
       let description = 'Terjadi kesalahan. Silakan coba lagi.';
@@ -72,13 +64,17 @@ export default function LoginPage() {
     }
   };
   
-  if (loading || user) {
+  // The main layout handles showing a loader while auth state is being determined.
+  // This page can render its content. If the user is already logged in,
+  // the main layout's useEffect will redirect them away from this page.
+  if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin" />
       </div>
     );
   }
+
 
   return (
     <Card>

@@ -42,16 +42,18 @@ export default function AppLayout({
   const { user, loading: authLoading } = useAuth();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
-  
+
   useEffect(() => {
+    // This effect handles fetching the user's profile from Firestore
+    // ONLY when the user object from useAuth is available.
     if (user) {
       setProfileLoading(true);
       const unsub = onSnapshot(doc(db, 'users', user.uid), (doc) => {
         if (doc.exists()) {
           setUserProfile(doc.data() as UserProfile);
         } else {
-          // This can happen if the user exists in Auth but not in Firestore.
-          // For example, if the Firestore document creation failed during signup.
+          // User exists in Auth, but not in Firestore. This is an invalid state.
+          console.error("Firestore profile missing for authenticated user:", user.uid);
           setUserProfile(null);
         }
         setProfileLoading(false);
@@ -60,32 +62,40 @@ export default function AppLayout({
         setUserProfile(null);
         setProfileLoading(false);
       });
-      return () => unsub();
+      return () => unsub(); // Cleanup the listener
     } else if (!authLoading) {
-      // If there's no user and auth is not loading, then profile is also not loading.
+      // If there's no user and auth is not loading, we are done.
       setUserProfile(null);
       setProfileLoading(false);
     }
   }, [user, authLoading]);
-  
+
+  // Combined loading state
   const loading = authLoading || profileLoading;
 
   useEffect(() => {
-    if (loading) return; // Wait until all loading is done
+    // This effect handles redirection logic safely AFTER all loading is complete.
+    if (loading) return;
 
     const isAuthPage = pathname === '/login' || pathname === '/signup';
 
-    if (!user && !isAuthPage) {
-      // If no user and not on an auth page, redirect to login
-      router.push('/login');
-    } else if (user && !userProfile) {
-      // If user exists in Auth but no profile found in Firestore (e.g., failed signup),
-      // it's an error state. Redirect to login to be safe.
-      console.error("Auth user exists but Firestore profile is missing.");
-      router.push('/login');
-    } else if (user && userProfile && isAuthPage) {
-      // If user is logged in and on an auth page, redirect to dashboard
-      router.push('/dashboard');
+    if (!user) {
+      // Not logged in. If not on an auth page, redirect to login.
+      if (!isAuthPage) {
+        router.push('/login');
+      }
+    } else {
+      // Logged in.
+      if (!userProfile) {
+        // Logged in, but profile data is missing. This is an error state.
+        // For safety, log out and redirect to login to restart the process.
+        console.error("Redirecting to login due to missing user profile.");
+        signOut(auth); 
+      } else if (isAuthPage) {
+        // Logged in and on an auth page, redirect to the correct dashboard.
+        const dashboardPath = userProfile.role === 'admin' ? '/admin/dashboard' : '/dashboard';
+        router.push(dashboardPath);
+      }
     }
   }, [loading, user, userProfile, pathname, router]);
 
@@ -93,26 +103,10 @@ export default function AppLayout({
     await signOut(auth);
     router.push('/login');
   };
-
-  const getDashboardTitle = () => {
-    if (!userProfile) return 'Dasbor';
-    switch (userProfile.role) {
-      case 'guru':
-        return 'Dasbor Guru';
-      case 'siswa':
-        return 'Dasbor Siswa';
-      case 'admin':
-        return 'Dasbor Admin';
-      case 'orangtua':
-        return 'Dasbor Orang Tua';
-      default:
-        return 'Dasbor';
-    }
-  };
   
-  // If we're loading, or if we're not loading but have no user (and are not on an auth page), show a loader.
-  // The useEffect above will handle the redirect.
-  if (loading || (!user && pathname !== '/login' && pathname !== '/signup')) {
+  // Show a global loader while we are resolving auth state and profile data.
+  // Or if we are in a redirecting state.
+  if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -121,24 +115,13 @@ export default function AppLayout({
     );
   }
    
-  // Let the auth pages render themselves without the main layout
-  if (pathname === '/login' || pathname === '/signup') {
+  // If user is not logged in, render children (which would be login/signup pages).
+  // The useEffect above handles redirecting from protected pages.
+  if (!user || !userProfile) {
      return <>{children}</>;
   }
-
-  // After all checks, if we still don't have a profile, it's an invalid state.
-  // The useEffect will redirect, but we need to render something in the meantime.
-  if (!userProfile) {
-     return (
-          <div className="flex h-screen items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin" />
-              <p className="ml-2">Sesi tidak valid. Mengalihkan...</p>
-          </div>
-      );
-  }
   
-  const dashboardTitle = getDashboardTitle();
-  const dashboardPath = userProfile?.role === 'admin' ? '/admin/dashboard' : '/dashboard';
+  const dashboardPath = userProfile.role === 'admin' ? '/admin/dashboard' : '/dashboard';
 
   const navItems = [
     { href: dashboardPath, icon: LayoutDashboard, label: 'Dasbor', roles: ['guru', 'siswa', 'admin', 'orangtua'] },
@@ -211,7 +194,7 @@ export default function AppLayout({
           <SidebarTrigger className="md:hidden" />
           <div className="flex-1">
               <span className="font-semibold capitalize text-sm">
-                {dashboardTitle}
+                Dasbor {userProfile.role}
               </span>
               <span className="text-sm text-muted-foreground ml-2">({user?.email})</span>
           </div>
