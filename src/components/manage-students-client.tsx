@@ -22,7 +22,7 @@ import { FirestorePermissionError } from '@/lib/errors';
 
 export function ManageStudentsClient() {
   const [students, setStudents] = useState<Student[]>([]);
-  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [parentUsers, setParentUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -36,13 +36,12 @@ export function ManageStudentsClient() {
   useEffect(() => {
     setLoading(true);
     const studentsQuery = query(collection(db, 'students'));
-    const usersQuery = query(collection(db, 'users'));
+    const parentsQuery = query(collection(db, 'users'), where('role', '==', 'orangtua'));
 
     const unsubStudents = onSnapshot(studentsQuery, 
       (snapshot) => {
         const studentData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
         setStudents(studentData);
-        if (users.length > 0) setLoading(false);
       },
       (error) => {
         const permissionError = new FirestorePermissionError({
@@ -50,15 +49,14 @@ export function ManageStudentsClient() {
           operation: 'list',
         });
         errorEmitter.emit('permission-error', permissionError);
-        setLoading(false);
       }
     );
 
-    const unsubUsers = onSnapshot(usersQuery,
+    const unsubParents = onSnapshot(parentsQuery,
       (snapshot) => {
-        const userData = snapshot.docs.map(doc => doc.data() as UserProfile);
-        setUsers(userData);
-        if (students.length > 0 || snapshot.docs.length > 0) setLoading(false);
+        const parentData = snapshot.docs.map(doc => doc.data() as UserProfile);
+        setParentUsers(parentData);
+        setLoading(false);
       },
       (error) => {
         const permissionError = new FirestorePermissionError({
@@ -72,9 +70,8 @@ export function ManageStudentsClient() {
 
     return () => {
       unsubStudents();
-      unsubUsers();
+      unsubParents();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleAddStudent = () => {
@@ -209,8 +206,6 @@ export function ManageStudentsClient() {
     }
   };
   
-  const parentUsers = users.filter(u => u.role === 'orangtua');
-
   const handleLinkParentSave = async (studentId: string, parentId: string) => {
     const parent = parentUsers.find(u => u.uid === parentId);
     if (parent) {
@@ -249,10 +244,6 @@ export function ManageStudentsClient() {
       (student.email && student.email.toLowerCase().includes(term))
     );
   });
-  
-  const linkedUserUids = new Set(students.map(s => s.linkedUserUid).filter(Boolean));
-  const unlinkedStudentUsers = users.filter(user => user.role === 'siswa' && !linkedUserUids.has(user.uid));
-
 
   if (loading) {
     return (
@@ -396,3 +387,5 @@ export function ManageStudentsClient() {
     </>
   );
 }
+
+    
