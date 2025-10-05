@@ -11,11 +11,23 @@ export default function DashboardPage() {
   const { userProfile, loading } = useAuth();
   const router = useRouter();
 
-  if (loading || !userProfile) {
+  if (loading) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
+    );
+  }
+
+  // After loading, if there's no profile, redirect to login.
+  // This handles the case where the user is not logged in.
+  if (!userProfile) {
+    router.replace('/login');
+    return (
+        <div className="flex h-full w-full items-center justify-center">
+             <Loader2 className="h-8 w-8 animate-spin" />
+             <p className="ml-2">Mengalihkan ke halaman login...</p>
+        </div>
     );
   }
 
@@ -30,7 +42,7 @@ export default function DashboardPage() {
     case 'siswa':
       return <SiswaDashboardClient />;
     default:
-       // Redirect to login if role is unknown or user is not fully authenticated
+       // Redirect to login if role is unknown
       router.replace('/login');
       return (
         <div className="flex h-full w-full items-center justify-center">

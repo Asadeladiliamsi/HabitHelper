@@ -52,7 +52,7 @@ export default function LoginPage() {
         title: 'Login Berhasil',
         description: 'Anda akan diarahkan ke dasbor.',
       });
-      // Redirect is now handled by useEffect
+      // Redirect is now handled by the useEffect hook watching the user state
     } catch (error: any) {
       console.error(error);
       let description = 'Terjadi kesalahan. Silakan coba lagi.';
