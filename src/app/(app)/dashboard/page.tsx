@@ -27,7 +27,6 @@ export default function DashboardPage() {
     );
   }
 
-  // Render the appropriate dashboard based on the user's role
   switch (userProfile.role) {
     case 'guru':
       return <DashboardClient />;
@@ -38,7 +37,6 @@ export default function DashboardPage() {
     case 'siswa':
       return <SiswaDashboardClient />;
     default:
-      // Fallback for any other case or while role is being determined
       return (
         <div className="flex h-full w-full items-center justify-center">
           <p>Peran pengguna tidak dikenali. Menunggu...</p>

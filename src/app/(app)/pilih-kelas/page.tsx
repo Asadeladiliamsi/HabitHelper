@@ -12,10 +12,8 @@ import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
-import { collection, query, where, onSnapshot, doc, updateDoc, getDocs } from 'firebase/firestore';
+import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Student } from '@/lib/types';
-
 
 const KELAS_LIST = [
     "7 Ruang 1", "7 Ruang 2", "7 Ruang 3", "7 Ruang 4", "7 Ruang 5", "7 Ruang 6", "7 Ruang 7", "7 Ruang 8", "7 Ruang 9",
@@ -36,14 +34,15 @@ export default function PilihKelasPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    // Only run this logic if auth is done and we have a user profile
     if (!loading) {
-      // Must be a student to be on this page
-      if (userProfile?.role !== 'siswa' || !user) {
+      if (!user) {
+        router.replace('/login');
+        return;
+      }
+      if (userProfile?.role !== 'siswa') {
         router.replace('/dashboard');
         return;
       }
-      // If student already has a class, they should not be on this page. Redirect them.
       if (studentData?.class) {
         router.replace('/dashboard');
       }
@@ -62,7 +61,6 @@ export default function PilihKelasPage() {
     await updateDoc(studentDocRef, { class: className });
   };
   
-
   if (loading || !studentData) {
     return (
       <div className="flex h-screen items-center justify-center">
