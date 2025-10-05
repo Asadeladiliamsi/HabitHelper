@@ -94,7 +94,9 @@ const habitColors: { [key: string]: string } = {
 
 
 export function DashboardClient() {
-  const { students, habitEntries, loading } = useAuth();
+  const { students: initialStudents, loading: authLoading } = useAuth();
+  const [habitEntries, setHabitEntries] = useState<HabitEntry[]>([]);
+  const [entriesLoading, setEntriesLoading] = useState(true);
   
   const language = 'id';
   const [selectedClass, setSelectedClass] = useState('all');
@@ -112,8 +114,56 @@ export function DashboardClient() {
     translations[language]?.landingPage.habits ||
     translations.en.landingPage.habits;
 
+  const filteredStudents = useMemo(() => {
+    if (selectedClass === 'all') {
+      return initialStudents;
+    }
+    return initialStudents.filter(student => student.class === selectedClass);
+  }, [initialStudents, selectedClass]);
+  
+  useEffect(() => {
+    if (authLoading || filteredStudents.length === 0) {
+      setEntriesLoading(false);
+      return;
+    };
+    
+    setEntriesLoading(true);
+    const studentIds = filteredStudents.map(s => s.id);
+    
+    // Chunk studentIds to avoid Firestore 'in' query limit (max 30)
+    const chunks: string[][] = [];
+    for (let i = 0; i < studentIds.length; i += 30) {
+        chunks.push(studentIds.slice(i, i + 30));
+    }
+
+    const unsubscribers = chunks.map(chunk => {
+      const q = query(collection(db, 'habit_entries'), where('studentId', 'in', chunk));
+      return onSnapshot(q, (snapshot) => {
+        const newEntries = snapshot.docs.map(d => ({
+          ...d.data(),
+          id: d.id,
+          date: (d.data().date as Timestamp).toDate()
+        } as HabitEntry));
+
+        setHabitEntries(prevEntries => {
+          const otherEntries = prevEntries.filter(e => !chunk.includes(e.studentId));
+          return [...otherEntries, ...newEntries];
+        });
+        setEntriesLoading(false);
+      }, (error) => {
+        console.error("Error fetching habit entries:", error);
+        toast({ variant: 'destructive', title: 'Gagal Memuat Data', description: 'Tidak dapat memuat data kebiasaan siswa.' });
+        setEntriesLoading(false);
+      });
+    });
+
+    return () => {
+      unsubscribers.forEach(unsub => unsub());
+    };
+  }, [authLoading, filteredStudents, toast]);
+
   const getHabitsForDate = useCallback((studentId: string, date: Date): Habit[] => {
-      const student = students.find(s => s.id === studentId);
+      const student = initialStudents.find(s => s.id === studentId);
       if (!student) return [];
       
       const relevantEntries = habitEntries.filter(entry => 
@@ -137,7 +187,7 @@ export function DashboardClient() {
       }));
       return habitsFromDefs;
 
-  }, [students, habitEntries]);
+  }, [initialStudents, habitEntries]);
   
   const toggleDateLock = async (studentId: string, date: Date, lock: boolean) => {
     const studentDocRef = doc(db, 'students', studentId);
@@ -147,13 +197,6 @@ export function DashboardClient() {
       lockedDates: lock ? arrayUnion(formattedDate) : arrayRemove(formattedDate),
     });
   };
-
-  const filteredStudents = useMemo(() => {
-    if (selectedClass === 'all') {
-      return students;
-    }
-    return students.filter(student => student.class === selectedClass);
-  }, [students, selectedClass]);
 
   const areAllLocked = useMemo(() => {
     if (filteredStudents.length === 0) return false;
@@ -206,9 +249,9 @@ export function DashboardClient() {
   };
 
   const classList = useMemo(() => {
-    const classes = new Set(students.map(s => s.class).filter(Boolean));
+    const classes = new Set(initialStudents.map(s => s.class).filter(Boolean));
     return ['all', ...Array.from(classes).sort()];
-  }, [students]);
+  }, [initialStudents]);
 
   const calculateOverallAverage = (habits: Habit[]) => {
     if (!habits || habits.length === 0) return 0;
@@ -288,7 +331,7 @@ export function DashboardClient() {
 
   }, [dateRange, filteredStudents, habitEntries]);
 
-  if (loading) {
+  if (authLoading) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -359,7 +402,7 @@ export function DashboardClient() {
           </div>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {entriesLoading ? (
             <div className="flex h-80 items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
@@ -460,7 +503,7 @@ export function DashboardClient() {
           </div>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {entriesLoading ? (
             <div className="flex h-64 items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>

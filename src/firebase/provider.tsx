@@ -3,10 +3,10 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, type User } from 'firebase/auth';
-import { getFirestore, doc, getDoc, onSnapshot, query, collection, where, Timestamp } from 'firebase/firestore';
-import type { UserProfile, Student, HabitEntry } from '@/lib/types';
-import { useRouter } from 'next/navigation';
+import { getFirestore, doc, getDoc, onSnapshot, query, collection, where, getDocs } from 'firebase/firestore';
+import type { UserProfile, Student } from '@/lib/types';
 
+// Your web app's Firebase configuration
 const firebaseConfig = {
   "projectId": "habithelper-9o371",
   "appId": "1:140507692145:web:37f29c86ff391f3ec66fd0",
@@ -17,6 +17,7 @@ const firebaseConfig = {
   "messagingSenderId": "140507692145"
 };
 
+// Initialize Firebase
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -24,9 +25,8 @@ const db = getFirestore(app);
 interface FirebaseContextValue {
   user: User | null;
   userProfile: UserProfile | null;
-  studentData: Student | null;
-  students: Student[]; // For parent/teacher roles
-  habitEntries: HabitEntry[];
+  studentData: Student | null; // Data for the logged-in student
+  students: Student[]; // Data for students linked to a parent/teacher/admin
   loading: boolean;
 }
 
@@ -35,83 +35,84 @@ const FirebaseContext = createContext<FirebaseContextValue | null>(null);
 export const FirebaseProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [studentData, setStudentData] = useState<Student | null>(null); // For siswa role
-  const [students, setStudents] = useState<Student[]>([]); // For parent/teacher roles
-  const [habitEntries, setHabitEntries] = useState<HabitEntry[]>([]);
+  const [studentData, setStudentData] = useState<Student | null>(null);
+  const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (authUser) => {
       setLoading(true);
       if (authUser) {
         setUser(authUser);
         const userDocRef = doc(db, 'users', authUser.uid);
         const userDocSnap = await getDoc(userDocRef);
-
+        
         if (userDocSnap.exists()) {
           const profile = userDocSnap.data() as UserProfile;
           setUserProfile(profile);
 
-          let studentIds: string[] = [];
-
-          if (profile.role === 'siswa') {
-            const studentQuery = query(collection(db, 'students'), where('linkedUserUid', '==', authUser.uid));
-            const studentSnap = await getDoc(studentQuery.docs[0]?.ref);
-            if (studentSnap?.exists()) {
-                const student = { id: studentSnap.id, ...studentSnap.data() } as Student;
-                setStudentData(student);
-                studentIds = [student.id];
-            }
-          } else if (profile.role === 'orangtua') {
-            const studentsQuery = query(collection(db, 'students'), where('parentId', '==', authUser.uid));
-            const studentsSnap = await getDocs(studentsQuery);
-            const parentStudents = studentsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Student));
-            setStudents(parentStudents);
-            studentIds = parentStudents.map(s => s.id);
-          } else if (profile.role === 'guru' || profile.role === 'admin') {
-            const studentsQuery = query(collection(db, 'students'));
-            const studentsSnap = await getDocs(studentsQuery);
-            const allStudents = studentsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Student));
-            setStudents(allStudents);
-            studentIds = allStudents.map(s => s.id);
-          }
-
-          if (studentIds.length > 0) {
-            // Firestore 'in' queries are limited to 30 elements. Chunk if necessary.
-            const habitEntriesQuery = query(collection(db, 'habit_entries'), where('studentId', 'in', studentIds));
-            onSnapshot(habitEntriesQuery, (snapshot) => {
-              const entries = snapshot.docs.map(d => ({
-                ...d.data(),
-                id: d.id,
-                date: (d.data().date as Timestamp).toDate()
-              } as HabitEntry));
-              setHabitEntries(entries);
-              setLoading(false);
-            });
-          } else {
-            setHabitEntries([]);
-            setLoading(false);
-          }
-
+          // Stop any previous student listeners
+          // This will be handled by role-specific listeners
         } else {
-           // User exists in auth but not in firestore, probably mid-signup
-           setUserProfile(null);
-           setLoading(false);
+          setUserProfile(null);
+          setLoading(false);
         }
       } else {
         setUser(null);
         setUserProfile(null);
         setStudentData(null);
         setStudents([]);
-        setHabitEntries([]);
         setLoading(false);
       }
     });
 
-    return () => unsubscribe();
+    return () => unsubscribeAuth();
   }, []);
 
-  const value = { user, userProfile, studentData, students, habitEntries, loading };
+  useEffect(() => {
+    if (!userProfile) {
+        setLoading(false);
+        return;
+    };
+
+    let unsubscribeStudents: (() => void) | null = null;
+    
+    if (userProfile.role === 'siswa') {
+        const q = query(collection(db, 'students'), where('linkedUserUid', '==', userProfile.uid));
+        unsubscribeStudents = onSnapshot(q, (snapshot) => {
+            if (!snapshot.empty) {
+                const studentDoc = snapshot.docs[0];
+                setStudentData({ id: studentDoc.id, ...studentDoc.data() } as Student);
+            } else {
+                setStudentData(null);
+            }
+            setLoading(false);
+        });
+    } else if (userProfile.role === 'orangtua') {
+        const q = query(collection(db, 'students'), where('parentId', '==', userProfile.uid));
+        unsubscribeStudents = onSnapshot(q, (snapshot) => {
+            setStudents(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Student)));
+            setLoading(false);
+        });
+    } else if (userProfile.role === 'guru' || userProfile.role === 'admin') {
+        const q = query(collection(db, 'students'));
+        unsubscribeStudents = onSnapshot(q, (snapshot) => {
+            setStudents(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Student)));
+            setLoading(false);
+        });
+    } else {
+        setLoading(false);
+    }
+    
+    return () => {
+        if (unsubscribeStudents) {
+            unsubscribeStudents();
+        }
+    }
+  }, [userProfile]);
+
+
+  const value = { user, userProfile, studentData, students, loading };
 
   return (
     <FirebaseContext.Provider value={value}>
