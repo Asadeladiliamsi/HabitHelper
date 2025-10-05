@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { signInWithEmailAndPassword, User } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useAuth } from '@/firebase/provider';
 import type { UserProfile } from '@/lib/types';
@@ -49,9 +49,7 @@ export default function LoginPage() {
         if (docSnap.exists()) {
             const profile = docSnap.data() as UserProfile;
             
-            // Logika Pengalihan Cerdas Berdasarkan Peran
             if (profile.role === 'siswa') {
-                // Periksa apakah siswa sudah memiliki kelas.
                 const studentQuery = query(collection(db, 'students'), where('linkedUserUid', '==', user.uid));
                 const studentSnapshot = await getDocs(studentQuery);
 
@@ -60,22 +58,17 @@ export default function LoginPage() {
                     if (studentData.class) {
                         router.push('/dashboard');
                     } else {
-                        // Jika siswa ada tapi belum punya kelas
                         router.push('/pilih-kelas');
                     }
                 } else {
-                    // Jika data siswa belum ada (mungkin baru daftar), arahkan ke link-account
                     router.push('/link-account');
                 }
             } else if (profile.role === 'admin') {
                 router.push('/admin/dashboard');
             } else {
-                // Untuk guru dan orangtua
                 router.push('/dashboard');
             }
         } else {
-            // Profil tidak ditemukan, mungkin siswa yang baru mendaftar
-            // dan datanya dibuat oleh guru. Arahkan ke halaman penautan.
             toast({
               title: 'Profil Tidak Ditemukan',
               description: 'Mengarahkan Anda untuk menautkan akun dengan data siswa.',
@@ -89,13 +82,13 @@ export default function LoginPage() {
             title: "Gagal Mengambil Profil",
             description: "Tidak dapat memuat data profil setelah login. Mengarahkan ke dasbor umum.",
         });
-        // Fallback ke dasbor umum jika ada error saat fetch profil
         router.push('/dashboard');
     }
   }
 
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
+    form.clearErrors(); // Hapus error sebelumnya
     try {
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
       toast({
@@ -105,26 +98,26 @@ export default function LoginPage() {
       await handleLoginSuccess(userCredential.user);
     } catch (error: any) {
       console.error(error);
-      let description = 'Terjadi kesalahan. Silakan coba lagi.';
       if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-        description = 'Email atau kata sandi salah. Mohon periksa kembali.';
+        form.setError('root', {
+          type: 'manual',
+          message: 'Email atau kata sandi yang Anda masukkan salah. Mohon periksa kembali.'
+        });
+      } else {
+         form.setError('root', {
+          type: 'manual',
+          message: 'Terjadi kesalahan yang tidak diketahui. Silakan coba lagi.'
+        });
       }
-      toast({
-        variant: 'destructive',
-        title: 'Login Gagal',
-        description,
-      });
       setIsSubmitting(false);
-    } 
-    // isSubmitting akan tetap true saat redirect, ini tidak masalah.
+    }
   };
   
-  // Jika pengguna sudah login, arahkan mereka
   useEffect(() => {
     if (!loading && user) {
         handleLoginSuccess(user);
     }
-  }, [loading, user]);
+  }, [loading, user, handleLoginSuccess]);
 
 
   if (loading || user) {
@@ -153,6 +146,7 @@ export default function LoginPage() {
               type="email"
               placeholder="nama@email.com"
               {...form.register('email')}
+              aria-invalid={!!form.formState.errors.email}
             />
             {form.formState.errors.email && (
               <p className="text-sm text-destructive mt-1">{form.formState.errors.email.message}</p>
@@ -165,11 +159,19 @@ export default function LoginPage() {
               type="password"
               placeholder="••••••••"
               {...form.register('password')}
+              aria-invalid={!!form.formState.errors.password}
             />
             {form.formState.errors.password && (
               <p className="text-sm text-destructive mt-1">{form.formState.errors.password.message}</p>
             )}
           </div>
+
+          {form.formState.errors.root && (
+              <p className="text-sm font-medium text-destructive text-center">
+                  {form.formState.errors.root.message}
+              </p>
+          )}
+          
           <Button type="submit" className="w-full" disabled={isSubmitting}>
             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Masuk'}
           </Button>
