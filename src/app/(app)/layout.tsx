@@ -27,8 +27,10 @@ import {
 import { ThemeToggle } from '@/components/theme-toggle';
 import { useAuth } from '@/firebase/provider';
 import { signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import { useEffect } from 'react';
+import { auth, db } from '@/lib/firebase';
+import { useEffect, useState } from 'react';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+
 
 export default function AppLayout({
   children,
@@ -40,10 +42,38 @@ export default function AppLayout({
   const { user, userProfile, loading } = useAuth();
   
   useEffect(() => {
-    if (!loading && !user) {
+    if (loading) return; // Wait until authentication state is resolved
+
+    if (!user) {
+        // If not logged in, always redirect to login
         router.replace('/login');
+        return;
     }
-  }, [loading, user, router]);
+
+    if (userProfile) {
+        // If profile is loaded, perform role-based checks
+        if (userProfile.role === 'admin' && !pathname.startsWith('/admin')) {
+             router.replace('/admin/dashboard');
+        } else if (userProfile.role === 'siswa') {
+            // For students, check if they have selected a class
+            const studentQuery = query(collection(db, 'students'), where('linkedUserUid', '==', user.uid));
+            getDocs(studentQuery).then(studentSnapshot => {
+                if (!studentSnapshot.empty) {
+                    const studentData = studentSnapshot.docs[0].data();
+                    if (!studentData.class && pathname !== '/pilih-kelas') {
+                        // If class is not set, redirect to class selection
+                        router.replace('/pilih-kelas');
+                    }
+                } else if (pathname !== '/link-account') {
+                    // If student data doesn't exist, they need to link their account
+                    router.replace('/link-account');
+                }
+            });
+        }
+    }
+    // If profile is still loading, children will show their own loading state.
+    
+  }, [loading, user, userProfile, router, pathname]);
 
 
   const handleLogout = async () => {
@@ -51,7 +81,7 @@ export default function AppLayout({
     router.push('/login');
   };
   
-  if (loading) {
+  if (loading || !user) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -60,20 +90,8 @@ export default function AppLayout({
     );
   }
    
-  // Jangan redirect di sini. Biarkan useEffect di atas yang menangani.
-  // Jika user null, redirect akan terjadi. Jika user ada tapi profil null,
-  // halaman akan menampilkan state loading-nya sendiri.
-  if (!user) {
-     return (
-       <div className="flex h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-        <p className="ml-2">Mengalihkan ke halaman login...</p>
-      </div>
-     );
-  }
-  
-  // Jangan render apapun jika profil sedang dimuat atau tidak ada,
-  // kecuali children (halaman) yang akan menampilkan state loading-nya sendiri.
+  // Do not render the main layout if the profile is not yet loaded,
+  // as the page content might depend on it. Let the page itself handle its loading state.
   if (!userProfile) {
     return (
         <div className="flex h-screen items-center justify-center">
