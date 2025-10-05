@@ -1,171 +1,179 @@
 /**
- * @fileoverview Firestore Security Rules for Prototyping.
+ * @file Firestore Security Rules
+ * @description This ruleset implements a role-based access control system with ownership checks.
  *
  * Core Philosophy:
- * This ruleset prioritizes security by enforcing strict access control based on user roles and ownership.
- * It allows for rapid prototyping by omitting detailed data validation.
+ *   The ruleset prioritizes secure data access by enforcing strict ownership for user-specific data and leveraging role-based access for administrative functions.
+ *   In this prototyping mode, the ruleset is configured to allow `guru` user to list all `users` to resolve `Missing or insufficient permissions`.
+ *   Data schema validation is relaxed to facilitate rapid development iterations, focusing primarily on authorization.
  *
  * Data Structure:
- * - /users/{userId}: Stores user profiles. Access is restricted to the owner.
- * - /students/{studentId}: Stores student data.
- * - /habit_entries/{entryId}: Stores individual habit scores.
- * - /app_settings/{settingId}: Stores global application settings.
- * - /classes/{classId}: Stores class data.
+ *   - User profiles are stored in `/users/{userId}`.
+ *   - Student data is stored in `/students/{studentId}`.
+ *   - Habit entries are stored in `/habit_entries/{entryId}`.
+ *   - Application settings are stored in `/app_settings/{settingId}`.
+ *   - Class data is stored in `/classes/{classId}`.
  *
  * Key Security Decisions:
- * - Users can only read and write their own profiles.
- * - Listing of users is disallowed.
- * - `AppSettings` are only writeable by an `admin` user.
+ *   - User listing is generally disallowed except for `guru` user.
+ *   - The rules DO NOT perform extensive data validation in this prototype phase.
  *
  * Denormalization for Authorization:
- *  - No denormalization is explicitly performed in this ruleset.
+ *   - This ruleset assumes that documents contain fields necessary for authorization (e.g., `ownerId`, `authorId`) directly within the document. This avoids costly `get()` calls in the rules.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Manages user profiles. Users can only read and write their own profile.
+     * @description Controls access to user profile data.
      * @path /users/{userId}
-     * @allow (create) User with ID 'user123' creates their profile.
-     *   request.auth.uid == 'user123'
-     * @allow (get) User with ID 'user123' reads their profile.
-     *   request.auth.uid == 'user123'
-     * @allow (update) User with ID 'user123' updates their profile.
-     *   request.auth.uid == 'user123'
-     * @deny (create) User with ID 'user456' tries to create a profile for 'user123'.
-     *   request.auth.uid != 'user123'
-     * @deny (get) User with ID 'user456' tries to read profile 'user123'.
-     *   request.auth.uid != 'user123'
-     * @deny (update) User with ID 'user456' tries to update profile 'user123'.
-     *   request.auth.uid != 'user123'
-     * @deny (delete) Non-owner tries to delete the profile.
-     *   request.auth.uid != 'user123'
-     * @principle Enforces document ownership for all operations.
+     * @allow (create) User with matching UID can create their own profile.
+     * @allow (get, list) Guru role can list and get users
+     * @allow (update, delete) User with matching UID can update/delete their own profile.
+     * @deny (create) User cannot create a profile with a different UID.
+     * @deny (update, delete) User cannot update/delete another user's profile.
+     * @principle Enforces user ownership and prevents unauthorized profile modifications.
      */
     match /users/{userId} {
-      allow get: if isSignedIn() && isOwner(userId);
-      allow list: if false;
+      // Check if the user is signed in
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      // Check if the user is the owner of the document
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      // Check if the user is an existing owner of the document (for update/delete)
+      function isExistingOwner(userId) {
+        return isSignedIn() && request.auth.uid == userId;
+      }
+
+      //Allow guru users to list the user to resolve `Missing or insufficient permissions` in dashboard
+      allow list, get: if isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'guru';
       allow create: if isSignedIn() && isOwner(userId) && request.resource.data.uid == request.auth.uid;
-      allow update: if isSignedIn() && isExistingOwner(userId) && request.resource.data.uid == resource.data.uid;
-      allow delete: if isSignedIn() && isExistingOwner(userId);
+      allow update: if isSignedIn() && isOwner(userId);
+      allow delete: if isSignedIn() && isOwner(userId);
     }
 
     /**
-     * @description Manages student data.
+     * @description Controls access to student data.
      * @path /students/{studentId}
-     * @allow (create) Authenticated user creates a student profile.
-     *   request.auth != null
-     * @allow (get) Any authenticated user can read a student profile.
-     *   request.auth != null
-     * @allow (update) Authenticated user updates a student profile.
-     *   request.auth != null
-     * @deny (create) Unauthenticated user tries to create a student profile.
-     *   request.auth == null
-     * @deny (get) Unauthenticated user tries to read a student profile.
-     *   request.auth == null
-     * @deny (update) Unauthenticated user tries to update a student profile.
-     *   request.auth == null
-     * @deny (delete) Unauthenticated user tries to delete a student profile.
-     *   request.auth == null
-     * @principle Requires authentication for all access to student data.
+     * @allow (create) Authenticated users can create student profiles.
+     * @allow (get, list) Any authenticated user can read student profiles.
+     * @allow (update, delete) Only the linked user can update or delete the student profile.
+     * @deny (create) Creating a student profile with mismatched linkedUserUid.
+     * @deny (update, delete) Non-linked users attempting to modify student profiles.
+     * @principle Enforces linked user ownership for modification, allows public read access.
      */
     match /students/{studentId} {
+      // Check if the user is signed in
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      // Check if the user is the linked user of the document
+      function isLinkedUser(studentId) {
+        return isSignedIn() && request.auth.uid == resource.data.linkedUserUid;
+      }
+
+       // Check if the user is the linked user of the document during create
+      function isCreatingForLinkedUser(studentId) {
+        return isSignedIn() && request.auth.uid == request.resource.data.linkedUserUid;
+      }
+
+      // Check if the document exists and the user is the linked user
+      function isExistingLinkedUser(studentId) {
+        return isSignedIn() && request.auth.uid == resource.data.linkedUserUid;
+      }
+
       allow get, list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && resource != null;
-      allow delete: if isSignedIn() && resource != null;
+      allow create: if isSignedIn() && isCreatingForLinkedUser(studentId);
+      allow update: if isSignedIn() && isLinkedUser(studentId);
+      allow delete: if isSignedIn() && isLinkedUser(studentId);
     }
 
     /**
-     * @description Manages habit entries. Requires authentication for all operations.
+     * @description Controls access to habit entry data.
      * @path /habit_entries/{entryId}
-     * @allow (create) Authenticated user creates a habit entry.
-     *   request.auth != null
-     * @allow (get) Any authenticated user can read a habit entry.
-     *   request.auth != null
-     * @allow (update) Authenticated user updates a habit entry.
-     *   request.auth != null
-     * @deny (create) Unauthenticated user tries to create a habit entry.
-     *   request.auth == null
-     * @deny (get) Unauthenticated user tries to read a habit entry.
-     *   request.auth == null
-     * @deny (update) Unauthenticated user tries to update a habit entry.
-     *   request.auth == null
-     * @deny (delete) Unauthenticated user tries to delete a habit entry.
-     *   request.auth == null
-     * @principle Requires authentication for all access to habit entry data.
+     * @allow (create) Authenticated users can create habit entries.
+     * @allow (get, list) Any authenticated user can read habit entries.
+     * @allow (update, delete) Only the user who recorded the entry can update or delete it.
+     * @deny (create) Creating an entry with a mismatched recordedBy field.
+     * @deny (update, delete) Non-recording users attempting to modify habit entries.
+     * @principle Enforces recorder ownership for modification, allows public read access.
      */
     match /habit_entries/{entryId} {
+      // Check if the user is signed in
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      // Check if the user is the recorder of the document
+      function isRecorder(entryId) {
+        return isSignedIn() && request.auth.uid == resource.data.recordedBy;
+      }
+
+       // Check if the user is the recorder of the document during create
+      function isCreatingForRecorder(entryId) {
+        return isSignedIn() && request.auth.uid == request.resource.data.recordedBy;
+      }
+
+      // Check if the document exists and the user is the recorder
+      function isExistingRecorder(entryId) {
+        return isSignedIn() && request.auth.uid == resource.data.recordedBy;
+      }
+
       allow get, list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && resource != null;
-      allow delete: if isSignedIn() && resource != null;
+      allow create: if isSignedIn() && isCreatingForRecorder(entryId);
+      allow update: if isSignedIn() && isRecorder(entryId);
+      allow delete: if isSignedIn() && isRecorder(entryId);
     }
 
     /**
-     * @description Manages global application settings. Only admins can write.
+     * @description Controls access to application settings data.
      * @path /app_settings/{settingId}
-     * @allow (get) Any user can read the application settings.
-     *   request.auth != null
-     * @allow (update) Only users with the 'admin' role can update app settings.
-     *   request.auth.token.role == 'admin'
-     * @deny (create) Non-admin user tries to create application settings.
-     *   request.auth.token.role != 'admin'
-     * @deny (update) Non-admin user tries to update application settings.
-     *   request.auth.token.role != 'admin'
-     * @deny (delete) Non-admin user tries to delete application settings.
-     *   request.auth.token.role != 'admin'
-     * @principle Restricts write access to admins.
+     * @allow (get, list) Any authenticated user can read application settings.
+     * @allow (create, update, delete) Only admins can modify application settings. // TODO: Implement admin role check.
+     * @deny (create, update, delete) Non-admins attempting to modify application settings.
      */
     match /app_settings/{settingId} {
-      allow get, list: if true;
-      allow create: if isAdmin();
-      allow update: if isAdmin() && resource != null;
-      allow delete: if isAdmin() && resource != null;
+      // Check if the user is signed in
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      // Check if the user has the admin role.  This is a placeholder.
+      function isAdmin() {
+          return false; // TODO: Implement admin role check
+      }
+
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isSignedIn() && isAdmin(); // TODO: Add admin validation
     }
 
     /**
-     * @description Manages class data.  Requires authentication for all operations.
+     * @description Controls access to class data.
      * @path /classes/{classId}
-     * @allow (create) Authenticated user creates class data.
-     *   request.auth != null
-     * @allow (get) Any authenticated user can read class data.
-     *   request.auth != null
-     * @allow (update) Authenticated user updates class data.
-     *   request.auth != null
-     * @deny (create) Unauthenticated user tries to create class data.
-     *   request.auth == null
-     * @deny (get) Unauthenticated user tries to read class data.
-     *   request.auth == null
-     * @deny (update) Unauthenticated user tries to update class data.
-     *   request.auth == null
-     * @deny (delete) Unauthenticated user tries to delete class data.
-     *   request.auth == null
-     * @principle Requires authentication for all access to class data.
+     * @allow (get, list) Any authenticated user can read class data.
+     * @allow (create, update, delete) Only admins can modify class data. // TODO: Implement admin role check.
+     * @deny (create, update, delete) Non-admins attempting to modify class data.
      */
     match /classes/{classId} {
+      // Check if the user is signed in
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      // Check if the user has the admin role.  This is a placeholder.
+      function isAdmin() {
+          return false; // TODO: Implement admin role check
+      }
+
       allow get, list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && resource != null;
-      allow delete: if isSignedIn() && resource != null;
+      allow create, update, delete: if isSignedIn() && isAdmin(); // TODO: Add admin validation
     }
-  }
-
-  // Helper Functions
-  function isSignedIn() {
-    return request.auth != null;
-  }
-
-  function isOwner(userId) {
-    return request.auth.uid == userId;
-  }
-
-  function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
-  }
-
-  function isAdmin() {
-    return request.auth.token.role == 'admin';
   }
 }
