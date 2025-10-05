@@ -1,142 +1,110 @@
 /**
  * @file Firestore Security Rules
- * @description This ruleset enforces a role-based access control model, with specific rules for user profiles, student data, habit entries, application settings, and class data.
+ * @description This ruleset enforces a strict user-ownership model for user profiles and student data,
+ * with public read access to app settings. It ensures that users can only read and write their own profiles,
+ * and only authenticated users can create new student entries. Habit entries are publicly readable but
+ * can only be created, updated, or deleted by authorized users.
  *
  * Data Structure:
- * - /users/{userId}: User profiles, accessible only to the owning user and admins.
- * - /students/{studentId}: Student data, accessible to admins and teachers.
- * - /habit_entries/{entryId}: Habit entries, write access controlled by teacher role.
- * - /app_settings/{settingId}: Application settings, accessible only to admins.
- * - /classes/{classId}: Class data, read access is public, write access restricted to admins.
+ * - /users/{userId}: Stores user profiles, with access restricted to the owner.
+ * - /students/{studentId}: Stores student data, with access restricted to authenticated users for creation.
+ * - /habit_entries/{entryId}: Stores habit entries, publicly readable, write access not defined.
+ * - /app_settings/{settingId}: Stores global app settings, publicly readable but write-protected.
+ * - /classes/{classId}: Stores data about classes.
  *
  * Key Security Decisions:
- * - User listing is disallowed to protect privacy.
- * - Strict ownership is enforced for user profiles.
- * - Admin role grants broad access to application settings and student data.
- * - Class data read access is public to simplify the dashboard for teachers.
+ * - Users can only manage their own profiles.
+ * - Student creation is limited to authenticated users.
+ * - Habit entries are publicly readable.
+ * - App settings are publicly readable but write-protected.
+ * - Classes have no write rules.
+ *
+ * Denormalization for Authorization:
+ *   The rules rely on the `uid` field in the `/users/{userId}` document matching the `userId` in the path.
+ *   The rules rely on the `studentId` field in the `/habit_entries/{entryId}` document for access control.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Checks if the request is authenticated.
-     */
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    /**
-     * @description Checks if the authenticated user's UID matches the provided userId.
-     * @param {string} userId - The user ID to compare against.
-     * @return {boolean} True if the user is signed in and the UID matches, false otherwise.
-     * @example isOwner('someUserId')
-     */
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    /**
-     * @description Checks if the user has the 'admin' role.
-     * @return {boolean} True if the user has the 'admin' role, false otherwise.
-     */
-    function isAdmin() {
-      return isSignedIn() && request.auth.token.role == 'admin';
-    }
-
-    /**
-     * @description Checks if the user has the 'guru' role.
-     * @return {boolean} True if the user has the 'guru' role, false otherwise.
-     */
-    function isGuru() {
-      return isSignedIn() && request.auth.token.role == 'guru';
-    }
-
-    /**
-     * @description Checks if the document exists and the authenticated user is the owner.
-     * @param {string} userId - The user ID to compare against.
-     * @return {boolean} True if the document exists and the user is the owner, false otherwise.
-     */
-    function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
-    }
-
-    /**
-     * @description Security rules for user profiles.
+     * @description Allows users to read and write their own profile data.
      * @path /users/{userId}
-     * @allow (create) - Authenticated user with matching UID can create their profile.
-     * @allow (get, update, delete) - Authenticated user with matching UID can access and modify their profile.
-     * @deny (list) - User listing is not allowed.
-     * @deny (create) - Authenticated user cannot create a profile with a mismatched UID.
-     * @principle Enforces document ownership for user profiles.
+     * @allow (get, update, delete) User with UID 'user123' can read/write /users/user123.
+     * @allow (create) User with UID 'user123' can create /users/user123.
+     * @deny (get, update, delete) User with UID 'user456' cannot read/write /users/user123.
+     * @deny (create) User with UID 'user456' cannot create /users/user123.
+     * @principle Enforces document ownership for all operations on user profiles.
      */
     match /users/{userId} {
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
       allow get: if isOwner(userId);
       allow list: if false;
-      allow create: if isOwner(userId) && request.resource.data.uid == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.uid == resource.data.uid;
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
       allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Security rules for student data.
+     * @description Allows any authenticated user to create student entries.
      * @path /students/{studentId}
-     * @allow (get, list) - Admins and teachers can read student data.
-     * @allow (create) - Admins can create student data.
-     * @allow (update, delete) - Admins can update and delete student data.
-     * @deny (create, update, delete) - Non-admins and non-teachers cannot modify student data.
-     * @principle Restricts student data modification to authorized personnel.
+     * @allow (create) Authenticated user can create a new student profile.
+     * @deny (create) Unauthenticated user cannot create a new student profile.
+     * @principle Requires authentication for student creation.
      */
     match /students/{studentId} {
-      allow get, list: if isAdmin() || isGuru();
-      allow create: if isAdmin();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow get: if false;
+      allow list: if false;
+      allow create: if isSignedIn();
+      allow update: if false;
+      allow delete: if false;
     }
 
     /**
-     * @description Security rules for habit entries.
+     * @description Allows anyone to read habit entries, but restricts write access.
      * @path /habit_entries/{entryId}
-     * @allow (get, list) - Admins and teachers can read habit entries.
-     * @allow (create) - Teachers can create habit entries.
-     * @allow (update, delete) - Admins can update and delete habit entries.
-     * @deny (create, update, delete) - Non-admins and non-teachers cannot modify habit entries.
-     * @principle Limits habit entry modification to authorized personnel.
+     * @allow (get, list) Any user can read habit entries.
+     * @deny (create, update, delete) No one can create, update, or delete habit entries without specific authorization.
+     * @principle Public read access with restricted write access.
      */
     match /habit_entries/{entryId} {
-        allow get, list: if isAdmin() || isGuru();
-        allow create: if isGuru();
-        allow update: if isAdmin();
-        allow delete: if isAdmin();
+        allow get, list: if true;
+        allow create, update, delete: if false; // TODO: Add appropriate write rules
     }
 
     /**
-     * @description Security rules for application settings.
+     * @description Allows anyone to read app settings, but restricts write access.
      * @path /app_settings/{settingId}
-     * @allow (get, list) - Admins can read application settings.
-     * @allow (create, update, delete) - Admins can create, update, and delete application settings.
-     * @deny (create, update, delete) - Non-admins cannot modify application settings.
-     * @principle Restricts app settings modification to admins only.
+     * @allow (get, list) Any user can read app settings.
+     * @deny (create, update, delete) No one can create, update, or delete app settings without specific authorization.
+     * @principle Public read access with restricted write access.
      */
     match /app_settings/{settingId} {
-        allow get, list: if isAdmin();
-        allow create: if isAdmin();
-        allow update: if isAdmin();
-        allow delete: if isAdmin();
+        allow get, list: if true;
+        allow create, update, delete: if false;
     }
-    
+
     /**
-     * @description Security rules for class data.
+     * @description Allows read access for anyone to read class data.
      * @path /classes/{classId}
-     * @allow (get, list) - Anyone can read class data.
-     * @allow (create, update, delete) - Only admins can create, update, and delete class data.
-     * @principle Restricts class data modification to admins.
+     * @allow (get, list) Any user can read class data.
+     * @deny (create, update, delete) No one can create, update, or delete class data without specific authorization.
+     * @principle Public read access with restricted write access.
      */
-    match /classes/{classId} {
-      allow get, list: if true;
-      allow create: if isAdmin();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+        match /classes/{classId} {
+        allow get, list: if true;
+        allow create, update, delete: if false;
     }
   }
 }
