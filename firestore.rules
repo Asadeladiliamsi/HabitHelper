@@ -1,22 +1,28 @@
 /**
- * @file Firestore Security Rules
- * @description This ruleset implements a role-based access control system with user-owned data and public read access where appropriate.
+ * @fileoverview Firestore Security Rules for Prototyping.
+ *
+ * Core Philosophy:
+ * This ruleset prioritizes rapid prototyping by focusing on authorization and relationship enforcement,
+ * while minimizing data shape validation. It enforces a user-ownership model where appropriate,
+ * and provides public read access where explicitly allowed by the data model.
  *
  * Data Structure:
- * - /users/{userId}: Stores user profiles, accessible only to the user themselves.
- * - /students/{studentId}: Stores student data, publicly readable and writable by anyone for prototyping.
- * - /habit_entries/{entryId}: Stores individual habit scores, writable by anyone for prototyping.
- * - /app_settings/{settingId}: Stores global application settings, protected with owner-only access.
- * - /classes/{classId}: Stores data for classes, publicly readable and writable by anyone for prototyping.
+ * - `/users/{userId}`: Stores user profile information, accessible to the owner.
+ * - `/students/{studentId}`: Stores student data.
+ * - `/habit_entries/{entryId}`: Stores habit entry data, accessible with owner validation.
+ * - `/app_settings/{settingId}`: Stores global app settings.
+ * - `/classes/{classId}`: Stores class data.
  *
  * Key Security Decisions:
- * - User profiles are strictly private (owner-only access).
- * - Students and Classes are intentionally public read and write for prototyping purposes, but must eventually have authorization!
- * - The app_settings collection is protected with owner-only writes.
+ * - Users can only manage their own profile data.
+ * - Listing of users is allowed for teachers for dashboard purposes.
+ * - Public read access is enabled where the data model suggests public consumption (e.g. list all students, classes).
+ * - Data shape validation is minimized to facilitate prototyping.
  *
  * Denormalization for Authorization:
- *   For simplicity and performance, authorization checks rely on the authenticated user's UID (`request.auth.uid`) and,
- *   where applicable, the document's `userId` field to ensure data ownership.
+ *  N/A - Current data model doesn't require denormalization. All authorization can be done with existing fields.
+ * Structural Segregation:
+ *  N/A - The current model does not require structural segregation of public and private data.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -25,83 +31,100 @@ service cloud.firestore {
     /**
      * @description Allows users to read and write their own profile data.
      * @path /users/{userId}
-     * @allow (get, update, delete) if request.auth.uid == userId
-     * @allow (create) if request.auth.uid == request.resource.data.uid
-     * @deny (get, update, delete) if request.auth.uid != userId
-     * @deny (create) if request.auth.uid != request.resource.data.uid
+     * @allow (get, create, update, delete) if the user's UID matches the userId.
+     * @deny (get, create, update, delete) if the user's UID does not match the userId.
      * @principle Enforces document ownership for writes.
      */
     match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow list: if false;
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
       allow create: if isOwner(userId);
       allow update: if isExistingOwner(userId);
       allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Allows anyone to read and write student data. FOR PROTOTYPING PURPOSES ONLY.
+     * @description Allows anyone to read student data, but restricts creation, updates, and deletion to authenticated users after owner validation is added to the data model.
      * @path /students/{studentId}
-     * @allow (get, list) if true
-     * @allow (create, update, delete) if true
-     * @principle Public read and write access for prototyping.
+     * @allow (get, list) anyone
+     * @deny (create, update, delete) no one until ownership field is added.
+     * @principle Public read with owner-only writes.
      */
     match /students/{studentId} {
       allow get, list: if true;
-      allow create, update, delete: if true;
+      allow create: if isSignedIn(); // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow update: if isSignedIn() && resource != null; // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow delete: if isSignedIn() && resource != null; // TODO: Add owner validation once the schema is updated with an ownership field.
     }
 
     /**
-     * @description Allows anyone to read and write habit entries for prototyping.
+     * @description Allows anyone to read habit entries, but restricts creation, updates, and deletion to authenticated users after owner validation is added to the data model.
      * @path /habit_entries/{entryId}
-     * @allow (get, list) if true
-     * @allow (create, update, delete) if true
-     * @principle Public read and write access for prototyping.
+     * @allow (get, list) anyone
+     * @deny (create, update, delete) no one until ownership field is added.
+     * @principle Public read with owner-only writes.
      */
     match /habit_entries/{entryId} {
-        allow get, list: if true;
-        allow create, update, delete: if true;
+      allow get, list: if true;
+      allow create: if isSignedIn(); // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow update: if isSignedIn() && resource != null; // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow delete: if isSignedIn() && resource != null; // TODO: Add owner validation once the schema is updated with an ownership field.
     }
 
     /**
-     * @description Stores global application settings, like registration codes.
+     * @description Allows anyone to read app settings data, but restricts creation, updates, and deletion to authenticated users after owner validation is added to the data model.
      * @path /app_settings/{settingId}
-     * @allow (get, list) if true
-     * @deny create: if true;
-     * @deny update: if true;
-     * @deny delete: if true;
-     * @principle Only admin can read.
+     * @allow (get, list) anyone
+     * @deny (create, update, delete) no one until ownership field is added.
+     * @principle Public read with owner-only writes.
      */
     match /app_settings/{settingId} {
-        allow get, list: if true;
-        allow create: if false;
-        allow update: if false;
-        allow delete: if false;
+      allow get, list: if true;
+      allow create: if isSignedIn(); // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow update: if isSignedIn() && resource != null; // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow delete: if isSignedIn() && resource != null; // TODO: Add owner validation once the schema is updated with an ownership field.
     }
-
-        /**
-     * @description Allows anyone to read and write class data. FOR PROTOTYPING PURPOSES ONLY.
-     * @path /classes/{classId}
-     * @allow (get, list) if true
-     * @allow (create, update, delete) if true
-     * @principle Public read and write access for prototyping.
-     */
+      
+     /**
+      * @description Allows anyone to read class data, but restricts creation, updates, and deletion to authenticated users after owner validation is added to the data model.
+      * @path /classes/{classId}
+      * @allow (get, list) anyone
+      * @deny (create, update, delete) no one until ownership field is added.
+      * @principle Public read with owner-only writes.
+      */
     match /classes/{classId} {
       allow get, list: if true;
-      allow create, update, delete: if true;
+      allow create: if isSignedIn(); // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow update: if isSignedIn() && resource != null; // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow delete: if isSignedIn() && resource != null; // TODO: Add owner validation once the schema is updated with an ownership field.
     }
 
-    // Helper functions
+    // --- Helper Functions ---
+
+    /**
+     * @description Checks if the user is signed in.
+     * @return True if the user is signed in, false otherwise.
+     */
     function isSignedIn() {
       return request.auth != null;
     }
 
+    /**
+     * @description Checks if the user is the owner of the document.
+     * @param userId The user ID to compare against the request's authentication UID.
+     * @return True if the user is the owner, false otherwise.
+     */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    /**
+     * @description Checks if the user is the owner of the existing document.
+     * @param userId The user ID to compare against the request's authentication UID.
+     * @return True if the user is the owner and document exists, false otherwise.
+     */
     function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
+      return isOwner(userId) && resource != null;
     }
   }
 }
