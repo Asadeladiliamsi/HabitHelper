@@ -15,7 +15,7 @@ import { Loader2 } from 'lucide-react';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { doc, getDoc, setDoc, addDoc, collection, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { doc, getDoc, setDoc, writeBatch, collection, serverTimestamp } from 'firebase/firestore';
 import { HABIT_DEFINITIONS } from '@/lib/types';
 import type { Habit } from '@/lib/types';
 
@@ -95,6 +95,20 @@ export default function SignupPage() {
                 variant: 'destructive',
                 title: 'Pendaftaran Gagal',
                 description: 'Kode registrasi guru tidak valid.',
+            });
+            setIsLoading(false);
+            return;
+        }
+    }
+    
+    if (data.role === 'siswa' && data.kelas) {
+        const classDocRef = doc(db, 'classes', data.kelas);
+        const classDoc = await getDoc(classDocRef);
+        if (classDoc.exists() && classDoc.data().isLocked) {
+            toast({
+                variant: 'destructive',
+                title: 'Pendaftaran Gagal',
+                description: `Kelas ${data.kelas} sudah penuh atau dikunci. Silakan hubungi admin sekolah.`,
             });
             setIsLoading(false);
             return;

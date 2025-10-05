@@ -1,4 +1,3 @@
-
 import type { Timestamp, DocumentData } from 'firebase/firestore';
 
 export interface SubHabit {
@@ -25,6 +24,12 @@ export interface Student extends DocumentData {
   parentName?: string;
   linkedUserUid?: string;
   lockedDates?: string[]; // YYYY-MM-DD format
+}
+
+export interface ClassData {
+    id: string;
+    name: string;
+    isLocked: boolean;
 }
 
 export const HABIT_DEFINITIONS: Record<string, string[]> = {

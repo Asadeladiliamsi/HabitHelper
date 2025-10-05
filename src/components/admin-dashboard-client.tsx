@@ -31,6 +31,7 @@ import { UserEditDialog } from './user-edit-dialog';
 import { UserDeleteDialog } from './user-delete-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { ManageStudentsClient } from './manage-students-client';
+import { ManageClassesClient } from './manage-classes-client';
 import { Input } from './ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { collection, onSnapshot, updateDoc, doc, deleteDoc, getDoc, setDoc, query } from 'firebase/firestore';
@@ -307,15 +308,16 @@ export function AdminDashboardClient() {
             Dasbor Admin
           </h1>
           <p className="text-muted-foreground">
-            Kelola pengguna dan data siswa dari satu tempat.
+            Kelola pengguna, siswa, dan kelas dari satu tempat.
           </p>
         </header>
 
          <Tabs defaultValue="manage-users">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="manage-users">Manajemen Pengguna</TabsTrigger>
                 <TabsTrigger value="manage-teachers">Manajemen Guru</TabsTrigger>
                 <TabsTrigger value="manage-students">Manajemen Siswa</TabsTrigger>
+                <TabsTrigger value="manage-classes">Manajemen Kelas</TabsTrigger>
             </TabsList>
             <TabsContent value="manage-users" className="mt-6 space-y-6">
                 <div className="relative sm:w-64">
@@ -360,6 +362,9 @@ export function AdminDashboardClient() {
             </TabsContent>
              <TabsContent value="manage-students" className="mt-6">
                 <ManageStudentsClient />
+            </TabsContent>
+            <TabsContent value="manage-classes" className="mt-6">
+                <ManageClassesClient />
             </TabsContent>
         </Tabs>
       </div>

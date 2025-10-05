@@ -77,10 +77,17 @@
         "properties": {
             "teacherCode": { "type": "string", "description": "The registration code for new teachers." }
         }
+    },
+    "ClassData": {
+        "title": "Class Data",
+        "description": "Represents data and settings for a specific class.",
+        "type": "object",
+        "properties": {
+            "name": { "type": "string" },
+            "isLocked": { "type": "boolean", "description": "If true, no new students can register for this class." }
+        },
+        "required": ["name", "isLocked"]
     }
-  },
-  "auth": {
-    "providers": ["email"]
   },
   "firestore": {
     "/users/{userId}": {
@@ -98,6 +105,13 @@
     "/app_settings/{settingId}": {
         "schema": { "$ref": "#/entities/AppSettings" },
         "description": "Stores global application settings, like registration codes."
+    },
+    "/classes/{classId}": {
+      "schema": { "$ref": "#/entities/ClassData" },
+      "description": "Stores data and settings for each class, like its locked status."
     }
+  },
+  "auth": {
+    "providers": ["email"]
   }
 }
