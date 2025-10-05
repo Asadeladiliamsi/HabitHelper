@@ -45,7 +45,6 @@ export function ManageStudentsClient() {
         if (users.length > 0) setLoading(false);
       },
       (error) => {
-        console.error("Student listener failed:", error);
         const permissionError = new FirestorePermissionError({
           path: 'students',
           operation: 'list',
@@ -62,7 +61,6 @@ export function ManageStudentsClient() {
         if (students.length > 0 || snapshot.docs.length > 0) setLoading(false);
       },
       (error) => {
-        console.error("User listener failed:", error);
         const permissionError = new FirestorePermissionError({
           path: 'users',
           operation: 'list',
@@ -110,14 +108,26 @@ export function ManageStudentsClient() {
         score: 0, 
       })),
     }));
-
-    await addDoc(collection(db, 'students'), {
+    
+    const finalData = {
       ...newStudentData,
       avatarUrl: `https://avatar.vercel.sh/${newStudentData.nisn}.png`, // Generate avatar from NISN
       habits: initialHabits,
       createdAt: serverTimestamp(),
       lockedDates: [],
-    });
+    };
+
+    addDoc(collection(db, 'students'), finalData)
+    .catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: 'students',
+          operation: 'create',
+          requestResourceData: finalData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        // Throw a user-facing error to be caught by handleDialogSave
+        throw new Error("Gagal menambahkan siswa karena masalah izin.");
+      });
   };
 
   const updateStudent = async (studentId: string, updatedData: Partial<Omit<Student, 'id' | 'habits' | 'avatarUrl' | 'linkedUserUid'>>) => {
@@ -129,18 +139,54 @@ export function ManageStudentsClient() {
         throw new Error(`NISN ${updatedData.nisn} sudah digunakan.`);
       }
     }
+    
     const studentDocRef = doc(db, 'students', studentId);
-    await updateDoc(studentDocRef, { ...updatedData, updatedAt: serverTimestamp() });
+    const finalData = { ...updatedData, updatedAt: serverTimestamp() };
+    
+    updateDoc(studentDocRef, finalData)
+    .catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: studentDocRef.path,
+          operation: 'update',
+          requestResourceData: finalData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        throw new Error("Gagal memperbarui data siswa karena masalah izin.");
+    });
   }
 
   const deleteStudent = async (studentId: string) => {
     const studentDocRef = doc(db, 'students', studentId);
-    await deleteDoc(studentDocRef);
+    
+    deleteDoc(studentDocRef)
+    .catch(async (serverError) => {
+      const permissionError = new FirestorePermissionError({
+        path: studentDocRef.path,
+        operation: 'delete',
+      });
+      errorEmitter.emit('permission-error', permissionError);
+       toast({
+        variant: "destructive",
+        title: "Gagal Menghapus",
+        description: "Tidak dapat menghapus siswa karena masalah izin.",
+      });
+    });
   };
   
   const linkParentToStudent = async (studentId: string, parentId: string, parentName: string) => {
     const studentDocRef = doc(db, 'students', studentId);
-    await updateDoc(studentDocRef, { parentId, parentName });
+    const updateData = { parentId, parentName };
+
+    updateDoc(studentDocRef, updateData)
+    .catch(async (serverError) => {
+      const permissionError = new FirestorePermissionError({
+        path: studentDocRef.path,
+        operation: 'update',
+        requestResourceData: updateData,
+      });
+      errorEmitter.emit('permission-error', permissionError);
+      throw new Error("Gagal menautkan orang tua karena masalah izin.");
+    });
   };
 
 
@@ -168,23 +214,31 @@ export function ManageStudentsClient() {
   const handleLinkParentSave = async (studentId: string, parentId: string) => {
     const parent = parentUsers.find(u => u.uid === parentId);
     if (parent) {
-      await linkParentToStudent(studentId, parent.uid, parent.name);
-      toast({
-        title: "Sukses",
-        description: `Akun orang tua ${parent.name} berhasil ditautkan.`,
-      });
+      try {
+        await linkParentToStudent(studentId, parent.uid, parent.name);
+        toast({
+          title: "Sukses",
+          description: `Akun orang tua ${parent.name} berhasil ditautkan.`,
+        });
+        setLinkParentDialogOpen(false);
+      } catch (error: any) {
+         toast({
+            variant: "destructive",
+            title: "Gagal Menautkan",
+            description: error.message,
+          });
+      }
     }
-    setLinkParentDialogOpen(false);
   };
 
-  const handleDeleteStudent = (studentId: string) => {
+  const handleDeleteStudent = (student: Student) => {
     // You might want to add a confirmation dialog here
-    deleteStudent(studentId);
-    toast({
-        variant: "destructive",
-        title: "Siswa Dihapus",
-        description: "Data siswa telah dihapus dari sistem.",
-      });
+    deleteStudent(student.id).then(() => {
+        toast({
+            title: "Siswa Dihapus",
+            description: `Data untuk ${student.name} telah dihapus.`,
+        });
+    });
   }
 
   const filteredStudents = students.filter(student => {
@@ -325,7 +379,7 @@ export function ManageStudentsClient() {
                           <DropdownMenuSeparator />
                           <DropdownMenuItem 
                             className="text-destructive focus:text-destructive"
-                            onClick={() => handleDeleteStudent(student.id)}
+                            onClick={() => handleDeleteStudent(student)}
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
                             {t.delete}
