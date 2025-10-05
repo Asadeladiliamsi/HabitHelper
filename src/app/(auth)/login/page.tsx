@@ -1,59 +1,143 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/firebase/provider';
-import { auth } from '@/lib/firebase';
-import { EmailAuthProvider } from 'firebase/auth';
-import { StyledFirebaseAuth } from '@/components/firebase-auth';
-import { Loader2 } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import type { UserProfile } from '@/lib/types';
+import Link from 'next/link';
 
-// Konfigurasi FirebaseUI
-const uiConfig = {
-  // Menggunakan alur 'redirect' yang lebih andal untuk aplikasi web
-  signInFlow: 'redirect',
-  signInOptions: [
-    {
-      provider: EmailAuthProvider.PROVIDER_ID,
-      requireDisplayName: false, // Ini akan selalu menampilkan form login terlebih dahulu
-    }
-  ],
-  // signInSuccessUrl dan callbacks tidak diperlukan dalam mode redirect
-  // karena AppLayout akan menangani pengalihan setelah auth state berubah.
-};
+const formSchema = z.object({
+  email: z.string().email({ message: 'Harap masukkan email yang valid.' }),
+  password: z.string().min(1, { message: 'Kata sandi tidak boleh kosong.' }),
+});
+
+type FormValues = z.infer<typeof formSchema>;
 
 export default function LoginPage() {
-  const { user, loading } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="h-12 w-12 animate-spin" />
-      </div>
-    );
-  }
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  });
 
-  if (user) {
-    router.replace('/dashboard');
-    return (
-       <div className="flex h-screen items-center justify-center">
-        <Loader2 className="h-12 w-12 animate-spin" />
-        <p className="ml-4">Mengalihkan ke dasbor...</p>
-      </div>
-    );
-  }
+  const onSubmit = async (data: FormValues) => {
+    setIsSubmitting(true);
+    setErrorMessage(null);
+
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
+      const user = userCredential.user;
+
+      if (user) {
+        toast({
+          title: 'Login Berhasil',
+          description: 'Memuat data profil Anda...',
+        });
+
+        // Fetch user profile to decide where to redirect
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (userDoc.exists()) {
+          const userProfile = userDoc.data() as UserProfile;
+          // Role-based redirection logic
+          if (userProfile.role === 'admin') {
+            router.push('/admin/dashboard');
+          } else {
+            router.push('/dashboard');
+          }
+        } else {
+          // This case is for users that exist in Auth but not in Firestore.
+          // This might happen for students who haven't completed their profile/class selection.
+          router.push('/link-account'); 
+        }
+        router.refresh();
+      }
+    } catch (error: any) {
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        setErrorMessage('Email atau kata sandi yang Anda masukkan salah. Mohon periksa kembali.');
+      } else {
+        setErrorMessage('Terjadi kesalahan yang tidak diketahui. Silakan coba lagi nanti.');
+        console.error(error);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <Card>
       <CardHeader className="text-center">
         <CardTitle className="text-2xl">Masuk ke Akun Anda</CardTitle>
         <CardDescription>
-          Gunakan email Anda untuk melanjutkan ke aplikasi.
+          Masukkan email dan kata sandi Anda untuk melanjutkan.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <StyledFirebaseAuth uiConfig={uiConfig} firebaseAuth={auth} />
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="email@contoh.com"
+              {...form.register('email')}
+              disabled={isSubmitting}
+            />
+            {form.formState.errors.email && (
+              <p className="text-sm text-destructive">{form.formState.errors.email.message}</p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">Kata Sandi</Label>
+            <Input
+              id="password"
+              type="password"
+              {...form.register('password')}
+              disabled={isSubmitting}
+            />
+            {form.formState.errors.password && (
+              <p className="text-sm text-destructive">{form.formState.errors.password.message}</p>
+            )}
+          </div>
+
+          {errorMessage && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Login Gagal</AlertTitle>
+              <AlertDescription>{errorMessage}</AlertDescription>
+            </Alert>
+          )}
+
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Masuk'}
+          </Button>
+        </form>
+         <div className="mt-4 text-center text-sm">
+          Belum punya akun?{' '}
+          <Link href="/signup" className="underline">
+            Daftar di sini
+          </Link>
+        </div>
       </CardContent>
     </Card>
   );
