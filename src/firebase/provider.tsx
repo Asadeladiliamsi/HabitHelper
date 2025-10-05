@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, type User } from 'firebase/auth';
-import { getFirestore, doc, getDoc, onSnapshot, query, collection, where, getDocs } from 'firebase/firestore';
+import { getFirestore, doc, onSnapshot, query, collection, where } from 'firebase/firestore';
 import type { UserProfile, Student } from '@/lib/types';
 
 // Your web app's Firebase configuration
@@ -25,8 +25,8 @@ const db = getFirestore(app);
 interface FirebaseContextValue {
   user: User | null;
   userProfile: UserProfile | null;
-  studentData: Student | null; // Data for the logged-in student
-  students: Student[]; // Data for students linked to a parent/teacher/admin
+  studentData: Student | null;
+  students: Student[];
   loading: boolean;
 }
 
@@ -40,77 +40,105 @@ export const FirebaseProvider = ({ children }: { children: React.ReactNode }) =>
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, async (authUser) => {
-      setLoading(true);
-      if (authUser) {
-        setUser(authUser);
-        const userDocRef = doc(db, 'users', authUser.uid);
-        const userDocSnap = await getDoc(userDocRef);
-        
-        if (userDocSnap.exists()) {
-          const profile = userDocSnap.data() as UserProfile;
-          setUserProfile(profile);
-
-          // Stop any previous student listeners
-          // This will be handled by role-specific listeners
-        } else {
-          setUserProfile(null);
-          setLoading(false);
-        }
-      } else {
-        setUser(null);
+    const unsubscribeAuth = onAuthStateChanged(auth, (authUser) => {
+      setUser(authUser);
+      if (!authUser) {
         setUserProfile(null);
         setStudentData(null);
         setStudents([]);
         setLoading(false);
       }
     });
-
     return () => unsubscribeAuth();
   }, []);
 
   useEffect(() => {
-    if (!userProfile) {
-        setLoading(false);
-        return;
-    };
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
-    let unsubscribeStudents: (() => void) | null = null;
-    
-    if (userProfile.role === 'siswa') {
-        const q = query(collection(db, 'students'), where('linkedUserUid', '==', userProfile.uid));
-        unsubscribeStudents = onSnapshot(q, (snapshot) => {
-            if (!snapshot.empty) {
-                const studentDoc = snapshot.docs[0];
-                setStudentData({ id: studentDoc.id, ...studentDoc.data() } as Student);
-            } else {
-                setStudentData(null);
-            }
-            setLoading(false);
-        });
-    } else if (userProfile.role === 'orangtua') {
-        const q = query(collection(db, 'students'), where('parentId', '==', userProfile.uid));
-        unsubscribeStudents = onSnapshot(q, (snapshot) => {
-            setStudents(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Student)));
-            setLoading(false);
-        });
-    } else if (userProfile.role === 'guru' || userProfile.role === 'admin') {
-        const q = query(collection(db, 'students'));
-        unsubscribeStudents = onSnapshot(q, (snapshot) => {
-            setStudents(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Student)));
-            setLoading(false);
-        });
-    } else {
+    setLoading(true);
+    const userDocRef = doc(db, 'users', user.uid);
+    const unsubscribeProfile = onSnapshot(userDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const profile = docSnap.data() as UserProfile;
+        setUserProfile(profile);
+      } else {
+        setUserProfile(null);
+        setLoading(false); // No profile, stop loading
+      }
+    }, (error) => {
+      console.error("Error fetching user profile:", error);
+      setUserProfile(null);
+      setLoading(false);
+    });
+
+    return () => unsubscribeProfile();
+  }, [user]);
+
+  useEffect(() => {
+    if (!userProfile) {
+        // If there's a user but no profile yet, we might still be loading or profile creation is pending.
+        // But if we already know there's no user, we should not be loading.
+        if (!user) setLoading(false);
+        return;
+    }
+
+    let unsubscribeRelatedData: (() => void) | null = null;
+
+    const role = userProfile.role;
+    let q;
+
+    if (role === 'siswa') {
+      q = query(collection(db, 'students'), where('linkedUserUid', '==', userProfile.uid));
+      unsubscribeRelatedData = onSnapshot(q, (snapshot) => {
+        if (!snapshot.empty) {
+          const studentDoc = snapshot.docs[0];
+          setStudentData({ id: studentDoc.id, ...studentDoc.data() } as Student);
+        } else {
+          setStudentData(null);
+        }
+        setStudents([]); // Siswa role doesn't need the 'students' list
         setLoading(false);
+      }, (error) => {
+          console.error(`Error fetching data for role ${role}:`, error);
+          setStudentData(null);
+          setLoading(false);
+      });
+    } else if (role === 'orangtua') {
+      q = query(collection(db, 'students'), where('parentId', '==', userProfile.uid));
+      unsubscribeRelatedData = onSnapshot(q, (snapshot) => {
+        setStudents(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Student)));
+        setStudentData(null); // Orangtua role doesn't have a single 'studentData'
+        setLoading(false);
+      }, (error) => {
+          console.error(`Error fetching data for role ${role}:`, error);
+          setStudents([]);
+          setLoading(false);
+      });
+    } else if (role === 'guru' || role === 'admin') {
+      q = query(collection(db, 'students'));
+      unsubscribeRelatedData = onSnapshot(q, (snapshot) => {
+        setStudents(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Student)));
+        setStudentData(null); // Guru/admin roles don't have a single 'studentData'
+        setLoading(false);
+      }, (error) => {
+          console.error(`Error fetching data for role ${role}:`, error);
+          setStudents([]);
+          setLoading(false);
+      });
+    } else {
+      // If role is unknown or not set, stop loading
+      setLoading(false);
     }
     
     return () => {
-        if (unsubscribeStudents) {
-            unsubscribeStudents();
-        }
-    }
-  }, [userProfile]);
-
+      if (unsubscribeRelatedData) {
+        unsubscribeRelatedData();
+      }
+    };
+  }, [userProfile]); // This effect depends only on userProfile
 
   const value = { user, userProfile, studentData, students, loading };
 
