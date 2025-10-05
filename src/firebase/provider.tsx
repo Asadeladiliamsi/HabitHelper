@@ -48,14 +48,15 @@ export const FirebaseProvider = ({ children }: { children: React.ReactNode }) =>
           setUserProfile(null);
         }
         setLoading(false);
-      }, (error) => {
-        console.error("Firestore Error fetching user profile:", error);
-        
-        // Create and emit a rich, contextual error for debugging.
+      }, async (error) => {
+        // Create the rich, contextual error asynchronously.
         const permissionError = new FirestorePermissionError({
           path: userDocRef.path,
           operation: 'get',
         });
+        
+        // Emit the error with the global error emitter.
+        // This will be caught by FirebaseErrorListener and shown in the Next.js overlay.
         errorEmitter.emit('permission-error', permissionError);
         
         setUserProfile(null);
