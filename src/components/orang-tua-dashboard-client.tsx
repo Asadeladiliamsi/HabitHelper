@@ -1,6 +1,5 @@
 'use client';
 
-import { useAuth } from '@/firebase';
 import { Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -16,7 +15,7 @@ import {
   Calendar as CalendarIcon,
 } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import type { Student, Habit, HabitEntry, UserProfile } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
@@ -29,9 +28,6 @@ import { DateRange } from 'react-day-picker';
 import { DateRangePicker } from './ui/date-range-picker';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Bar, BarChart, LabelList } from 'recharts';
 import { HABIT_DEFINITIONS } from '@/lib/types';
-import { collection, query, where, onSnapshot, Timestamp, doc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-
 
 const habitIcons: { [key: string]: React.ReactNode } = {
   'Bangun Pagi': <Sunrise className="h-5 w-5 text-yellow-500" />,
@@ -53,78 +49,24 @@ const habitColors: { [key: string]: string } = {
     'Tidur Cepat': '#10B981',
 };
 
+interface OrangTuaDashboardClientProps {
+  userProfile: UserProfile | null;
+  childStudents: Student[];
+  habitEntries: HabitEntry[];
+}
 
-export function OrangTuaDashboardClient() {
-  const { user, loading: authLoading } = useAuth();
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [initialStudents, setInitialStudents] = useState<Student[]>([]);
-  const [dataLoading, setDataLoading] = useState(true);
-  const [habitEntries, setHabitEntries] = useState<HabitEntry[]>([]);
-  
+export function OrangTuaDashboardClient({ userProfile, childStudents, habitEntries }: OrangTuaDashboardClientProps) {
   const language = 'id';
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
 
-  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(childStudents[0]?.id || null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: subDays(new Date(), 6),
     to: new Date(),
   });
   
-  useEffect(() => {
-    if (user) {
-      const unsub = onSnapshot(doc(db, 'users', user.uid), (doc) => {
-        if (doc.exists()) {
-          setUserProfile(doc.data() as UserProfile);
-        }
-      });
-      return () => unsub();
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (userProfile?.role === 'orangtua') {
-      setDataLoading(true);
-      const q = query(collection(db, 'students'), where('parentId', '==', userProfile.uid));
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const studentData = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Student));
-        setInitialStudents(studentData);
-        if (studentData.length > 0 && !selectedStudentId) {
-          setSelectedStudentId(studentData[0].id);
-        }
-        setDataLoading(false);
-      });
-      return () => unsubscribe();
-    } else {
-      setDataLoading(false);
-    }
-  }, [userProfile, selectedStudentId]);
-
-  useEffect(() => {
-    if (initialStudents.length === 0) {
-      setHabitEntries([]);
-      return;
-    }
-    const studentIds = initialStudents.map(s => s.id);
-    const q = query(collection(db, 'habit_entries'), where('studentId', 'in', studentIds));
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-        const entries = snapshot.docs.map(d => ({
-          ...d.data(),
-          id: d.id,
-          date: (d.data().date as Timestamp).toDate()
-        } as HabitEntry));
-        setHabitEntries(entries);
-    });
-
-    return () => unsubscribe();
-  }, [initialStudents]);
-
-
   const getHabitsForDate = useCallback((studentId: string, date: Date): Habit[] => {
-      const student = initialStudents.find(s => s.id === studentId);
-      if (!student) return [];
-      
       const relevantEntries = habitEntries.filter(entry => 
         entry.studentId === studentId && isSameDay(entry.date, date)
       );
@@ -135,7 +77,7 @@ export function OrangTuaDashboardClient() {
         subHabits: subHabitNames.map((subHabitName, subHabitIndex) => {
           const entry = relevantEntries
               .filter(e => e.habitName === habitName && e.subHabitName === subHabitName)
-              .sort((a, b) => (b.timestamp as Timestamp).toMillis() - (a.timestamp as Timestamp).toMillis())[0];
+              .sort((a, b) => (b.timestamp as any).toMillis() - (a.timestamp as any).toMillis())[0];
 
           return {
             id: `${habitIndex + 1}-${subHabitIndex + 1}`,
@@ -146,9 +88,9 @@ export function OrangTuaDashboardClient() {
       }));
       return habitsFromDefs;
 
-  }, [initialStudents, habitEntries]);
+  }, [habitEntries]);
     
-  const selectedStudentData = initialStudents.find(s => s.id === selectedStudentId);
+  const selectedStudentData = childStudents.find(s => s.id === selectedStudentId);
   const habitsForSelectedDate = selectedStudentData ? getHabitsForDate(selectedStudentData.id, selectedDate) : [];
 
   const habitTranslationMapping: Record<string, string> = {
@@ -205,9 +147,7 @@ export function OrangTuaDashboardClient() {
 
   }, [dateRange, selectedStudentData, habitEntries]);
   
-  const loading = authLoading || dataLoading;
-
-  if (loading) {
+  if (!userProfile) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -215,7 +155,7 @@ export function OrangTuaDashboardClient() {
     );
   }
 
-  if (initialStudents.length === 0) {
+  if (childStudents.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -272,7 +212,7 @@ export function OrangTuaDashboardClient() {
         <p className="text-muted-foreground">Selamat datang, {userProfile?.name}. Pantau progres anak Anda di sini.</p>
       </header>
 
-      {initialStudents.length > 1 && (
+      {childStudents.length > 1 && (
         <Card>
             <CardHeader>
                 <CardTitle>Pilih Anak</CardTitle>
@@ -284,7 +224,7 @@ export function OrangTuaDashboardClient() {
                         <SelectValue placeholder="Pilih nama anak..." />
                     </SelectTrigger>
                     <SelectContent>
-                        {initialStudents.map(student => (
+                        {childStudents.map(student => (
                             <SelectItem key={student.id} value={student.id}>
                                 {student.name} - Kelas {student.class}
                             </SelectItem>
@@ -310,11 +250,6 @@ export function OrangTuaDashboardClient() {
                 </div>
                 </CardHeader>
                 <CardContent>
-                {dataLoading ? (
-                    <div className="flex h-80 items-center justify-center">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                    </div>
-                ) : (
                     <div className="h-80 w-full">
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart
@@ -345,7 +280,6 @@ export function OrangTuaDashboardClient() {
                         </LineChart>
                     </ResponsiveContainer>
                     </div>
-                )}
                 </CardContent>
             </Card>
 
@@ -382,11 +316,7 @@ export function OrangTuaDashboardClient() {
                 </div>
                 </CardHeader>
                 <CardContent>
-                {dataLoading ? (
-                <div className="flex h-48 items-center justify-center">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-                ) : habitsForSelectedDate.length > 0 && habitsForSelectedDate.some(h => h.subHabits.some(sh => sh.score > 0)) ? (
+                {habitsForSelectedDate.length > 0 && habitsForSelectedDate.some(h => h.subHabits.some(sh => sh.score > 0)) ? (
                 <div className="space-y-4">
                      {dailySummaryData.length > 0 ? (
                         <div className="bg-muted/50 p-4 rounded-lg">

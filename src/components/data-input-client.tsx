@@ -26,9 +26,11 @@ import {
 import { StudentSearchDialog } from './student-search-dialog';
 import { useAuth } from '@/firebase';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { collection, addDoc, serverTimestamp, onSnapshot, query, getDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, onSnapshot, query, doc, writeBatch, setDoc, getDocs, where, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Student, UserProfile } from '@/lib/types';
+import { FirestorePermissionError } from '@/firebase/errors';
+import { errorEmitter } from '@/firebase/error-emitter';
 
 const formSchema = z.object({
   studentId: z.string().min(1, 'Siswa harus dipilih.'),
@@ -52,46 +54,16 @@ interface DataInputClientProps {
 
 export function DataInputClient({ studentId: lockedStudentId, allowedHabits }: DataInputClientProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
   const [students, setStudents] = useState<Student[]>([]);
   const [studentsLoading, setStudentsLoading] = useState(true);
-  const { user } = useAuth();
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const { toast } = useToast();
+  const { userProfile } = useAuth();
 
 
   const language = 'id';
   const t = translations[language]?.dataInputClient || translations.en.dataInputClient;
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
   const locale = language === 'id' ? id : enUS;
-
-  useEffect(() => {
-    if (user) {
-      const unsub = onSnapshot(doc(db, 'users', user.uid), (doc) => {
-        if (doc.exists()) {
-          setUserProfile(doc.data() as UserProfile);
-        }
-      });
-      return () => unsub();
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (lockedStudentId) {
-      setStudentsLoading(false);
-      return;
-    }
-    setStudentsLoading(true);
-    const q = query(collection(db, 'students'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const studentData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
-      setStudents(studentData);
-      setStudentsLoading(false);
-    }, (error) => {
-      console.error("Failed to fetch students:", error);
-      setStudentsLoading(false);
-    });
-    return () => unsubscribe();
-  }, [lockedStudentId]);
 
   const isStudentRole = userProfile?.role === 'siswa';
   const isParentRole = userProfile?.role === 'orangtua';
@@ -102,6 +74,21 @@ export function DataInputClient({ studentId: lockedStudentId, allowedHabits }: D
   const [availableSubHabits, setAvailableSubHabits] = useState<string[]>([]);
   
   const [studentForLockCheck, setStudentForLockCheck] = useState<Student | null>(null);
+
+  useEffect(() => {
+    setStudentsLoading(true);
+    const q = query(collection(db, 'students'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const studentData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
+        setStudents(studentData);
+        setStudentsLoading(false);
+    }, (error) => {
+        console.error("Error fetching students:", error);
+        setStudentsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -121,18 +108,12 @@ export function DataInputClient({ studentId: lockedStudentId, allowedHabits }: D
   // Effect to fetch the specific student for lock checking
   useEffect(() => {
     if (studentIdToWatch) {
-      const unsub = onSnapshot(doc(db, 'students', studentIdToWatch), (doc) => {
-        if (doc.exists()) {
-          setStudentForLockCheck({ id: doc.id, ...doc.data() } as Student);
-        } else {
-          setStudentForLockCheck(null);
-        }
-      });
-      return () => unsub();
+      const student = students.find(s => s.id === studentIdToWatch);
+      setStudentForLockCheck(student || null);
     } else {
       setStudentForLockCheck(null);
     }
-  }, [studentIdToWatch]);
+  }, [studentIdToWatch, students]);
   
   const isDateLocked = useMemo(() => {
     if (!studentForLockCheck || !selectedDate) return false;
@@ -156,13 +137,29 @@ export function DataInputClient({ studentId: lockedStudentId, allowedHabits }: D
     }
   }, [lockedStudentId, form]);
 
-  const addHabitEntry = async (data: Omit<FormValues, 'id' | 'timestamp' | 'recordedBy'>) => {
-    if (!user) throw new Error("Authentication required.");
-    await addDoc(collection(db, 'habit_entries'), {
-      ...data,
-      recordedBy: user.uid,
+  const addHabitEntry = async (data: FormValues) => {
+    if (!userProfile) throw new Error("Authentication required.");
+    
+    const newEntry = {
+      studentId: data.studentId,
+      habitName: data.habitName,
+      subHabitName: data.subHabitName,
+      score: data.score,
+      date: data.date,
+      recordedBy: userProfile.uid,
       timestamp: serverTimestamp()
-    });
+    };
+
+    const docRef = doc(collection(db, 'habit_entries'));
+    
+    setDoc(docRef, newEntry).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: docRef.path,
+          operation: 'create',
+          requestResourceData: newEntry,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
 
   const onSubmit = async (data: FormValues) => {

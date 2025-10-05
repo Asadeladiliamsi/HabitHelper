@@ -1,68 +1,15 @@
 'use client';
 
 import { DataInputClient } from '@/components/data-input-client';
-import { useAuth } from '@/firebase';
+import { useAuth } from '@/firebase/provider';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { collection, query, where, onSnapshot, doc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import type { Student, UserProfile } from '@/lib/types';
-
 
 export default function InputDataPage() {
-  const { user, loading: authLoading } = useAuth();
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [studentData, setStudentData] = useState<Student | null>(null);
-  const [dataLoading, setDataLoading] = useState(true);
+  const { userProfile, studentData, loading } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
-    if (authLoading) return;
-    if (!user) {
-      router.replace('/login');
-      return;
-    }
-
-    const unsubProfile = onSnapshot(doc(db, 'users', user.uid), (doc) => {
-      if (doc.exists()) {
-        const profile = doc.data() as UserProfile;
-        setUserProfile(profile);
-        if (profile.role !== 'siswa') {
-          router.replace('/dashboard');
-        }
-      } else {
-        router.replace('/login');
-      }
-    });
-
-    return () => unsubProfile();
-  }, [user, authLoading, router]);
-
-  useEffect(() => {
-    if (userProfile?.role === 'siswa' && userProfile.uid) {
-      const q = query(collection(db, 'students'), where('linkedUserUid', '==', userProfile.uid));
-      const unsubStudent = onSnapshot(q, (snapshot) => {
-        if (!snapshot.empty) {
-          const studentDoc = snapshot.docs[0];
-          const sData = { id: studentDoc.id, ...studentDoc.data() } as Student;
-          setStudentData(sData);
-          if (!sData.class) {
-            router.replace('/pilih-kelas');
-          }
-        } else {
-          setStudentData(null);
-        }
-        setDataLoading(false);
-      });
-      return () => unsubStudent();
-    } else {
-      setDataLoading(false);
-    }
-  }, [userProfile, router]);
-
-
-  if (authLoading || dataLoading) {
+  if (loading) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -70,10 +17,19 @@ export default function InputDataPage() {
     );
   }
   
-  if (userProfile?.role !== 'siswa' || !studentData) {
+  if (!userProfile || userProfile.role !== 'siswa') {
+     router.replace('/dashboard');
+     return (
+        <div className="flex h-full w-full items-center justify-center">
+          <p>Peran tidak valid. Mengalihkan...</p>
+        </div>
+     );
+  }
+
+  if (!studentData) {
      return (
       <div className="flex h-full w-full items-center justify-center">
-        <p>Data siswa tidak ditemukan atau peran tidak valid.</p>
+        <p>Data siswa tidak ditemukan.</p>
       </div>
     );
   }

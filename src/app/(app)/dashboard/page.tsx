@@ -6,105 +6,93 @@ import { SiswaDashboardClient } from '@/components/siswa-dashboard-client';
 import { OrangTuaDashboardClient } from '@/components/orang-tua-dashboard-client';
 import { useAuth } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import type { UserProfile, Student, HabitEntry } from '@/lib/types';
-import { doc, onSnapshot, query, collection, where, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { useEffect, useState } from 'react';
+import { collection, query, where, onSnapshot, doc, Timestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import type { Student, HabitEntry } from '@/lib/types';
+
 
 export default function DashboardPage() {
-  const { user, loading: authLoading } = useAuth();
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const { userProfile, loading: profileLoading } = useAuth();
   const [studentData, setStudentData] = useState<Student | null>(null);
+  const [childStudents, setChildStudents] = useState<Student[]>([]);
   const [habitEntries, setHabitEntries] = useState<HabitEntry[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const router = useRouter();
-  const { toast } = useToast();
 
   useEffect(() => {
-    if (authLoading) return;
-    if (!user) {
-      router.replace('/login');
-      return;
-    }
+    if (!userProfile) return;
 
-    setDataLoading(true);
-    const unsubProfile = onSnapshot(doc(db, 'users', user.uid), (doc) => {
-      if (doc.exists()) {
-        const profile = doc.data() as UserProfile;
-        setUserProfile(profile);
+    let unsubStudents: () => void = () => {};
+    const role = userProfile.role;
 
-        if (profile.role === 'siswa') {
-          const studentQuery = query(collection(db, 'students'), where('linkedUserUid', '==', user.uid));
-          const unsubStudent = onSnapshot(studentQuery, (studentSnapshot) => {
-            if (!studentSnapshot.empty) {
-              const studentDoc = studentSnapshot.docs[0];
-              const sData = { id: studentDoc.id, ...studentDoc.data() } as Student;
-              setStudentData(sData);
-
-              const entriesQuery = query(collection(db, 'habit_entries'), where('studentId', '==', sData.id));
-              const unsubEntries = onSnapshot(entriesQuery, (entriesSnapshot) => {
-                const entries = entriesSnapshot.docs.map(d => ({
-                  ...d.data(),
-                  id: d.id,
-                  date: (d.data().date as Timestamp).toDate(),
-                } as HabitEntry));
-                setHabitEntries(entries);
-                setDataLoading(false);
-              }, (error) => {
-                console.error("Error fetching habit entries:", error);
-                toast({ variant: 'destructive', title: 'Error', description: 'Gagal memuat data kebiasaan.' });
-                setDataLoading(false);
-              });
-              return () => unsubEntries();
-            } else {
-              setStudentData(null);
-              setDataLoading(false);
-               toast({
-                variant: 'destructive',
-                title: 'Data Siswa Tidak Ditemukan',
-                description: 'Tidak dapat menemukan data siswa yang tertaut dengan akun Anda. Silakan hubungi admin.',
-               });
-               router.replace('/login');
-            }
-          }, (error) => {
-            console.error("Error fetching student data:", error);
-            toast({ variant: 'destructive', title: 'Error', description: 'Gagal memuat data siswa.' });
-            setDataLoading(false);
-          });
-          return () => unsubStudent();
+    if (role === 'siswa') {
+      const q = query(collection(db, 'students'), where('linkedUserUid', '==', userProfile.uid));
+      unsubStudents = onSnapshot(q, (snapshot) => {
+        if (!snapshot.empty) {
+          const studentDoc = snapshot.docs[0];
+          setStudentData({ id: studentDoc.id, ...studentDoc.data() } as Student);
         } else {
           setStudentData(null);
-          setHabitEntries([]);
-          setDataLoading(false);
         }
-      } else {
-        setUserProfile(null);
         setDataLoading(false);
-        router.replace('/login');
-      }
-    }, (error) => {
-      console.error("Error fetching user profile:", error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Gagal memuat profil pengguna.' });
+      });
+    } else if (role === 'orangtua') {
+       const q = query(collection(db, 'students'), where('parentId', '==', userProfile.uid));
+       unsubStudents = onSnapshot(q, (snapshot) => {
+         setChildStudents(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Student)));
+         setDataLoading(false);
+       });
+    } else if (role === 'guru' || role === 'admin') {
+      setDataLoading(false); // Guru/Admin data is handled in their specific components
+    } else {
       setDataLoading(false);
+    }
+    
+    return () => unsubStudents();
+
+  }, [userProfile]);
+
+  useEffect(() => {
+    let studentIds: string[] = [];
+    if (studentData) { // For 'siswa'
+        studentIds = [studentData.id];
+    } else if (childStudents.length > 0) { // For 'orangtua'
+        studentIds = childStudents.map(s => s.id);
+    }
+    
+    if (studentIds.length === 0) {
+        setHabitEntries([]);
+        return;
+    }
+
+    const q = query(collection(db, 'habit_entries'), where('studentId', 'in', studentIds));
+    const unsubEntries = onSnapshot(q, (snapshot) => {
+        setHabitEntries(snapshot.docs.map(d => ({ ...d.data(), id: d.id, date: (d.data().date as Timestamp).toDate() } as HabitEntry)));
     });
 
-    return () => unsubProfile();
-  }, [user, authLoading, router, toast]);
+    return () => unsubEntries();
 
-  const loading = authLoading || dataLoading;
+  }, [studentData, childStudents]);
 
-  if (loading) {
+
+  if (profileLoading || dataLoading) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
-         <p className="ml-4 text-muted-foreground">Memuat data...</p>
+        <p className="ml-4 text-muted-foreground">Memuat data...</p>
       </div>
     );
   }
 
   if (!userProfile) {
-     return null;
+     // This case should be handled by the AppLayout, but as a fallback:
+     return (
+        <div className="flex h-full w-full items-center justify-center">
+            <p>Profil pengguna tidak ditemukan. Mengalihkan...</p>
+        </div>
+     );
   }
 
   switch (userProfile.role) {
@@ -114,15 +102,16 @@ export default function DashboardPage() {
       router.replace('/admin/dashboard');
       return null;
     case 'orangtua':
-      return <OrangTuaDashboardClient />;
+      return <OrangTuaDashboardClient userProfile={userProfile} childStudents={childStudents} habitEntries={habitEntries} />;
     case 'siswa':
       if (studentData) {
         return <SiswaDashboardClient studentData={studentData} habitEntries={habitEntries} />;
       } else {
          return (
-             <div className="flex h-full w-full items-center justify-center">
-                 <Loader2 className="h-8 w-8 animate-spin" />
-                 <p className="ml-2">Data siswa tidak ditemukan. Mengalihkan...</p>
+             <div className="flex h-full w-full flex-col items-center justify-center gap-4">
+                 <p className='text-destructive font-semibold'>Gagal Memuat Data Siswa</p>
+                 <p className="text-sm text-muted-foreground">Data siswa yang tertaut dengan akun Anda tidak dapat ditemukan.</p>
+                 <p className="text-sm text-muted-foreground">Mohon hubungi administrator sekolah.</p>
              </div>
          );
       }

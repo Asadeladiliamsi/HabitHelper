@@ -7,12 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { translations } from '@/lib/translations';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/firebase';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import type { UserProfile } from '@/lib/types';
-
+import { useAuth } from '@/firebase/provider';
 
 function DataMasterTabs() {
   const language = 'id';
@@ -53,38 +48,20 @@ function DataMasterTabs() {
 }
 
 export default function DataMasterPage() {
-  const { user, loading: authLoading } = useAuth();
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [profileLoading, setProfileLoading] = useState(true);
+  const { userProfile, loading } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.replace('/login');
-      return;
-    }
-    
-    if (user) {
-      const unsub = onSnapshot(doc(db, 'users', user.uid), (doc) => {
-        if (doc.exists()) {
-          const profile = doc.data() as UserProfile;
-          setUserProfile(profile);
-          if (profile.role === 'orangtua' || profile.role === 'siswa') {
-            router.replace('/dashboard');
-          }
-        } else {
-          setUserProfile(null);
-          router.replace('/login');
-        }
-        setProfileLoading(false);
-      });
-      return () => unsub();
-    }
-  }, [user, authLoading, router]);
+  if (loading) {
+    return (
+       <div className="flex h-full w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
-  const loading = authLoading || profileLoading;
-
-  if (loading || !userProfile || userProfile.role === 'orangtua' || userProfile.role === 'siswa') {
+  // Redirect if not the correct role
+  if (!userProfile || userProfile.role === 'orangtua' || userProfile.role === 'siswa') {
+    router.replace('/dashboard');
     return (
        <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
