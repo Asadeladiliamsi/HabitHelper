@@ -49,31 +49,33 @@ export default function LoginPage() {
         if (docSnap.exists()) {
             const profile = docSnap.data() as UserProfile;
             
-            if (profile.role === 'siswa') {
+            if (profile.role === 'admin') {
+                router.replace('/admin/dashboard');
+            } else if (profile.role === 'siswa') {
                 const studentQuery = query(collection(db, 'students'), where('linkedUserUid', '==', user.uid));
                 const studentSnapshot = await getDocs(studentQuery);
 
-                if (!studentSnapshot.empty) {
-                    const studentData = studentSnapshot.docs[0].data();
-                    if (studentData.class) {
-                        router.push('/dashboard');
-                    } else {
-                        router.push('/pilih-kelas');
-                    }
+                if (studentSnapshot.empty) {
+                    router.replace('/link-account');
                 } else {
-                    router.push('/link-account');
+                    const studentData = studentSnapshot.docs[0].data();
+                    if (!studentData.class) {
+                        router.replace('/pilih-kelas');
+                    } else {
+                        router.replace('/dashboard');
+                    }
                 }
-            } else if (profile.role === 'admin') {
-                router.push('/admin/dashboard');
             } else {
-                router.push('/dashboard');
+                router.replace('/dashboard');
             }
         } else {
+            // This case might happen if a user is created in Auth but not in Firestore.
+            // For a student, the most likely scenario is needing to link their account.
             toast({
               title: 'Profil Tidak Ditemukan',
-              description: 'Mengarahkan Anda untuk menautkan akun dengan data siswa.',
+              description: 'Profil Anda belum lengkap. Mari kita tautkan akun Anda.',
             });
-            router.push('/link-account');
+            router.replace('/link-account');
         }
     } catch (e: any) {
         console.error("Error fetching user profile after login:", e);
@@ -82,26 +84,31 @@ export default function LoginPage() {
             title: "Gagal Mengambil Profil",
             description: "Tidak dapat memuat data profil setelah login. Mengarahkan ke dasbor umum.",
         });
-        router.push('/dashboard');
+        router.replace('/dashboard');
     }
   }
 
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
-    form.clearErrors(); // Hapus error sebelumnya
+    form.clearErrors();
     try {
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
       toast({
         title: 'Login Berhasil',
         description: 'Memuat data profil Anda...',
       });
-      await handleLoginSuccess(userCredential.user);
+      // The useEffect will handle redirection on successful login
     } catch (error: any) {
       console.error(error);
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-        form.setError('root', {
+      // This is the most common error for bad credentials.
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        form.setError('email', {
           type: 'manual',
-          message: 'Email atau kata sandi yang Anda masukkan salah. Mohon periksa kembali.'
+          message: 'Email atau kata sandi yang Anda masukkan salah.',
+        });
+        form.setError('password', {
+          type: 'manual',
+          message: 'Mohon periksa kembali kredensial Anda.',
         });
       } else {
          form.setError('root', {
@@ -109,7 +116,8 @@ export default function LoginPage() {
           message: 'Terjadi kesalahan yang tidak diketahui. Silakan coba lagi.'
         });
       }
-      setIsSubmitting(false);
+    } finally {
+        setIsSubmitting(false);
     }
   };
   
@@ -117,7 +125,8 @@ export default function LoginPage() {
     if (!loading && user) {
         handleLoginSuccess(user);
     }
-  }, [loading, user, handleLoginSuccess]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, user, router]);
 
 
   if (loading || user) {
