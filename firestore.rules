@@ -4,7 +4,7 @@
  *
  * Data Structure:
  * - /users/{userId}: Stores user profiles, accessible only to the user themselves and admins.
- * - /students/{studentId}: Stores student data, accessible to teachers and admins. Students also can get their own data.
+ * - /students/{studentId}: Stores student data, accessible to teachers and admins. Students can also get their own data.
  * - /habit_entries/{entryId}: Stores habit entry data, writable by teachers and readable by admins.
  * - /app_settings/{settingId}: Stores global application settings, accessible only to admins.
  * - /classes/{classId}: Stores class data, accessible only to admins.
@@ -16,7 +16,7 @@
  * - Listing of users is generally disallowed for privacy reasons.
  *
  * Denormalization for Authorization:
- * - The `students` collection does not contain explicit role information. Teacher access is granted based on their `/users/{userId}` profile's role being "guru". This requires a check on the user's role.
+ * - The `students` collection stores `linkedUserUid` to link student data to user profile.
  *
  * Structural Segregation:
  * - Private user data is stored in `/users/{userId}`, separate from potentially public student data in `/students/{studentId}`.
@@ -81,7 +81,7 @@ service cloud.firestore {
      * @principle Enforces document ownership for reads and writes; users can only access their own profile data.
      */
     match /users/{userId} {
-      allow get: if isOwner(userId);
+      allow get: if isOwner(userId) || isAdmin();
       allow list: if false;
       allow create: if isOwner(userId) && request.resource.data.uid == userId;
       allow update: if isExistingOwner(userId) && request.resource.data.uid == resource.data.uid;
@@ -103,11 +103,11 @@ service cloud.firestore {
      * @principle Allows teachers (gurus) to manage student data.
      */
     match /students/{studentId} {
-      allow get: if isGuru() || (isSignedIn() && resource.data.linkedUserUid == request.auth.uid);
-      allow list: if isGuru();
-      allow create: if isGuru();
-      allow update: if isGuru() && resource != null;
-      allow delete: if isGuru() && resource != null;
+      allow get: if isGuru() || isAdmin() || (isSignedIn() && resource.data.linkedUserUid == request.auth.uid);
+      allow list: if isGuru() || isAdmin();
+      allow create: if isGuru() || isAdmin();
+      allow update: if (isGuru() || isAdmin()) && resource != null;
+      allow delete: if (isGuru() || isAdmin()) && resource != null;
     }
 
     /**
@@ -124,11 +124,11 @@ service cloud.firestore {
      * @principle Allows teachers (gurus) to manage habit entries and admins to view all.
      */
     match /habit_entries/{entryId} {
-      allow get: if isAdmin();
-      allow list: if false;
-      allow create: if isGuru();
-      allow update: if isGuru() && resource != null;
-      allow delete: if isGuru() && resource != null;
+      allow get: if isGuru() || isAdmin();
+      allow list: if isGuru() || isAdmin();
+      allow create: if isGuru() || isAdmin();
+      allow update: if (isGuru() || isAdmin()) && resource != null;
+      allow delete: if (isGuru() || isAdmin()) && resource != null;
     }
 
     /**
