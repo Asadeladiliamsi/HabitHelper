@@ -56,9 +56,16 @@ export default function DashboardPage() {
               // Return a function to unsubscribe from entries when student changes
               return () => unsubEntries();
             } else {
+              // This case should ideally not happen with the new signup flow,
+              // but as a fallback, we can treat it as an error or incomplete setup.
               setStudentData(null);
-              // Siswa sudah punya profil tapi belum tertaut. Arahkan ke halaman penautan.
-              router.replace('/link-account');
+              setDataLoading(false);
+               toast({
+                variant: 'destructive',
+                title: 'Data Siswa Tidak Ditemukan',
+                description: 'Tidak dapat menemukan data siswa yang tertaut dengan akun Anda. Silakan hubungi admin.',
+               });
+               router.replace('/login');
             }
           });
           // Return a function to unsubscribe from student data when profile changes
@@ -100,17 +107,6 @@ export default function DashboardPage() {
          </div>
      );
   }
-  
-  if (userProfile.role === 'siswa' && studentData && !studentData.class) {
-      router.replace('/pilih-kelas');
-      return (
-         <div className="flex h-full w-full items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin" />
-              <p className="ml-2">Anda belum memilih kelas. Mengalihkan...</p>
-         </div>
-      );
-  }
-
 
   switch (userProfile.role) {
     case 'guru':
@@ -127,7 +123,7 @@ export default function DashboardPage() {
          return (
              <div className="flex h-full w-full items-center justify-center">
                  <Loader2 className="h-8 w-8 animate-spin" />
-                 <p className="ml-2">Mengarahkan ke halaman penautan akun...</p>
+                 <p className="ml-2">Memuat data siswa...</p>
              </div>
          );
       }
