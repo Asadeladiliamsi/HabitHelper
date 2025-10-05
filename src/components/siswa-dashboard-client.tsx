@@ -1,6 +1,5 @@
 'use client';
 
-import { useAuth } from '@/firebase';
 import { Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -16,7 +15,7 @@ import {
   Calendar as CalendarIcon,
 } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Button } from './ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar } from './ui/calendar';
@@ -28,10 +27,6 @@ import { DateRange } from 'react-day-picker';
 import { DateRangePicker } from './ui/date-range-picker';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, LabelList } from 'recharts';
 import { HABIT_DEFINITIONS } from '@/lib/types';
-import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { useRouter } from 'next/navigation';
-
 
 const habitIcons: { [key: string]: React.ReactNode } = {
   'Bangun Pagi': <Sunrise className="h-5 w-5 text-yellow-500" />,
@@ -53,14 +48,13 @@ const habitColors: { [key: string]: string } = {
     'Tidur Cepat': '#10B981',
 };
 
+interface SiswaDashboardClientProps {
+  studentData: Student;
+  habitEntries: HabitEntry[];
+}
 
-export function SiswaDashboardClient() {
-  const { user, loading: authLoading } = useAuth();
-  const [studentData, setStudentData] = useState<Student | null>(null);
-  const [dataLoading, setDataLoading] = useState(true);
-  const [habitEntries, setHabitEntries] = useState<HabitEntry[]>([]);
-  const router = useRouter();
 
+export function SiswaDashboardClient({ studentData, habitEntries }: SiswaDashboardClientProps) {
   const language = 'id';
   const tHabits = translations[language]?.landingPage.habits || translations.en.landingPage.habits;
 
@@ -69,53 +63,6 @@ export function SiswaDashboardClient() {
     from: subDays(new Date(), 6),
     to: new Date(),
   });
-
-  useEffect(() => {
-    if (authLoading) return;
-    if (!user) {
-      router.replace('/login');
-      return;
-    }
-    
-    setDataLoading(true);
-    const q = query(collection(db, 'students'), where('linkedUserUid', '==', user.uid));
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      if (!snapshot.empty) {
-        const studentDoc = snapshot.docs[0];
-        const sData = { id: studentDoc.id, ...studentDoc.data() } as Student;
-        setStudentData(sData);
-        if (!sData.class) {
-          router.replace('/pilih-kelas');
-        }
-      } else {
-        setStudentData(null);
-      }
-      setDataLoading(false);
-    }, (error) => {
-      console.error("Error fetching student data:", error);
-      setDataLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [user, authLoading, router]);
-
-  useEffect(() => {
-    if (!studentData) return;
-
-    const entriesQuery = query(collection(db, 'habit_entries'), where('studentId', '==', studentData.id));
-    const unsubEntries = onSnapshot(entriesQuery, (snapshot) => {
-      const entries = snapshot.docs.map(d => ({
-        ...d.data(),
-        id: d.id,
-        date: (d.data().date as Timestamp).toDate()
-      } as HabitEntry));
-      setHabitEntries(entries);
-    });
-
-    return () => unsubEntries();
-  }, [studentData]);
-
 
   const getHabitsForDate = useCallback((date: Date): Habit[] => {
       if (!studentData) return [];
@@ -130,7 +77,7 @@ export function SiswaDashboardClient() {
         subHabits: subHabitNames.map((subHabitName, subHabitIndex) => {
           const entry = relevantEntries
               .filter(e => e.habitName === habitName && e.subHabitName === subHabitName)
-              .sort((a, b) => (b.timestamp as Timestamp).toMillis() - (a.timestamp as Timestamp).toMillis())[0];
+              .sort((a, b) => (b.timestamp as any).toMillis() - (a.timestamp as any).toMillis())[0];
 
           return {
             id: `${habitIndex + 1}-${subHabitIndex + 1}`,
@@ -198,17 +145,6 @@ export function SiswaDashboardClient() {
 
   }, [dateRange, studentData, habitEntries]);
   
-  const loading = authLoading || dataLoading;
-
-  if (loading) {
-    return (
-      <div className="flex h-full w-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-        <p className="ml-4 text-muted-foreground">Memuat data siswa...</p>
-      </div>
-    );
-  }
-  
   const calculateOverallAverage = (habits: Habit[]) => {
       if (!habits || habits.length === 0) return 0;
       const validHabits = habits.filter(h => h.subHabits && h.subHabits.length > 0 && h.subHabits.some(sh => sh.score > 0));
@@ -275,11 +211,6 @@ export function SiswaDashboardClient() {
           </div>
           </CardHeader>
           <CardContent>
-          {loading ? (
-              <div className="flex h-80 items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-          ) : (
               <div className="h-80 w-full">
               <ResponsiveContainer width="100%" height="100%">
                   <LineChart
@@ -310,7 +241,6 @@ export function SiswaDashboardClient() {
                   </LineChart>
               </ResponsiveContainer>
               </div>
-          )}
           </CardContent>
       </Card>
 
@@ -350,11 +280,7 @@ export function SiswaDashboardClient() {
           </div>
         </CardHeader>
         <CardContent>
-          {loading ? (
-             <div className="flex h-48 items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-             </div>
-          ) : habitsForSelectedDate.length > 0 && habitsForSelectedDate.some(h => h.subHabits.some(sh => sh.score > 0)) ? (
+          {habitsForSelectedDate.length > 0 && habitsForSelectedDate.some(h => h.subHabits.some(sh => sh.score > 0)) ? (
             <div className="space-y-4">
                  {dailySummaryData.length > 0 ? (
                     <div className="bg-muted/50 p-4 rounded-lg">
