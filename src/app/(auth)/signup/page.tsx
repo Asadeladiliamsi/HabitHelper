@@ -85,108 +85,114 @@ export default function SignupPage() {
 
   const onSubmit = async (data: FormValues) => {
     setIsLoading(true);
-
-    if (data.role === 'guru') {
-        const settingsDocRef = doc(db, 'app_settings', 'registration');
-        const docSnap = await getDoc(settingsDocRef);
-        const validCode = docSnap.exists() ? docSnap.data().teacherCode : '';
-        if (!validCode || data.teacherCode !== validCode) {
-            toast({
-                variant: 'destructive',
-                title: 'Pendaftaran Gagal',
-                description: 'Kode registrasi guru tidak valid.',
-            });
-            setIsLoading(false);
-            return;
-        }
-    }
-    
-    if (data.role === 'siswa' && data.kelas) {
-        const classDocRef = doc(db, 'classes', data.kelas);
-        const classDoc = await getDoc(classDocRef);
-        if (classDoc.exists() && classDoc.data().isLocked) {
-            toast({
-                variant: 'destructive',
-                title: 'Pendaftaran Gagal',
-                description: `Kelas ${data.kelas} sudah penuh atau dikunci. Silakan hubungi admin sekolah.`,
-            });
-            setIsLoading(false);
-            return;
-        }
-    }
-
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-      const user = userCredential.user;
+        // --- VALIDASI DI MUKA (FAIL-FAST) ---
+        if (data.role === 'guru') {
+            const settingsDocRef = doc(db, 'app_settings', 'registration');
+            const docSnap = await getDoc(settingsDocRef);
+            if (!docSnap.exists() || data.teacherCode !== docSnap.data().teacherCode) {
+                toast({
+                    variant: 'destructive',
+                    title: 'Pendaftaran Gagal',
+                    description: 'Kode registrasi guru tidak valid.',
+                });
+                // Penting: Hentikan eksekusi dan matikan loading
+                setIsLoading(false);
+                return;
+            }
+        }
+        
+        if (data.role === 'siswa' && data.kelas) {
+            const classDocRef = doc(db, 'classes', data.kelas);
+            const classDoc = await getDoc(classDocRef);
+            if (classDoc.exists() && classDoc.data().isLocked) {
+                toast({
+                    variant: 'destructive',
+                    title: 'Pendaftaran Gagal',
+                    description: `Kelas ${data.kelas} sudah penuh atau dikunci. Silakan hubungi admin sekolah.`,
+                });
+                // Penting: Hentikan eksekusi dan matikan loading
+                setIsLoading(false);
+                return;
+            }
+        }
 
-      const batch = writeBatch(db);
+        // --- PROSES PEMBUATAN AKUN DAN DATA ---
+        const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+        const user = userCredential.user;
+        
+        // Update profil Auth (nama tampilan)
+        await updateProfile(user, { displayName: data.name });
 
-      // 1. Update auth profile
-      await updateProfile(user, { displayName: data.name });
+        // Siapkan batch untuk operasi atomik di Firestore
+        const batch = writeBatch(db);
 
-      // 2. Create user profile document
-      const userProfileRef = doc(db, 'users', user.uid);
-      const userProfile = {
-        uid: user.uid,
-        email: user.email,
-        name: data.name,
-        role: data.role,
-        nisn: data.nisn || '',
-      };
-      batch.set(userProfileRef, userProfile);
+        // 1. Dokumen profil pengguna
+        const userProfileRef = doc(db, 'users', user.uid);
+        const userProfile = {
+            uid: user.uid,
+            email: user.email,
+            name: data.name,
+            role: data.role,
+            nisn: data.nisn || null, // Gunakan null jika kosong
+        };
+        batch.set(userProfileRef, userProfile);
 
-      // 3. If role is 'siswa', create student data document
-      if (data.role === 'siswa' && data.nisn && data.kelas) {
-        const studentsCollectionRef = collection(db, 'students');
-        const newStudentDocRef = doc(studentsCollectionRef); // Create a new doc with a generated ID
+        // 2. Dokumen data siswa (jika peran adalah siswa)
+        if (data.role === 'siswa' && data.nisn && data.kelas) {
+            const newStudentDocRef = doc(collection(db, 'students'));
+            const initialHabits: Habit[] = Object.entries(HABIT_DEFINITIONS).map(([habitName, subHabitNames], habitIndex) => ({
+                id: `${habitIndex + 1}`,
+                name: habitName,
+                subHabits: subHabitNames.map((subHabitName, subHabitIndex) => ({
+                    id: `${habitIndex + 1}-${subHabitIndex + 1}`,
+                    name: subHabitName,
+                    score: 0,
+                })),
+            }));
 
-        const initialHabits: Habit[] = Object.entries(HABIT_DEFINITIONS).map(([habitName, subHabitNames], habitIndex) => ({
-          id: `${habitIndex + 1}`,
-          name: habitName,
-          subHabits: subHabitNames.map((subHabitName, subHabitIndex) => ({
-            id: `${habitIndex + 1}-${subHabitIndex + 1}`,
-            name: subHabitName,
-            score: 0,
-          })),
-        }));
-
-        batch.set(newStudentDocRef, {
-          name: data.name,
-          nisn: data.nisn,
-          class: data.kelas,
-          email: data.email,
-          linkedUserUid: user.uid,
-          avatarUrl: `https://avatar.vercel.sh/${data.nisn}.png`,
-          habits: initialHabits,
-          lockedDates: [],
-          createdAt: serverTimestamp(),
+            batch.set(newStudentDocRef, {
+                name: data.name,
+                nisn: data.nisn,
+                class: data.kelas,
+                email: data.email,
+                linkedUserUid: user.uid,
+                avatarUrl: `https://avatar.vercel.sh/${data.nisn}.png`,
+                habits: initialHabits,
+                lockedDates: [],
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+            });
+        }
+        
+        // Jalankan semua operasi tulis sekaligus
+        await batch.commit();
+        
+        toast({
+            title: 'Pendaftaran Berhasil',
+            description: 'Akun Anda telah dibuat. Anda akan diarahkan ke dasbor.',
         });
-      }
-      
-      await batch.commit();
-      
-      toast({
-        title: 'Pendaftaran Berhasil',
-        description: 'Akun Anda telah dibuat. Anda akan diarahkan ke dasbor.',
-      });
 
-      router.push('/dashboard');
+        // Arahkan ke dasbor HANYA setelah semuanya berhasil
+        router.push('/dashboard');
 
     } catch (error: any) {
-      console.error(error);
-      let description = 'Terjadi kesalahan. Silakan coba lagi.';
-      if (error.code === 'auth/email-already-in-use') {
-        description = 'Email ini sudah terdaftar. Silakan gunakan email lain atau masuk.';
-      }
-      toast({
-        variant: 'destructive',
-        title: 'Pendaftaran Gagal',
-        description,
-      });
+        console.error("Signup Error:", error);
+        let description = 'Terjadi kesalahan yang tidak diketahui. Silakan coba lagi.';
+        if (error.code === 'auth/email-already-in-use') {
+            description = 'Email ini sudah terdaftar. Silakan gunakan email lain atau masuk.';
+        }
+        toast({
+            variant: 'destructive',
+            title: 'Pendaftaran Gagal',
+            description,
+        });
     } finally {
-      setIsLoading(false);
+        // --- JAMINAN: LOADING SELALU BERHENTI ---
+        setIsLoading(false);
     }
   };
+
 
   return (
     <Card>
