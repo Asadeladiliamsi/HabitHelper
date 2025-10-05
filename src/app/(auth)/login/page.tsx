@@ -13,7 +13,10 @@ const uiConfig = {
   signInFlow: 'popup',
   signInSuccessUrl: '/dashboard',
   signInOptions: [
-    EmailAuthProvider.PROVIDER_ID,
+    {
+      provider: EmailAuthProvider.PROVIDER_ID,
+      requireDisplayName: false, // Ini akan selalu menampilkan form login terlebih dahulu
+    }
   ],
   callbacks: {
     // Hindari pengalihan otomatis, biarkan signInSuccessUrl yang menangani
@@ -46,7 +49,7 @@ export default function LoginPage() {
   return (
     <Card>
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl">Masuk atau Daftar</CardTitle>
+        <CardTitle className="text-2xl">Masuk ke Akun Anda</CardTitle>
         <CardDescription>
           Gunakan email Anda untuk melanjutkan ke aplikasi.
         </CardDescription>
