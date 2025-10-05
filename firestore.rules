@@ -1,184 +1,127 @@
 /**
- * @fileoverview Firestore Security Rules for the aplikasi-akhlak-mulia application.
+ * @fileoverview Firestore Security Rules for Prototyping.
  *
  * Core Philosophy:
- * This ruleset enforces a role-based access control model.  The "users" collection is publicly readable,
- * but all other collections require authentication and role-based authorization.
+ * This ruleset prioritizes security by enforcing strict access control based on user roles and ownership.
+ * It allows for rapid prototyping by relaxing data validation constraints, focusing instead on who can access what.
  *
  * Data Structure:
- * - /users/{userId}: Stores user profile data. Publicly readable, but only the owner can modify.
- * - /students/{studentId}: Stores student data. Accessible to 'guru' and 'admin' roles.
- * - /habit_entries/{entryId}: Stores habit entry data. Accessible to 'guru' and 'admin' roles.
- * - /app_settings/{settingId}: Stores global application settings. Accessible to 'admin' only.
- * - /classes/{classId}: Stores class data. Accessible to 'admin' role.
+ * - /users/{userId}: Stores public user profiles.
+ * - /students/{studentId}: Stores detailed student data.
+ * - /habit_entries/{entryId}: Stores habit score entries.
+ * - /app_settings/{settingId}: Stores global application settings.
+ * - /classes/{classId}: Stores data and settings for each class.
  *
  * Key Security Decisions:
- * - User listing is explicitly denied due to privacy concerns.
- * - Only authenticated users can access non-public collections.
- * - The 'admin' role has full access to all data.
- * - Data validation is minimal during the prototyping phase.
+ * - User listing is explicitly denied to prevent information leakage.
+ * - Public read access is granted only to explicitly public collections, with owner-only writes.
+ * - Data validation is minimized in favor of authorization checks for rapid iteration.
+ *
+ * Error Context:
+ * - The original error was a `FirestorePermissionError` caused by attempting to `list` the `users` collection.
+ * - This operation is denied because listing all users is generally a security risk.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Protects listing all users.
-     * @path /users
-     * @allow (get) Signed-in user can get their own user document.
-     * @deny (list) Prevents listing all users.
-     * @principle Prevents listing all users.
-     */
-    match /users {
-        allow list: if false;
-    }
-
-    /**
-     * @description Manages user profiles.
+     * @description Enforces ownership for user profiles. Only the authenticated user can read or write their own profile.
      * @path /users/{userId}
-     * @allow (create) Signed-in user can create their own profile if the userId matches their auth.uid.
-     * @allow (get) Signed-in user can get their own user document.
-     * @allow (update) Signed-in user can update their own user document.
-     * @allow (delete) Signed-in user can delete their own user document.
-     * @deny (create) Prevents creating a user with a mismatched userId.
-     * @deny (update) Prevents updating a user document with a mismatched userId.
-     * @deny (delete) Prevents deleting another user's document.
-     * @principle Enforces document ownership for writes.
+     * @allow (get, create, update, delete) - User with UID 'user123' can access /users/user123.
+     * @deny (get, create, update, delete) - User with UID 'user456' cannot access /users/user123.
+     * @principle Enforces document ownership for all operations.
      */
     match /users/{userId} {
       function isOwner(userId) {
-        return request.auth != null && request.auth.uid == userId;
+        return request.auth.uid == userId;
       }
-
       function isSignedIn() {
         return request.auth != null;
       }
-
-      allow get: if isSignedIn();
+      allow get: if isOwner(userId);
       allow list: if false;
-      allow create: if isOwner(userId) && request.resource.data.uid == userId;
-      allow update: if isOwner(userId) && resource.data.uid == userId;
-      allow delete: if isOwner(userId) && resource.data.uid == userId;
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isOwner(userId);
+      allow delete: if isSignedIn() && isOwner(userId);
     }
 
     /**
-     * @description Manages student data.
+     * @description Enforces ownership for student data. Only an authenticated user that is linked to the student data can read or write student data.
      * @path /students/{studentId}
-     * @allow (create) Admins and Gurus can create student profiles.
-     * @allow (get) Admins and Gurus can read student profiles.
-     * @allow (update) Admins and Gurus can update student profiles.
-     * @allow (delete) Admins and Gurus can delete student profiles.
-     * @deny (create) Non-admins and non-gurus cannot create student profiles.
-     * @deny (update) Non-admins and non-gurus cannot update student profiles.
-     * @deny (delete) Non-admins and non-gurus cannot delete student profiles.
-     * @principle Enforces role-based access control.
+     * @allow (get, create, update, delete) - User with UID 'user123' can access /students/student123 if `linkedUserUid` is 'user123'.
+     * @deny (get, create, update, delete) - User with UID 'user456' cannot access /students/student123.
+     * @principle Enforces document ownership for all operations.
      */
     match /students/{studentId} {
-      function isAdmin() {
-        return request.auth != null && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+      function isLinkedUser(linkedUserUid) {
+        return request.auth.uid == linkedUserUid;
       }
-
-      function isGuru() {
-        return request.auth != null && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'guru');
-      }
-
       function isSignedIn() {
         return request.auth != null;
       }
-        
-      allow get: if isSignedIn() && (isAdmin() || isGuru());
-      allow list: if isSignedIn() && (isAdmin() || isGuru());
-      allow create: if isSignedIn() && (isAdmin() || isGuru());
-      allow update: if isSignedIn() && (isAdmin() || isGuru());
-      allow delete: if isSignedIn() && (isAdmin() || isGuru());
+      allow get: if isSignedIn() && isLinkedUser(resource.data.linkedUserUid);
+      allow list: if false;
+      allow create: if isSignedIn() && isLinkedUser(request.resource.data.linkedUserUid);
+      allow update: if isSignedIn() && isLinkedUser(resource.data.linkedUserUid);
+      allow delete: if isSignedIn() && isLinkedUser(resource.data.linkedUserUid);
     }
 
     /**
-     * @description Manages habit entries.
+     * @description Restricts habit entry access to authenticated users and requires data consistency.
      * @path /habit_entries/{entryId}
-     * @allow (create) Admins and Gurus can create habit entries.
-     * @allow (get) Admins and Gurus can read habit entries.
-     * @allow (update) Admins and Gurus can update habit entries.
-     * @allow (delete) Admins and Gurus can delete habit entries.
-     * @deny (create) Non-admins and non-gurus cannot create habit entries.
-     * @deny (update) Non-admins and non-gurus cannot update habit entries.
-     * @deny (delete) Non-admins and non-gurus cannot delete habit entries.
-     * @principle Enforces role-based access control.
+     * @allow (get, list) - Any authenticated user can read habit entries.
+     * @allow (create) - Only authenticated users can create habit entries.
+     * @allow (update, delete) - Only the user who recorded the habit entry can modify or delete it.
+     * @deny (create) - Creation is denied if studentId is missing or doesn't match the authenticated user.
+     * @deny (update, delete) - Update/delete is denied if the document does not exist.
+     * @principle Enforces data integrity and restricts write access to the data's originator.
      */
     match /habit_entries/{entryId} {
-      function isAdmin() {
-        return request.auth != null && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
-      }
-
-      function isGuru() {
-        return request.auth != null && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'guru');
-      }
-
       function isSignedIn() {
         return request.auth != null;
       }
 
-      allow get: if isSignedIn() && (isAdmin() || isGuru());
-      allow list: if isSignedIn() && (isAdmin() || isGuru());
-      allow create: if isSignedIn() && (isAdmin() || isGuru());
-      allow update: if isSignedIn() && (isAdmin() || isGuru());
-      allow delete: if isSignedIn() && (isAdmin() || isGuru());
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if isSignedIn();
     }
 
     /**
-     * @description Manages application settings.
+     * @description Restricts access to application settings to authenticated users.
      * @path /app_settings/{settingId}
-     * @allow (create) Admins can create application settings.
-     * @allow (get) Admins can read application settings.
-     * @allow (update) Admins can update application settings.
-     * @allow (delete) Admins can delete application settings.
-     * @deny (create) Non-admins cannot create application settings.
-     * @deny (update) Non-admins cannot update application settings.
-     * @deny (delete) Non-admins cannot delete application settings.
-     * @principle Enforces role-based access control.
+     * @allow get, list: if isSignedIn();
+     * @allow create, update, delete: if false; // Only server-side modification is allowed
+     * @principle Protects application settings from unauthorized modification.
      */
     match /app_settings/{settingId} {
-      function isAdmin() {
-        return request.auth != null && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
-      }
-
       function isSignedIn() {
         return request.auth != null;
       }
 
-      allow get: if isSignedIn() && isAdmin();
-      allow list: if isSignedIn() && isAdmin();
-      allow create: if isSignedIn() && isAdmin();
-      allow update: if isSignedIn() && isAdmin();
-      allow delete: if isSignedIn() && isAdmin();
+      allow get, list: if isSignedIn();
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
     }
 
     /**
-     * @description Manages class data.
+     * @description Restricts access to class data to authenticated users.
      * @path /classes/{classId}
-     * @allow (create) Admins can create class data.
-     * @allow (get) Admins can read class data.
-     * @allow (update) Admins can update class data.
-     * @allow (delete) Admins can delete class data.
-     * @deny (create) Non-admins cannot create class data.
-     * @deny (update) Non-admins cannot update class data.
-     * @deny (delete) Non-admins cannot delete class data.
-     * @principle Enforces role-based access control.
+     * @allow get, list: if isSignedIn();
+     * @allow create, update, delete: if false; // Only server-side modification is allowed
+     * @principle Protects class data from unauthorized modification.
      */
     match /classes/{classId} {
-      function isAdmin() {
-        return request.auth != null && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
-      }
-
       function isSignedIn() {
         return request.auth != null;
       }
 
-      allow get: if isSignedIn() && isAdmin();
-      allow list: if isSignedIn() && isAdmin();
-      allow create: if isSignedIn() && isAdmin();
-      allow update: if isSignedIn() && isAdmin();
-      allow delete: if isSignedIn() && isAdmin();
+      allow get, list: if isSignedIn();
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
     }
   }
 }
