@@ -12,11 +12,11 @@ import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
-import { doc, updateDoc, onSnapshot, query, collection, where } from 'firebase/firestore';
+import { doc, updateDoc, onSnapshot, query, collection, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Student } from '@/lib/types';
+import type { Student, ClassData } from '@/lib/types';
 
-const KELAS_LIST = [
+const PREDEFINED_KELAS_LIST = [
     "7 Ruang 1", "7 Ruang 2", "7 Ruang 3", "7 Ruang 4", "7 Ruang 5", "7 Ruang 6", "7 Ruang 7", "7 Ruang 8", "7 Ruang 9",
     "8 Ruang 1", "8 Ruang 2", "8 Ruang 3", "8 Ruang 4", "8 Ruang 5", "8 Ruang 6", "8 Ruang 7", "8 Ruang 8", "8 Ruang 9",
     "9 Ruang 1", "9 Ruang 2", "9 Ruang 3", "9 Ruang 4", "9 Ruang 5", "9 Ruang 6", "9 Ruang 7", "9 Ruang 8", "9 Ruang 9",
@@ -32,9 +32,33 @@ export default function PilihKelasPage() {
   const { user, loading: authLoading } = useAuth();
   const [studentData, setStudentData] = useState<Student | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
+  const [availableClasses, setAvailableClasses] = useState<string[]>([]);
+  const [classesLoading, setClassesLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    // Fetch available classes from Firestore
+    const classesRef = collection(db, 'classes');
+    const q = query(classesRef, where('isLocked', '==', false));
+    
+    const unsubClasses = onSnapshot(q, (snapshot) => {
+        const lockedClasses = snapshot.docs.map(doc => doc.id);
+        const allFetchedClasses = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}) as ClassData);
+
+        const unlockedClassNames = PREDEFINED_KELAS_LIST.filter(className => {
+            const classDoc = allFetchedClasses.find(c => c.id === className);
+            // If class is not in firestore, it's considered unlocked. If it is, check isLocked status.
+            return !classDoc || !classDoc.isLocked;
+        });
+
+        setAvailableClasses(unlockedClassNames);
+        setClassesLoading(false);
+    });
+
+    return () => unsubClasses();
+  }, []);
 
   useEffect(() => {
     if (authLoading) return;
@@ -74,7 +98,7 @@ export default function PilihKelasPage() {
     await updateDoc(studentDocRef, { class: className });
   };
   
-  const loading = authLoading || dataLoading;
+  const loading = authLoading || dataLoading || classesLoading;
 
   if (loading || !studentData) {
     return (
@@ -128,7 +152,7 @@ export default function PilihKelasPage() {
                         <SelectValue placeholder="Pilih kelas Anda..." />
                     </SelectTrigger>
                     <SelectContent>
-                        {KELAS_LIST.map(kelas => (
+                        {availableClasses.map(kelas => (
                         <SelectItem key={kelas} value={kelas}>
                             {kelas}
                         </SelectItem>
