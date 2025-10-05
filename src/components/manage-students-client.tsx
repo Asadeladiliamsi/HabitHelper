@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Pencil, Trash2, Search, Link2, UserCheck } from 'lucide-react';
+import { Loader2, MoreHorizontal, PlusCircle, Pencil, Trash2, Search, Link2, UserCheck } from 'lucide-react';
 import type { Student, UserProfile, Habit } from '@/lib/types';
 import { StudentDialog } from '@/components/student-dialog';
 import { translations } from '@/lib/translations';
