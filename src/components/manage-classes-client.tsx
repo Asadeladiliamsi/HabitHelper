@@ -2,17 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, doc, setDoc, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, doc, setDoc } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Switch } from '@/components/ui/switch';
 import { Loader2 } from 'lucide-react';
 import { Label } from './ui/label';
-
-interface ClassData {
-    id: string;
-    isLocked: boolean;
-}
+import type { ClassData } from '@/lib/types';
 
 const KELAS_LIST = [
     "7 Ruang 1", "7 Ruang 2", "7 Ruang 3", "7 Ruang 4", "7 Ruang 5", "7 Ruang 6", "7 Ruang 7", "7 Ruang 8", "7 Ruang 9",
@@ -32,7 +28,7 @@ export function ManageClassesClient() {
             
             const allClassData: ClassData[] = KELAS_LIST.map(className => {
                 const found = fetchedClasses.find(c => c.id === className);
-                return found || { id: className, isLocked: false };
+                return found || { id: className, isLocked: false, name: className };
             });
 
             setClasses(allClassData.sort((a,b) => a.id.localeCompare(b.id)));

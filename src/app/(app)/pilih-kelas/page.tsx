@@ -41,10 +41,8 @@ export default function PilihKelasPage() {
   useEffect(() => {
     // Fetch available classes from Firestore
     const classesRef = collection(db, 'classes');
-    const q = query(classesRef, where('isLocked', '==', false));
     
-    const unsubClasses = onSnapshot(q, (snapshot) => {
-        const lockedClasses = snapshot.docs.map(doc => doc.id);
+    const unsubClasses = onSnapshot(classesRef, (snapshot) => {
         const allFetchedClasses = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}) as ClassData);
 
         const unlockedClassNames = PREDEFINED_KELAS_LIST.filter(className => {
@@ -55,6 +53,10 @@ export default function PilihKelasPage() {
 
         setAvailableClasses(unlockedClassNames);
         setClassesLoading(false);
+    }, (error) => {
+        console.error("Error fetching classes: ", error);
+        setClassesLoading(false);
+        setAvailableClasses(PREDEFINED_KELAS_LIST); // Fallback to all classes on error
     });
 
     return () => unsubClasses();
