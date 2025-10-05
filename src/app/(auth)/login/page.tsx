@@ -10,18 +10,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 
 // Konfigurasi FirebaseUI
 const uiConfig = {
-  signInFlow: 'popup',
-  signInSuccessUrl: '/dashboard',
+  // Menggunakan alur 'redirect' yang lebih andal untuk aplikasi web
+  signInFlow: 'redirect',
   signInOptions: [
     {
       provider: EmailAuthProvider.PROVIDER_ID,
       requireDisplayName: false, // Ini akan selalu menampilkan form login terlebih dahulu
     }
   ],
-  callbacks: {
-    // Hindari pengalihan otomatis, biarkan signInSuccessUrl yang menangani
-    signInSuccessWithAuthResult: () => true,
-  },
+  // signInSuccessUrl dan callbacks tidak diperlukan dalam mode redirect
+  // karena AppLayout akan menangani pengalihan setelah auth state berubah.
 };
 
 export default function LoginPage() {
