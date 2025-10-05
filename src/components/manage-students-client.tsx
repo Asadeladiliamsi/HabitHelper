@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Pencil, Trash2, Search, Link2 } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Pencil, Trash2, Search, Link2, UserCheck } from 'lucide-react';
 import type { Student, UserProfile, Habit } from '@/lib/types';
 import { StudentDialog } from '@/components/student-dialog';
 import { translations } from '@/lib/translations';
@@ -72,17 +72,11 @@ export function ManageStudentsClient() {
     setLinkParentDialogOpen(true);
   };
   
-  const addStudent = async (newStudentData: Omit<Student, 'id' | 'habits' | 'avatarUrl'>) => {
+  const addStudent = async (newStudentData: Omit<Student, 'id' | 'habits' | 'avatarUrl' | 'linkedUserUid'>) => {
     const nisnQuery = query(collection(db, 'students'), where('nisn', '==', newStudentData.nisn));
     const nisnSnapshot = await getDocs(nisnQuery);
     if (!nisnSnapshot.empty && newStudentData.nisn) {
       throw new Error(`NISN ${newStudentData.nisn} sudah digunakan oleh siswa lain.`);
-    }
-
-    const userLinkQuery = query(collection(db, 'students'), where('linkedUserUid', '==', newStudentData.linkedUserUid));
-    const userLinkSnapshot = await getDocs(userLinkQuery);
-    if (!userLinkSnapshot.empty) {
-        throw new Error(`Akun pengguna ini sudah ditautkan ke siswa lain.`);
     }
 
     const initialHabits: Habit[] = Object.entries(HABIT_DEFINITIONS).map(([habitName, subHabitNames], habitIndex) => ({
@@ -97,14 +91,14 @@ export function ManageStudentsClient() {
 
     await addDoc(collection(db, 'students'), {
       ...newStudentData,
-      class: '', // Class is always empty on creation
+      avatarUrl: `https://avatar.vercel.sh/${newStudentData.nisn}.png`, // Generate avatar from NISN
       habits: initialHabits,
       createdAt: serverTimestamp(),
       lockedDates: [],
     });
   };
 
-  const updateStudent = async (studentId: string, updatedData: Partial<Omit<Student, 'id' | 'habits' | 'avatarUrl'>>) => {
+  const updateStudent = async (studentId: string, updatedData: Partial<Omit<Student, 'id' | 'habits' | 'avatarUrl' | 'linkedUserUid'>>) => {
      if (updatedData.nisn) {
       const q = query(collection(db, 'students'), where('nisn', '==', updatedData.nisn));
       const querySnapshot = await getDocs(q);
@@ -128,17 +122,14 @@ export function ManageStudentsClient() {
   };
 
 
-  const handleDialogSave = async (studentData: Omit<Student, 'id' | 'habits' | 'avatarUrl'>) => {
+  const handleDialogSave = async (studentData: Omit<Student, 'id' | 'habits' | 'avatarUrl' | 'linkedUserUid'>) => {
     try {
       if (selectedStudent) {
-        // Teachers can no longer edit class, so we remove it from the update object
-        await updateStudent(selectedStudent.id, { nisn: studentData.nisn });
+        await updateStudent(selectedStudent.id, studentData);
+         toast({ title: "Sukses", description: "Data siswa berhasil diperbarui." });
       } else {
-        // Add new student (link user)
-        if (!studentData.linkedUserUid) {
-            throw new Error("Pengguna siswa harus dipilih.");
-        }
         await addStudent(studentData);
+        toast({ title: "Sukses", description: `Siswa ${studentData.name} berhasil ditambahkan.` });
       }
       setDialogOpen(false);
     } catch (error: any) {
@@ -165,7 +156,13 @@ export function ManageStudentsClient() {
   };
 
   const handleDeleteStudent = (studentId: string) => {
+    // You might want to add a confirmation dialog here
     deleteStudent(studentId);
+    toast({
+        variant: "destructive",
+        title: "Siswa Dihapus",
+        description: "Data siswa telah dihapus dari sistem.",
+      });
   }
 
   const filteredStudents = students.filter(student => {
@@ -197,7 +194,6 @@ export function ManageStudentsClient() {
           onOpenChange={setDialogOpen} 
           onSave={handleDialogSave}
           student={selectedStudent} 
-          studentUsers={unlinkedStudentUsers}
         />
       )}
       {selectedStudent && (
@@ -239,6 +235,7 @@ export function ManageStudentsClient() {
                 <TableRow>
                   <TableHead>{t.student}</TableHead>
                   <TableHead>NISN</TableHead>
+                  <TableHead>Status Akun</TableHead>
                   <TableHead>Orang Tua</TableHead>
                   <TableHead>{t.class}</TableHead>
                   <TableHead className="text-right">{t.actions}</TableHead>
@@ -253,24 +250,37 @@ export function ManageStudentsClient() {
                           <AvatarImage src={student.avatarUrl} alt={student.name} data-ai-hint="person portrait" />
                           <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
                         </Avatar>
-                        <span className="font-medium">{student.name}</span>
+                        <div className="flex flex-col">
+                            <span className="font-medium">{student.name}</span>
+                            <span className="text-xs text-muted-foreground">{student.email}</span>
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>
                         <span className="font-mono text-xs">{student.nisn}</span>
                     </TableCell>
                     <TableCell>
+                        {student.linkedUserUid ? (
+                            <Badge variant="default" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                <UserCheck className="mr-1 h-3 w-3" />
+                                Tertaut
+                            </Badge>
+                        ) : (
+                            <Badge variant="secondary">Belum Tertaut</Badge>
+                        )}
+                    </TableCell>
+                    <TableCell>
                         {student.parentName ? (
                             <Badge variant="outline">{student.parentName}</Badge>
                         ) : (
-                            <span className="text-xs text-muted-foreground">Belum ditautkan</span>
+                            <span className="text-xs text-muted-foreground">Belum ada</span>
                         )}
                     </TableCell>
                     <TableCell>
                       {student.class ? (
                         <Badge variant="secondary">{student.class}</Badge>
                       ) : (
-                        <Badge variant="destructive">Belum Pilih Kelas</Badge>
+                        <Badge variant="destructive">Belum Pilih</Badge>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
@@ -284,11 +294,11 @@ export function ManageStudentsClient() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => handleEditStudent(student)}>
                             <Pencil className="mr-2 h-4 w-4" />
-                            Lihat Detail
+                            Ubah Detail Siswa
                           </DropdownMenuItem>
                            <DropdownMenuItem onClick={() => handleOpenLinkParentDialog(student)}>
                             <Link2 className="mr-2 h-4 w-4" />
-                            Tautkan Orang Tua
+                            Tautkan Akun Orang Tua
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem 

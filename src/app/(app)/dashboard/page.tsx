@@ -57,7 +57,8 @@ export default function DashboardPage() {
               return () => unsubEntries();
             } else {
               setStudentData(null);
-              setDataLoading(false);
+              // Siswa sudah punya profil tapi belum tertaut. Arahkan ke halaman penautan.
+              router.replace('/link-account');
             }
           });
           // Return a function to unsubscribe from student data when profile changes
@@ -125,7 +126,8 @@ export default function DashboardPage() {
       } else {
          return (
              <div className="flex h-full w-full items-center justify-center">
-                 <p>Data siswa tidak ditemukan. Hubungi administrator.</p>
+                 <Loader2 className="h-8 w-8 animate-spin" />
+                 <p className="ml-2">Mengarahkan ke halaman penautan akun...</p>
              </div>
          );
       }

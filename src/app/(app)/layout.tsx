@@ -11,6 +11,7 @@ import {
   Loader2,
   Database,
   PencilLine,
+  Link2,
 } from 'lucide-react';
 import {
   SidebarProvider,
@@ -68,9 +69,9 @@ export default function AppLayout({
   const loading = authLoading || profileLoading;
 
   useEffect(() => {
-    // This is the safe place to perform side effects like redirection.
+    const allowedPaths = ['/login', '/signup', '/link-account'];
     if (!loading && (!user || !userProfile)) {
-       if (pathname !== '/login') {
+       if (!allowedPaths.includes(pathname)) {
            router.push('/login');
        }
     }
@@ -97,13 +98,24 @@ export default function AppLayout({
     }
   };
   
-  if (loading || !user || !userProfile) {
+  if (loading || (!user && !pathname.startsWith('/link-account'))) {
+     if (pathname === '/login' || pathname === '/signup') return <>{children}</>;
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
         <p className="ml-2">Mengalihkan ke halaman login...</p>
       </div>
     );
+  }
+   if (!userProfile && !loading && !pathname.startsWith('/link-account')) {
+      if (pathname === '/login' || pathname === '/signup') return <>{children}</>;
+      router.push('/login');
+      return (
+          <div className="flex h-screen items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin" />
+              <p className="ml-2">Profil tidak ditemukan. Mengalihkan...</p>
+          </div>
+      );
   }
   
   const dashboardTitle = getDashboardTitle();
@@ -116,6 +128,7 @@ export default function AppLayout({
     { href: '/data-master', icon: Database, label: 'Data Master', roles: ['guru', 'admin'] },
     { href: '/notifications', icon: Bell, label: 'Notifikasi', roles: ['guru', 'admin'] },
     { href: '/reports', icon: FileText, label: 'Laporan', roles: ['guru', 'admin'] },
+    { href: '/link-account', icon: Link2, label: 'Tautkan Akun', roles: ['siswa'] },
   ];
 
   return (
@@ -131,8 +144,11 @@ export default function AppLayout({
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
-            {navItems.map((item) => (
-              userProfile && item.roles.includes(userProfile.role) && (
+            {navItems.map((item) => {
+              if (!userProfile || !item.roles.includes(userProfile.role)) return null;
+              // Hide "Tautkan Akun" if already linked, but that logic is complex here.
+              // We'll rely on redirection for now.
+              return (
                 <SidebarMenuItem key={item.href}>
                   <Link href={item.href}>
                     <SidebarMenuButton
@@ -145,7 +161,7 @@ export default function AppLayout({
                   </Link>
                 </SidebarMenuItem>
               )
-            ))}
+            })}
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter>
