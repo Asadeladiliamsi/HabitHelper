@@ -8,6 +8,7 @@ import { translations } from '@/lib/translations';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/firebase/provider';
+import { ManageClassesClient } from '@/components/manage-classes-client';
 
 function DataMasterTabs() {
   const language = 'id';
@@ -15,12 +16,15 @@ function DataMasterTabs() {
   
   return (
     <Tabs defaultValue="data-input">
-      <TabsList className="grid w-full grid-cols-2">
+      <TabsList className="grid w-full grid-cols-3">
         <TabsTrigger value="data-input">
           {t.sidebar.dataInput}
         </TabsTrigger>
         <TabsTrigger value="manage-students">
           {t.sidebar.manageStudents}
+        </TabsTrigger>
+        <TabsTrigger value="manage-classes">
+          Manajemen Kelas
         </TabsTrigger>
       </TabsList>
       <TabsContent value="data-input" className="mt-6 space-y-6">
@@ -42,6 +46,9 @@ function DataMasterTabs() {
       </TabsContent>
       <TabsContent value="manage-students" className="mt-6">
         <ManageStudentsClient />
+      </TabsContent>
+      <TabsContent value="manage-classes" className="mt-6">
+        <ManageClassesClient />
       </TabsContent>
     </Tabs>
   )
