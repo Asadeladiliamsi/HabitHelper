@@ -162,17 +162,18 @@ export function ManageStudentsClient() {
         operation: 'delete',
       });
       errorEmitter.emit('permission-error', permissionError);
-       toast({
-        variant: "destructive",
-        title: "Gagal Menghapus",
-        description: "Tidak dapat menghapus siswa karena masalah izin.",
-      });
+       // Throw a user-facing error to be caught by the calling function
+       throw new Error("Tidak dapat menghapus siswa karena masalah izin.");
     });
   };
   
-  const linkParentToStudent = async (studentId: string, parentId: string, parentName: string) => {
+  const linkParentToStudent = async (studentId: string, parentId: string) => {
+    const parent = parentUsers.find(u => u.uid === parentId);
+    if (!parent) {
+        throw new Error("Akun orang tua tidak ditemukan.");
+    }
     const studentDocRef = doc(db, 'students', studentId);
-    const updateData = { parentId, parentName };
+    const updateData = { parentId, parentName: parent.name };
 
     updateDoc(studentDocRef, updateData)
     .catch(async (serverError) => {
@@ -207,13 +208,12 @@ export function ManageStudentsClient() {
   };
   
   const handleLinkParentSave = async (studentId: string, parentId: string) => {
-    const parent = parentUsers.find(u => u.uid === parentId);
-    if (parent) {
       try {
-        await linkParentToStudent(studentId, parent.uid, parent.name);
+        await linkParentToStudent(studentId, parentId);
+        const parent = parentUsers.find(u => u.uid === parentId);
         toast({
           title: "Sukses",
-          description: `Akun orang tua ${parent.name} berhasil ditautkan.`,
+          description: `Akun orang tua ${parent?.name || ''} berhasil ditautkan.`,
         });
         setLinkParentDialogOpen(false);
       } catch (error: any) {
@@ -223,7 +223,6 @@ export function ManageStudentsClient() {
             description: error.message,
           });
       }
-    }
   };
 
   const handleDeleteStudent = (student: Student) => {
@@ -233,6 +232,12 @@ export function ManageStudentsClient() {
             title: "Siswa Dihapus",
             description: `Data untuk ${student.name} telah dihapus.`,
         });
+    }).catch((error: any) => {
+         toast({
+            variant: "destructive",
+            title: "Gagal Menghapus",
+            description: error.message,
+          });
     });
   }
 
@@ -387,5 +392,3 @@ export function ManageStudentsClient() {
     </>
   );
 }
-
-    
