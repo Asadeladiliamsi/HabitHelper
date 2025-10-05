@@ -2,11 +2,34 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Aturan Terbuka untuk Pengembangan
-    // MENGIZINKAN SEMUA PENGGUNA YANG SUDAH LOGIN UNTUK MEMBACA DAN MENULIS SEMUA DATA.
-    // PERINGATAN: JANGAN GUNAKAN ATURAN INI DI LINGKUNGAN PRODUKSI.
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn() && isOwner(userId);
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && isOwner(userId);
+      allow delete: if isSignedIn() && isOwner(userId);
+    }
+    
+    match /students/{studentId} {
+      allow read, create, update, delete: if isSignedIn();
+    }
+    
+    match /habit_entries/{entryId} {
+      allow read, write: if isSignedIn();
+    }
+    
+    match /app_settings/{settingId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn(); // Admins should manage this, but allowing for now.
     }
   }
 }

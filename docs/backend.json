@@ -1,0 +1,103 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Represents a user's profile information.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "The user's unique ID." },
+        "email": { "type": "string", "format": "email", "description": "The user's email address." },
+        "name": { "type": "string", "description": "The user's full name." },
+        "role": { "type": "string", "enum": ["guru", "siswa", "orangtua", "admin"], "description": "The user's role." },
+        "nisn": { "type": "string", "description": "The student's national identification number (if role is 'siswa')." }
+      },
+      "required": ["uid", "email", "name", "role"]
+    },
+    "Student": {
+      "title": "Student",
+      "description": "Represents a student's data.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "nisn": { "type": "string" },
+        "class": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "linkedUserUid": { "type": "string" },
+        "avatarUrl": { "type": "string", "format": "uri" },
+        "habits": { "type": "array", "items": { "$ref": "#/entities/Habit" } },
+        "parentId": { "type": "string" },
+        "parentName": { "type": "string" },
+        "lockedDates": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "nisn", "class", "linkedUserUid"]
+    },
+    "Habit": {
+      "title": "Habit",
+      "description": "Represents a main habit with its sub-habits.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "subHabits": { "type": "array", "items": { "$ref": "#/entities/SubHabit" } }
+      },
+      "required": ["id", "name", "subHabits"]
+    },
+    "SubHabit": {
+      "title": "SubHabit",
+      "description": "Represents a specific aspect of a main habit.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "score": { "type": "number" }
+      },
+      "required": ["id", "name", "score"]
+    },
+    "HabitEntry": {
+        "title": "Habit Entry",
+        "description": "Represents a single score entry for a sub-habit on a specific date.",
+        "type": "object",
+        "properties": {
+            "studentId": { "type": "string" },
+            "habitName": { "type": "string" },
+            "subHabitName": { "type": "string" },
+            "score": { "type": "number" },
+            "date": { "type": "string", "format": "date-time" },
+            "recordedBy": { "type": "string" },
+            "timestamp": { "type": "string", "format": "date-time" }
+        },
+        "required": ["studentId", "habitName", "subHabitName", "score", "date", "recordedBy", "timestamp"]
+    },
+    "AppSettings": {
+        "title": "App Settings",
+        "description": "Global settings for the application.",
+        "type": "object",
+        "properties": {
+            "teacherCode": { "type": "string", "description": "The registration code for new teachers." }
+        }
+    }
+  },
+  "auth": {
+    "providers": ["email"]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Stores public profiles for all users."
+    },
+    "/students/{studentId}": {
+      "schema": { "$ref": "#/entities/Student" },
+      "description": "Stores detailed data for each student."
+    },
+    "/habit_entries/{entryId}": {
+        "schema": { "$ref": "#/entities/HabitEntry" },
+        "description": "Stores individual habit scores for each student on a given day."
+    },
+    "/app_settings/{settingId}": {
+        "schema": { "$ref": "#/entities/AppSettings" },
+        "description": "Stores global application settings, like registration codes."
+    }
+  }
+}
