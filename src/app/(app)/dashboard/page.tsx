@@ -8,7 +8,7 @@ import { AdminDashboardClient } from '@/components/admin-dashboard-client';
 import { useAuth } from '@/firebase/provider';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { collection, query, where, onSnapshot, doc, Timestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Student, HabitEntry } from '@/lib/types';
 
@@ -24,6 +24,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (profileLoading) return;
     if (!userProfile) {
+        // This case is handled by the layout redirect, but as a safeguard.
         router.replace('/login');
         return;
     }
@@ -33,11 +34,10 @@ export default function DashboardPage() {
     setDataLoading(true);
 
     if (role === 'siswa') {
-      // The student document ID is the same as the user UID
-      const studentDocRef = doc(db, 'students', userProfile.uid);
-      unsubStudents = onSnapshot(studentDocRef, (doc) => {
-        if (doc.exists()) {
-          const student = { id: doc.id, ...doc.data() } as Student;
+      const q = query(collection(db, 'students'), where('linkedUserUid', '==', userProfile.uid));
+      unsubStudents = onSnapshot(q, (snapshot) => {
+        if (!snapshot.empty) {
+          const student = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as Student;
           setStudentData(student);
           // If student has not selected a class, redirect them.
           if (!student.class) {
@@ -77,6 +77,8 @@ export default function DashboardPage() {
     }
 
     if (studentIds.length === 0) {
+      // For teachers and admins, entries are loaded inside DashboardClient.
+      // For others, if there are no student IDs, we can stop here.
       if (userProfile.role === 'guru' || userProfile.role === 'admin' || !dataLoading) {
         setHabitEntries([]);
       }
@@ -103,7 +105,7 @@ export default function DashboardPage() {
   }
 
   if (!userProfile) {
-     return null; // The useEffect above handles the redirect
+     return null; // The layout's useEffect handles the redirect
   }
 
   // Render the correct dashboard based on the role.
@@ -127,7 +129,8 @@ export default function DashboardPage() {
          );
       }
     default:
+      // Fallback redirect for any unknown roles or states
       router.replace('/login');
-      return null; // Fallback redirect
+      return null;
   }
 }

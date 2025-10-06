@@ -12,7 +12,7 @@ import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
-import { doc, updateDoc, onSnapshot, collection } from 'firebase/firestore';
+import { doc, updateDoc, onSnapshot, collection, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Student, ClassData } from '@/lib/types';
 
@@ -73,6 +73,7 @@ export default function PilihKelasPage() {
     }
     
     setDataLoading(true);
+    // The student document ID is the same as the user UID
     const studentDocRef = doc(db, 'students', user.uid);
     const unsub = onSnapshot(studentDocRef, (doc) => {
       if (doc.exists()) {
@@ -129,7 +130,9 @@ export default function PilihKelasPage() {
         title: 'Kelas Berhasil Disimpan',
         description: `Anda telah terdaftar di kelas ${data.kelas}. Mengalihkan ke dasbor...`,
       });
-      // The useEffect will now handle the redirect, no need for router.push or router.refresh
+      // The useEffect will now handle the redirect, but we can give it a little push
+      // by refreshing the router state, which might re-trigger auth checks.
+      router.refresh(); 
     } catch (error: any) {
       toast({
         variant: 'destructive',

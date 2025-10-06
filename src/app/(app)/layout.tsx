@@ -64,13 +64,14 @@ export default function AppLayout({
     );
   }
    
-  if (!userProfile) {
+  if (!user || !userProfile) {
      // This state is temporary as the redirect to /login should happen.
+     // Returning null or a loader prevents rendering children with incorrect auth state.
      return (
         <div className="flex h-screen items-center justify-center">
             <div className="flex flex-col items-center gap-4">
                 <Loader2 className="h-8 w-8 animate-spin" />
-                <p className="text-muted-foreground">Profil tidak ditemukan, mengalihkan...</p>
+                <p className="text-muted-foreground">Sesi tidak ditemukan, mengalihkan...</p>
             </div>
         </div>
     );
