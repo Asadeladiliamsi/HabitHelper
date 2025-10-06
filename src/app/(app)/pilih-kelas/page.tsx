@@ -12,7 +12,7 @@ import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
-import { doc, updateDoc, onSnapshot, query, collection, where, getDocs, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, onSnapshot, collection } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Student, ClassData } from '@/lib/types';
 
@@ -78,6 +78,7 @@ export default function PilihKelasPage() {
       if (doc.exists()) {
         const sData = { id: doc.id, ...doc.data() } as Student;
         setStudentData(sData);
+        // CRITICAL CHANGE: If class already exists, redirect from here.
         if (sData.class) {
           router.replace('/dashboard');
         }
@@ -110,7 +111,8 @@ export default function PilihKelasPage() {
   
   const loading = authLoading || dataLoading || classesLoading;
 
-  if (loading || !studentData) {
+  // Don't render the form if we already have a class and are about to redirect.
+  if (loading || studentData?.class) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin" />
@@ -127,8 +129,7 @@ export default function PilihKelasPage() {
         title: 'Kelas Berhasil Disimpan',
         description: `Anda telah terdaftar di kelas ${data.kelas}. Mengalihkan ke dasbor...`,
       });
-      // Refresh to trigger re-evaluation in /loading page
-      router.refresh(); 
+      // The useEffect will now handle the redirect, no need for router.push or router.refresh
     } catch (error: any) {
       toast({
         variant: 'destructive',

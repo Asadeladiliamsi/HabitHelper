@@ -141,13 +141,12 @@ export default function SignupPage() {
         description: 'Akun Anda telah dibuat. Mengalihkan...',
       });
 
-      // Arahkan siswa untuk memilih kelas, atau yang lain ke dashboard
+      // Arahkan siswa untuk memilih kelas, atau yang lain ke loading page
       if (data.role === 'siswa') {
-        router.push('/pilih-kelas');
+        router.replace('/pilih-kelas');
       } else {
-        router.push('/dashboard');
+        router.replace('/loading');
       }
-      router.refresh();
 
     } catch (error: any) {
       if (error.code === 'auth/email-already-in-use') {

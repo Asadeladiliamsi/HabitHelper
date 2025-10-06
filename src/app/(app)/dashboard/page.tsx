@@ -23,7 +23,6 @@ export default function DashboardPage() {
   useEffect(() => {
     if (profileLoading) return;
     if (!userProfile) {
-        // The /loading page should prevent this, but as a safeguard
         router.replace('/login');
         return;
     }
@@ -37,9 +36,17 @@ export default function DashboardPage() {
       const studentDocRef = doc(db, 'students', userProfile.uid);
       unsubStudents = onSnapshot(studentDocRef, (doc) => {
         if (doc.exists()) {
-          setStudentData({ id: doc.id, ...doc.data() } as Student);
+          const student = { id: doc.id, ...doc.data() } as Student;
+          setStudentData(student);
+          // If student has not selected a class, redirect them.
+          if (!student.class) {
+            router.replace('/pilih-kelas');
+          }
         } else {
           setStudentData(null);
+          // This state is unlikely but possible if student doc creation failed.
+          // Redirecting to class selection might allow recreation or shows an error.
+          router.replace('/pilih-kelas');
         }
         setDataLoading(false);
       });
@@ -49,7 +56,11 @@ export default function DashboardPage() {
          setChildStudents(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Student)));
          setDataLoading(false);
        });
-    } else { // 'guru' or 'admin'
+    } else if (role === 'admin') {
+      router.replace('/admin/dashboard');
+      return; // Stop further execution
+    }
+    else { // 'guru'
       setDataLoading(false);
     }
     
@@ -61,8 +72,8 @@ export default function DashboardPage() {
     if (!userProfile) return;
 
     let studentIds: string[] = [];
-    if (userProfile.role === 'siswa') {
-        studentIds = [userProfile.uid];
+    if (userProfile.role === 'siswa' && studentData) {
+        studentIds = [studentData.id];
     } else if (userProfile.role === 'orangtua') {
         studentIds = childStudents.map(s => s.id);
     }
@@ -81,7 +92,7 @@ export default function DashboardPage() {
 
     return () => unsubEntries();
 
-  }, [userProfile, childStudents, dataLoading]);
+  }, [userProfile, studentData, childStudents, dataLoading]);
 
 
   if (profileLoading || dataLoading) {
@@ -93,24 +104,8 @@ export default function DashboardPage() {
     );
   }
 
-  // The /loading page handles the primary routing, this is a safeguard.
   if (!userProfile) {
-     return (
-        <div className="flex h-full w-full items-center justify-center">
-            <p>Profil pengguna tidak ditemukan. Mengalihkan...</p>
-        </div>
-     );
-  }
-
-  // The check for class selection is now primarily on the /loading page.
-  // This is a secondary check in case the user navigates here directly.
-  if (userProfile.role === 'siswa' && studentData && !studentData.class) {
-      router.replace('/pilih-kelas');
-      return (
-        <div className="flex h-full w-full items-center justify-center">
-            <p>Anda belum memilih kelas. Mengalihkan...</p>
-        </div>
-      );
+     return null; // The useEffect above handles the redirect
   }
 
   // Render the correct dashboard based on the role.
@@ -118,30 +113,23 @@ export default function DashboardPage() {
     case 'guru':
       return <DashboardClient />;
     case 'admin':
-      // The /loading page should have already redirected. This is a safeguard.
-      router.replace('/admin/dashboard');
-      return null;
+      return null; // The useEffect above handles the redirect
     case 'orangtua':
       return <OrangTuaDashboardClient userProfile={userProfile} childStudents={childStudents} habitEntries={habitEntries} />;
     case 'siswa':
-      if (studentData) {
+      if (studentData?.class) { // Only render if student has a class
         return <SiswaDashboardClient studentData={studentData} habitEntries={habitEntries} />;
       } else {
+         // This state should be brief as the useEffect redirects to /pilih-kelas
          return (
              <div className="flex h-full w-full flex-col items-center justify-center gap-4">
-                 <p className='text-destructive font-semibold'>Gagal Memuat Data Siswa</p>
-                 <p className="text-sm text-muted-foreground">Data siswa yang tertaut dengan akun Anda tidak dapat ditemukan.</p>
-                 <p className="text-sm text-muted-foreground">Mohon hubungi administrator sekolah.</p>
+                 <Loader2 className="h-8 w-8 animate-spin" />
+                 <p className="text-muted-foreground">Anda belum memilih kelas. Mengalihkan...</p>
              </div>
          );
       }
     default:
-      // Should not happen, but as a fallback.
       router.replace('/login');
-      return (
-        <div className="flex h-full w-full items-center justify-center">
-          <p>Peran pengguna tidak dikenali. Mengalihkan...</p>
-        </div>
-      );
+      return null; // Fallback redirect
   }
 }
