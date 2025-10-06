@@ -17,6 +17,8 @@ import { LinkParentDialog } from './link-parent-dialog';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, serverTimestamp, getDocs, where, writeBatch, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { HABIT_DEFINITIONS } from '@/lib/types';
+import { FirestorePermissionError } from '@/lib/errors';
+import { errorEmitter } from '@/lib/error-emitter';
 
 export function ManageStudentsClient() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -43,8 +45,11 @@ export function ManageStudentsClient() {
         setLoading(false);
       },
       (error) => {
-        console.error("Error fetching students:", error)
-        toast({ variant: 'destructive', title: 'Gagal Memuat Siswa', description: 'Tidak dapat mengambil data siswa dari database.' });
+        const permissionError = new FirestorePermissionError({
+          path: 'students',
+          operation: 'list',
+        });
+        errorEmitter.emit('permission-error', permissionError);
         setLoading(false);
       }
     );
@@ -55,8 +60,11 @@ export function ManageStudentsClient() {
         setParentUsers(parentData);
       },
       (error) => {
-        console.error("Error fetching parents:", error)
-        toast({ variant: 'destructive', title: 'Gagal Memuat Orang Tua', description: 'Tidak dapat mengambil data orang tua dari database.' });
+        const permissionError = new FirestorePermissionError({
+          path: 'users',
+          operation: 'list',
+        });
+        errorEmitter.emit('permission-error', permissionError);
       }
     );
 
@@ -105,29 +113,40 @@ export function ManageStudentsClient() {
       class: newStudentData.class || '',
     };
 
-    return setDoc(studentDocRef, finalData);
+    setDoc(studentDocRef, finalData).catch(error => {
+       const permissionError = new FirestorePermissionError({
+          path: studentDocRef.path,
+          operation: 'create',
+          requestResourceData: finalData
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
   };
 
   const updateStudent = (studentId: string, updatedData: Partial<Omit<Student, 'id' | 'habits' | 'avatarUrl' | 'linkedUserUid'>>) => {
     const studentDocRef = doc(db, 'students', studentId);
     const finalData = { ...updatedData, updatedAt: serverTimestamp() };
     
-    return updateDoc(studentDocRef, finalData);
+    updateDoc(studentDocRef, finalData).catch(error => {
+        const permissionError = new FirestorePermissionError({
+            path: studentDocRef.path,
+            operation: 'update',
+            requestResourceData: finalData
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
   }
 
   const deleteStudent = async (studentId: string) => {
-    const batch = writeBatch(db);
     const studentDocRef = doc(db, 'students', studentId);
-    const userDocRef = doc(db, 'users', studentId);
-
-    const userDocSnap = await getDocs(query(collection(db, 'users'), where('uid', '==', studentId)));
-
-    batch.delete(studentDocRef);
-    if(!userDocSnap.empty) {
-        batch.delete(userDocSnap.docs[0].ref);
-    }
     
-    return batch.commit();
+    deleteDoc(studentDocRef).catch(error => {
+        const permissionError = new FirestorePermissionError({
+            path: studentDocRef.path,
+            operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
   };
   
   const linkParentToStudent = (studentId: string, parentId: string) => {
@@ -138,7 +157,14 @@ export function ManageStudentsClient() {
     const studentDocRef = doc(db, 'students', studentId);
     const updateData = { parentId, parentName: parent.name };
 
-    return updateDoc(studentDocRef, updateData);
+    updateDoc(studentDocRef, updateData).catch(error => {
+       const permissionError = new FirestorePermissionError({
+            path: studentDocRef.path,
+            operation: 'update',
+            requestResourceData: updateData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
   };
 
   const handleDialogSave = async (studentData: Omit<Student, 'id' | 'habits' | 'avatarUrl' | 'linkedUserUid'>) => {

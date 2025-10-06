@@ -29,6 +29,8 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { collection, addDoc, serverTimestamp, onSnapshot, query, doc, writeBatch, setDoc, getDocs, where, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Student, UserProfile } from '@/lib/types';
+import { FirestorePermissionError } from '@/lib/errors';
+import { errorEmitter } from '@/lib/error-emitter';
 
 const formSchema = z.object({
   studentId: z.string().min(1, 'Siswa harus dipilih.'),
@@ -81,7 +83,11 @@ export function DataInputClient({ studentId: lockedStudentId, allowedHabits }: D
         setStudents(studentData);
         setStudentsLoading(false);
     }, (error) => {
-        console.error("Error fetching students:", error);
+        const permissionError = new FirestorePermissionError({
+          path: 'students',
+          operation: 'list',
+        });
+        errorEmitter.emit('permission-error', permissionError);
         setStudentsLoading(false);
     });
 
@@ -147,8 +153,17 @@ export function DataInputClient({ studentId: lockedStudentId, allowedHabits }: D
       recordedBy: userProfile.uid,
       timestamp: serverTimestamp()
     };
+    
+    const habitEntriesRef = collection(db, 'habit_entries');
 
-    await addDoc(collection(db, 'habit_entries'), newEntry);
+    addDoc(habitEntriesRef, newEntry).catch(error => {
+       const permissionError = new FirestorePermissionError({
+          path: habitEntriesRef.path,
+          operation: 'create',
+          requestResourceData: newEntry
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
   };
 
   const onSubmit = async (data: FormValues) => {
@@ -172,7 +187,8 @@ export function DataInputClient({ studentId: lockedStudentId, allowedHabits }: D
       });
 
     } catch (error: any) {
-      console.error("Failed to save habit entry:", error);
+      // This catch is for client-side errors, not Firestore permission errors
+      // which are now handled in addHabitEntry.
       toast({
         variant: "destructive",
         title: "Gagal Menyimpan",

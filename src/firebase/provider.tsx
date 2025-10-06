@@ -5,6 +5,8 @@ import { type User, onAuthStateChanged } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
 import { auth, db } from '@/lib/firebase';
+import { errorEmitter } from '@/lib/error-emitter';
+import { FirestorePermissionError } from '@/lib/errors';
 
 interface FirebaseContextValue {
   user: User | null;
@@ -47,7 +49,14 @@ export const FirebaseProvider = ({ children }: { children: React.ReactNode }) =>
         }
         setLoading(false);
       }, (error) => {
-        console.error("Error fetching user profile:", error);
+        // Create the rich, contextual error asynchronously.
+        const permissionError = new FirestorePermissionError({
+          path: userDocRef.path,
+          operation: 'get',
+        });
+        // Emit the error with the global error emitter
+        errorEmitter.emit('permission-error', permissionError);
+
         setUserProfile(null);
         setLoading(false);
       });
