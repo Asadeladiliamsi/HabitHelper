@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import type { UserProfile } from '@/lib/types';
+import type { UserProfile, Student } from '@/lib/types';
 import Link from 'next/link';
 
 const formSchema = z.object({
@@ -59,30 +59,30 @@ export default function LoginPage() {
 
         if (userDoc.exists()) {
           const userProfile = userDoc.data() as UserProfile;
-          // Role-based redirection logic
-          if (userProfile.role === 'admin') {
-            router.push('/admin/dashboard');
-          } else if (userProfile.role === 'siswa') {
-            // For students, check if they have a class set
+          
+          if (userProfile.role === 'siswa') {
             const studentDocRef = doc(db, 'students', user.uid);
             const studentDoc = await getDoc(studentDocRef);
-            if (studentDoc.exists() && studentDoc.data().class) {
-                router.push('/dashboard');
+            if (studentDoc.exists()) {
+                const studentData = studentDoc.data() as Student;
+                if (studentData.class) {
+                    router.push('/dashboard');
+                } else {
+                    router.push('/pilih-kelas');
+                }
             } else {
-                router.push('/pilih-kelas');
+                 // This case indicates an issue, maybe student document was not created.
+                 // Fallback to class selection, it might handle it.
+                 router.push('/pilih-kelas');
             }
-          }
-          else {
-            router.push('/dashboard');
+          } else {
+             // For admin, guru, orangtua
+             router.push('/dashboard');
           }
         } else {
-          // This case should ideally not happen with the new signup flow
-          // but as a fallback, we direct to login.
           setErrorMessage("Profil pengguna tidak ditemukan. Silakan hubungi admin.");
           setIsSubmitting(false);
-          return;
         }
-        router.refresh();
       }
     } catch (error: any) {
       if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {

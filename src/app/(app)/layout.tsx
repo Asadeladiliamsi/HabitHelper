@@ -27,11 +27,8 @@ import {
 import { ThemeToggle } from '@/components/theme-toggle';
 import { useAuth } from '@/firebase/provider';
 import { signOut } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
-import { useEffect, useState } from 'react';
-import { collection, query, where, getDocs, doc } from 'firebase/firestore';
-import type { Student } from '@/lib/types';
-
+import { auth } from '@/lib/firebase';
+import { useEffect } from 'react';
 
 export default function AppLayout({
   children,
@@ -43,36 +40,10 @@ export default function AppLayout({
   const { user, userProfile, loading } = useAuth();
   
   useEffect(() => {
-    if (loading) return; // Wait until authentication state is resolved
-
-    if (!user) {
-        // If not logged in, always redirect to login
-        router.replace('/login');
-        return;
+    if (!loading && !user) {
+      router.replace('/login');
     }
-
-    if (userProfile) {
-        // If profile is loaded, perform role-based checks
-        if (userProfile.role === 'admin' && !pathname.startsWith('/admin')) {
-             router.replace('/admin/dashboard');
-        } else if (userProfile.role === 'siswa') {
-            // For students, check if they have selected a class
-            const studentDocRef = doc(db, 'students', user.uid);
-            getDocs(query(collection(db, 'students'), where('linkedUserUid', '==', user.uid))).then(studentSnapshot => {
-                if (!studentSnapshot.empty) {
-                    const studentData = studentSnapshot.docs[0].data() as Student;
-                    if (!studentData.class && pathname !== '/pilih-kelas') {
-                        // If class is not set, redirect to class selection
-                        router.replace('/pilih-kelas');
-                    }
-                } 
-                // No need for an else block to redirect to link-account anymore
-            });
-        }
-    }
-    // If profile is still loading, children will show their own loading state.
-    
-  }, [loading, user, userProfile, router, pathname]);
+  }, [loading, user, router]);
 
 
   const handleLogout = async () => {
@@ -89,8 +60,6 @@ export default function AppLayout({
     );
   }
    
-  // Do not render the main layout if the profile is not yet loaded,
-  // as the page content might depend on it. Let the page itself handle its loading state.
   if (!userProfile) {
     return (
         <div className="flex h-screen items-center justify-center">
