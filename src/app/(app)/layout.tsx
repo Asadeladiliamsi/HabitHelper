@@ -10,7 +10,6 @@ import {
   LogOut,
   Loader2,
   Database,
-  PencilLine,
 } from 'lucide-react';
 import {
   SidebarProvider,
@@ -81,12 +80,8 @@ export default function AppLayout({
 
   const navItems = [
     { href: dashboardPath, icon: LayoutDashboard, label: 'Dasbor', roles: ['guru', 'siswa', 'admin', 'orangtua'] },
-    // Guru's main data entry page
-    { href: '/input-data', icon: Database, label: 'Input Data & Manajemen', roles: ['guru', 'admin'] },
-    // Student's dedicated data entry page
-    { href: '/input-data-siswa', icon: PencilLine, label: 'Input Data Harian', roles: ['siswa'] },
-    // Parent's data entry page
-    { href: '/orangtua/input-data', icon: PencilLine, label: 'Input Data Anak', roles: ['orangtua'] },
+    // Simplified single data entry page for all relevant roles.
+    { href: '/input-data', icon: Database, label: 'Input Data', roles: ['guru', 'admin', 'siswa', 'orangtua'] },
     { href: '/notifications', icon: Bell, label: 'Notifikasi', roles: ['guru', 'admin'] },
     { href: '/reports', icon: FileText, label: 'Laporan', roles: ['guru', 'admin'] },
   ];
