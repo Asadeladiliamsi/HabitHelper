@@ -1,156 +1,88 @@
 /**
- * @fileoverview Firestore Security Rules for Prototyping.
+ * @file Firestore Security Rules
+ * @description This ruleset prioritizes ease of use for teachers by granting them full access to all collections. Other user roles (students, parents) are not considered in this prototyping phase.
  *
- * Core Philosophy:
- * This ruleset prioritizes strict user-based authorization while relaxing data validation to accelerate prototyping.
- * All data access is controlled by user identity, with clearly defined ownership for user profiles and student data.
- * Data consistency is maintained for critical fields like user IDs in paths and documents.
+ * @dataStructure
+ *   - /users/{userId}: Stores public user profiles, accessible to all.
+ *   - /students/{studentId}: Stores student data.
+ *   - /habit_entries/{entryId}: Stores habit entry data.
+ *   - /app_settings/{settingId}: Stores global app settings.
+ *   - /classes/{classId}: Stores class data.
  *
- * Data Structure:
- * - /users/{userId}: Stores public user profiles, accessible only to the owner.
- * - /students/{studentId}: Stores student data, accessible only to authenticated users.
- * - /habit_entries/{entryId}: Stores individual habit scores, accessible only to authenticated users.
- * - /app_settings/{settingId}: Stores global app settings.
- * - /classes/{classId}: Stores class data and settings.
- *
- * Key Security Decisions:
- * - Users can only read and write their own profile data.
- * - Students data are only accessible to authenticated users.
- * - `list` operations are restricted on `users` and other collections containing private data.
- * - No data type or format validation is enforced beyond ownership checks.
- *
- * Denormalization for Authorization:
- * No denormalization is explicitly required in this ruleset based on the provided schema and access patterns.
+ * @keySecurityDecisions
+ *   - Teachers (users with the "guru" role) have full read and write access to all collections. This simplifies initial development and testing.
+ *   - The ruleset does NOT perform extensive data validation in this prototype phase, focusing instead on role-based access control.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Defines whether the user is signed in.
-     * @returns {boolean} True if the user is signed in, false otherwise.
+     * @description Manages access to user profiles. Teachers can read and write all user profiles.
+     * @path /users/{userId}
+     * @allow (get, list, create, update, delete) User with role 'guru'.
+     * @deny (create, update, delete) User without role 'guru'.
+     * @principle Grants full access to teachers.
      */
+    match /users/{userId} {
+      allow get, list: if isSignedIn() && isGuru();
+      allow create, update, delete: if isSignedIn() && isGuru();
+    }
+
+    /**
+     * @description Manages access to student data. Teachers can read and write all student data.
+     * @path /students/{studentId}
+     * @allow (get, list, create, update, delete) User with role 'guru'.
+     * @deny (create, update, delete) User without role 'guru'.
+     * @principle Grants full access to teachers.
+     */
+    match /students/{studentId} {
+      allow get, list: if isSignedIn() && isGuru();
+      allow create, update, delete: if isSignedIn() && isGuru();
+    }
+
+    /**
+     * @description Manages access to habit entry data. Teachers can read and write all habit entries.
+     * @path /habit_entries/{entryId}
+     * @allow (get, list, create, update, delete) User with role 'guru'.
+     * @deny (create, update, delete) User without role 'guru'.
+     * @principle Grants full access to teachers.
+     */
+    match /habit_entries/{entryId} {
+      allow get, list: if isSignedIn() && isGuru();
+      allow create, update, delete: if isSignedIn() && isGuru();
+    }
+
+    /**
+     * @description Manages access to app settings. Teachers can read and write all app settings.
+     * @path /app_settings/{settingId}
+     * @allow (get, list, create, update, delete) User with role 'guru'.
+     * @deny (create, update, delete) User without role 'guru'.
+     * @principle Grants full access to teachers.
+     */
+    match /app_settings/{settingId} {
+      allow get, list: if isSignedIn() && isGuru();
+      allow create, update, delete: if isSignedIn() && isGuru();
+    }
+
+    /**
+     * @description Manages access to class data. Teachers can read and write all class data.
+     * @path /classes/{classId}
+     * @allow (get, list, create, update, delete) User with role 'guru'.
+     * @deny (create, update, delete) User without role 'guru'.
+     * @principle Grants full access to teachers.
+     */
+    match /classes/{classId} {
+      allow get, list: if isSignedIn() && isGuru();
+      allow create, update, delete: if isSignedIn() && isGuru();
+    }
+
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /**
-     * @description Defines whether the user is the owner of the resource.
-     * @param {string} userId - The user ID to compare against the request's auth UID.
-     * @returns {boolean} True if the user is the owner, false otherwise.
-     */
-    function isOwner(userId) {
-        return isSignedIn() && request.auth.uid == userId;
-    }
-
-    /**
-     * @description Defines whether the user is the owner of the resource, verifying existence.
-     * @param {string} userId - The user ID to compare against the resource's UID.
-     * @returns {boolean} True if the user is the existing owner, false otherwise.
-     */
-    function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
-    }
-
-    /**
-     * @description Security rules for user profiles.
-     * @path /users/{userId}
-     * @allow (create) User with UID 'user123' creates their own profile.
-     * @allow (get) User with UID 'user123' reads their own profile.
-     * @allow (update) User with UID 'user123' updates their own profile.
-     * @allow (delete) User with UID 'user123' deletes their own profile.
-     * @deny (create) User with UID 'user123' tries to create profile for 'user456'.
-     * @deny (get) User with UID 'user123' tries to read profile of 'user456'.
-     * @deny (update) User with UID 'user123' tries to update profile of 'user456'.
-     * @deny (delete) User with UID 'user123' tries to delete profile of 'user456'.
-     * @principle Enforces document ownership for writes.
-     */
-    match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
-    }
-
-    /**
-     * @description Security rules for student data.
-     * @path /students/{studentId}
-     * @allow (create) Authenticated user creates student data.
-     * @allow (get) Authenticated user gets student data.
-     * @allow (update) Authenticated user updates student data.
-     * @allow (delete) Authenticated user deletes student data.
-     * @deny (create) Unauthenticated user tries to create student data.
-     * @deny (get) Unauthenticated user tries to read student data.
-     * @deny (update) Unauthenticated user tries to update student data.
-     * @deny (delete) Unauthenticated user tries to delete student data.
-     * @principle Authenticated access to student data.
-     */
-    match /students/{studentId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn();
-      allow delete: if isSignedIn();
-    }
-
-     /**
-      * @description Security rules for habit entries.
-      * @path /habit_entries/{entryId}
-      * @allow (create) Authenticated user creates a habit entry.
-      * @allow (get) Authenticated user gets a habit entry.
-      * @allow (update) Authenticated user updates a habit entry.
-      * @allow (delete) Authenticated user deletes a habit entry.
-      * @deny (create) Unauthenticated user tries to create a habit entry.
-      * @deny (get) Unauthenticated user tries to read a habit entry.
-      * @deny (update) Unauthenticated user tries to update a habit entry.
-      * @deny (delete) Unauthenticated user tries to delete a habit entry.
-      * @principle Authenticated access to habit entry data.
-      */
-    match /habit_entries/{entryId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn();
-      allow delete: if isSignedIn();
-    }
-
-    /**
-     * @description Security rules for app settings.
-     * @path /app_settings/{settingId}
-     * @allow (get) Anyone can get app settings.
-     * @deny (create) No one can create app settings.
-     * @deny (update) No one can update app settings.
-     * @deny (delete) No one can delete app settings.
-     * @principle Public read-only access.
-     */
-    match /app_settings/{settingId} {
-      allow get: if true;
-      allow list: if true; // Assuming listing is also intended to be public. If not, change to `if false;`
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
-    }
-
-    /**
-     * @description Security rules for class data.
-     * @path /classes/{classId}
-     * @allow (create) Authenticated user creates class data.
-     * @allow (get) Authenticated user gets class data.
-     * @allow (update) Authenticated user updates class data.
-     * @allow (delete) Authenticated user deletes class data.
-     * @deny (create) Unauthenticated user tries to create class data.
-     * @deny (get) Unauthenticated user tries to read class data.
-     * @deny (update) Unauthenticated user tries to update class data.
-     * @deny (delete) Unauthenticated user tries to delete class data.
-     * @principle Authenticated access to class data.
-     */
-    match /classes/{classId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn();
-      allow delete: if isSignedIn();
+    function isGuru() {
+      return request.auth.token.role == 'guru';
     }
   }
 }
