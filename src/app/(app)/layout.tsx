@@ -41,7 +41,6 @@ export default function AppLayout({
   
   useEffect(() => {
     // This effect now only handles LOGOUT.
-    // The main routing logic is handled by the /loading page.
     if (!loading && !user) {
       router.replace('/login');
     }
@@ -54,7 +53,6 @@ export default function AppLayout({
   };
   
   // While the auth state is loading, show a global spinner.
-  // This prevents rendering pages that might make incorrect assumptions.
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -66,11 +64,8 @@ export default function AppLayout({
     );
   }
    
-  // If loading is finished but there's no profile, it means something is wrong
-  // or user is not fully authenticated. Let the /loading page or login page handle it.
-  // We render the children to avoid flashes of content, but protected routes
-  // should handle this case individually if needed.
   if (!userProfile) {
+     // This state is temporary as the redirect to /login should happen.
      return (
         <div className="flex h-screen items-center justify-center">
             <div className="flex flex-col items-center gap-4">
@@ -85,9 +80,12 @@ export default function AppLayout({
 
   const navItems = [
     { href: dashboardPath, icon: LayoutDashboard, label: 'Dasbor', roles: ['guru', 'siswa', 'admin', 'orangtua'] },
-    { href: '/input-data', icon: PencilLine, label: 'Input Data Harian', roles: ['siswa'] },
+    // Guru's main data entry page
+    { href: '/input-data', icon: Database, label: 'Input Data', roles: ['guru', 'admin'] },
+    // Student's dedicated data entry page
+    { href: '/input-data-siswa', icon: PencilLine, label: 'Input Data Harian', roles: ['siswa'] },
+    // Parent's data entry page
     { href: '/orangtua/input-data', icon: PencilLine, label: 'Input Data Anak', roles: ['orangtua'] },
-    { href: '/data-master', icon: Database, label: 'Data Master', roles: ['guru', 'admin'] },
     { href: '/notifications', icon: Bell, label: 'Notifikasi', roles: ['guru', 'admin'] },
     { href: '/reports', icon: FileText, label: 'Laporan', roles: ['guru', 'admin'] },
   ];
