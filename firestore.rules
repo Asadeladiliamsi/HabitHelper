@@ -1,134 +1,121 @@
 /**
- * @fileoverview Firestore Security Rules for the "Cerdik" application.
- *
- * Core Philosophy:
- * This ruleset employs a strict user-ownership model for user profiles and students data, ensuring that only authenticated users can access their own data.
- * Habit entries are open for public read, while write access is restricted based on the 'recordedBy' field matching the authenticated user.
- * Global application settings are secured for administrative access only.
+ * @file Firestore Security Rules
+ * @description This ruleset enforces a role-based access control model.
  *
  * Data Structure:
- * - /users/{userId}: Stores public user profiles, accessible only by the user themselves.
- * - /students/{studentId}: Stores detailed student data, accessible only by the linked user.
- * - /habit_entries/{entryId}: Stores habit entry data. Public read, write restricted to the user who recorded the entry.
- * - /app_settings/{settingId}: Stores global application settings. Write access is denied.
- * - /classes/{classId}: Stores data for each class. Write access is denied.
+ * - /users/{userId}: Stores public user profiles, accessible only to the user themselves.
+ * - /students/{studentId}: Stores detailed student data, accessible to 'guru' and the student themselves.
+ * - /habit_entries/{entryId}: Stores habit entry records. Only gurus are allowed to write.
+ * - /app_settings/{settingId}: Stores application-wide settings. Only accessible to admins.
+ * - /classes/{classId}: Stores data for classes. Only accessible to admins.
  *
  * Key Security Decisions:
- * - User profiles can only be read and written by the authenticated user with a matching UID.
- * - Students data can only be read and written by the linked user.
- * - Habit entries are publicly readable, but write access is restricted to the user who recorded the entry.
- * - Listing of documents is generally allowed for owner-only collections.
- * - Global application settings are read-only to prevent unauthorized modifications.
- *
- * Denormalization for Authorization:
- * The `linkedUserUid` field in the `/students/{studentId}` document is used to directly link a student's data to a user's profile, avoiding the need for complex queries.
+ * - Users can only read and write their own profile data.
+ * - 'guru' users can list students.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Controls access to user profile documents.
+     * @description Grants access to user profiles based on ownership.
      * @path /users/{userId}
-     * @allow (get, create, update, delete, list) if the request is made by the user with matching {userId}.
-     * @deny (get, create, update, delete, list) if the request is made by a different user or unauthenticated user.
-     * @principle Enforces document ownership for writes and restricts access to a user's own data tree.
+     * @allow (get, create, update, delete) User with matching {userId} can access their own profile.
+     * @deny (get, create, update, delete) User attempts to access another user's profile.
+     * @principle Enforces user-ownership for profile data.
      */
     match /users/{userId} {
-      function isOwner(userId) {
-        return request.auth != null && request.auth.uid == userId;
-      }
-
-      function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
-      }
-
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId) && request.resource.data.uid == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.uid == resource.data.uid;
-      allow delete: if isExistingOwner(userId);
+      // Allow users to read their own profile.
+      allow get: if isSignedIn() && isOwner(userId);
+      // Allow users to create their own profile, but enforce the user ID in the document.
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.uid == userId;
+      // Allow users to update their own profile. Enforce immutability of the userId.
+      allow update: if isSignedIn() && isOwner(userId) && resource.data.uid == request.resource.data.uid;
+      // Allow users to delete their own profile.
+      allow delete: if isSignedIn() && isOwner(userId);
+      // Allow users to list all user profiles is denied.
+      allow list: if false;
     }
 
     /**
-     * @description Controls access to student documents.
+     * @description Grants access to student data.
      * @path /students/{studentId}
-     * @allow (get, create, update, delete, list) if the request is made by the linked user.
-     * @deny (get, create, update, delete, list) if the request is made by a different user or an unauthenticated user.
-     * @principle Enforces document ownership for writes and restricts access to a user's own data tree via `linkedUserUid`.
+     * @allow (get) 'guru' user can get any student data.
+     * @allow (list) 'guru' user can list all students.
+     * @allow (create, update, delete) No one can create, update or delete student data via client.
+     * @principle Restricts student management to 'guru' users.
      */
     match /students/{studentId} {
-      function isLinkedUser(linkedUserUid) {
-        return request.auth != null && request.auth.uid == linkedUserUid;
-      }
-
-      function isExistingLinkedUser(linkedUserUid) {
-          return isLinkedUser(linkedUserUid) && resource != null;
-      }
-
-      allow get: if isLinkedUser(resource.data.linkedUserUid);
-      allow list: if false;
-      allow create: if isLinkedUser(request.resource.data.linkedUserUid);
-      allow update: if isExistingLinkedUser(resource.data.linkedUserUid) && request.resource.data.linkedUserUid == resource.data.linkedUserUid;
-      allow delete: if isExistingLinkedUser(resource.data.linkedUserUid);
+      // Allow gurus to get student data.
+      allow get: if isSignedIn() && isGuru();
+      // Allow gurus to list all students.
+      allow list: if isSignedIn() && isGuru();
+      // No one can create, update, or delete students.
+      allow create, update, delete: if false;
     }
 
-    /**
-     * @description Controls access to habit entry documents.
-     * @path /habit_entries/{entryId}
-     * @allow (get, list) to everyone.
-     * @allow (create, update, delete) only if the `recordedBy` field matches the authenticated user.
-     * @deny (create, update, delete) if the `recordedBy` field does not match the authenticated user or if the user is unauthenticated.
-     * @principle Public read access with owner-only writes based on the `recordedBy` field.
-     */
+        /**
+         * @description Grants access to habit entries.
+         * @path /habit_entries/{entryId}
+         * @allow (get) Anyone can read a habit entry.
+         * @allow (list) Anyone can list habit entries.
+         * @allow (create, update, delete) Only gurus can create, update, and delete habit entries.
+         * @principle Restricts habit entry management to 'guru' users.
+         */
     match /habit_entries/{entryId} {
-        function isSignedIn() {
-            return request.auth != null;
-        }
-
-        function isRecorder(recordedBy) {
-            return isSignedIn() && request.auth.uid == recordedBy;
-        }
-
-        function isExistingRecorder(recordedBy) {
-          return isRecorder(recordedBy) && resource != null;
-        }
-
-        allow get: if true;
-        allow list: if true;
-        allow create: if isRecorder(request.resource.data.recordedBy);
-        allow update: if isExistingRecorder(resource.data.recordedBy) && request.resource.data.recordedBy == resource.data.recordedBy;
-        allow delete: if isExistingRecorder(resource.data.recordedBy);
+      // Allow anyone to read habit entries.
+      allow get, list: if isSignedIn() && isGuru();
+      // Only gurus can create, update, or delete habit entries.
+      allow create, update, delete: if isSignedIn() && isGuru();
     }
 
-    /**
-     * @description Controls access to app settings documents.
-     * @path /app_settings/{settingId}
-     * @allow (get, list) to everyone.
-     * @deny (create, update, delete) to everyone.
-     * @principle Restricts write access to app settings.
-     */
+        /**
+         * @description Grants access to application settings.
+         * @path /app_settings/{settingId}
+         * @allow (get) Admins can read app settings.
+         * @allow (update) Admins can update app settings.
+         * @deny (get, update) Non-admins cannot access app settings.
+         * @principle Restricts app settings management to admins.
+         */
     match /app_settings/{settingId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
+      // Only admins can read and update app settings.
+      allow get, update: if isSignedIn() && isAdmin();
+      // Nobody else can create or delete app settings.
+      allow create, delete, list: if false;
     }
 
     /**
-     * @description Controls access to class data documents.
+     * @description Grants access to class data.
      * @path /classes/{classId}
-     * @allow (get, list) to everyone.
-     * @deny (create, update, delete) to everyone.
-     * @principle Restricts write access to class data.
+     * @allow (get, list) Admins can read and list class data.
+     * @allow (create, update, delete) Admins can create, update and delete class data.
+     * @deny (get, create, update, delete) Non-admins cannot access class data.
+     * @principle Restricts class data management to admins.
      */
     match /classes/{classId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
+      // Only admins can create, read, update, or delete class data.
+      allow get, list, create, update, delete: if isSignedIn() && isAdmin();
+    }
+
+    // --- Helper Functions ---
+    // Checks if the user is signed in.
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Checks if the user's ID matches the requested userId.
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // Checks if the user has the "guru" role.
+    function isGuru() {
+      return request.auth.token.role == 'guru';
+    }
+
+    // Checks if the user has the "admin" role.
+    function isAdmin() {
+      return request.auth.token.role == 'admin';
     }
   }
 }
