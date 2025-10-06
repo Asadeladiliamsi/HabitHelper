@@ -6,8 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,7 +14,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import type { UserProfile, Student } from '@/lib/types';
 import Link from 'next/link';
 
 const formSchema = z.object({
@@ -44,46 +42,13 @@ export default function LoginPage() {
     setErrorMessage(null);
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
-      const user = userCredential.user;
-
-      if (user) {
-        toast({
-          title: 'Login Berhasil',
-          description: 'Memuat data profil Anda...',
-        });
-
-        // Fetch user profile to decide where to redirect
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDoc = await getDoc(userDocRef);
-
-        if (userDoc.exists()) {
-          const userProfile = userDoc.data() as UserProfile;
-          
-          if (userProfile.role === 'siswa') {
-            const studentDocRef = doc(db, 'students', user.uid);
-            const studentDoc = await getDoc(studentDocRef);
-            if (studentDoc.exists()) {
-                const studentData = studentDoc.data() as Student;
-                if (studentData.class) {
-                    router.push('/dashboard');
-                } else {
-                    router.push('/pilih-kelas');
-                }
-            } else {
-                 // This case indicates an issue, maybe student document was not created.
-                 // Fallback to class selection, it might handle it.
-                 router.push('/pilih-kelas');
-            }
-          } else {
-             // For admin, guru, orangtua
-             router.push('/dashboard');
-          }
-        } else {
-          setErrorMessage("Profil pengguna tidak ditemukan. Silakan hubungi admin.");
-          setIsSubmitting(false);
-        }
-      }
+      await signInWithEmailAndPassword(auth, data.email, data.password);
+      toast({
+        title: 'Login Berhasil',
+        description: 'Mengarahkan ke aplikasi...',
+      });
+      // Redirect to a central loading/routing page
+      router.push('/loading');
     } catch (error: any) {
       if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
         setErrorMessage('Email atau kata sandi yang Anda masukkan salah. Mohon periksa kembali.');

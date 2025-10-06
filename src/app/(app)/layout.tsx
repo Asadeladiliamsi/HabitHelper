@@ -40,6 +40,8 @@ export default function AppLayout({
   const { user, userProfile, loading } = useAuth();
   
   useEffect(() => {
+    // This effect now only handles LOGOUT.
+    // The main routing logic is handled by the /loading page.
     if (!loading && !user) {
       router.replace('/login');
     }
@@ -51,23 +53,29 @@ export default function AppLayout({
     router.push('/login');
   };
   
+  // While the auth state is loading, show a global spinner.
+  // This prevents rendering pages that might make incorrect assumptions.
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-        <p className="ml-2">Memuat sesi...</p>
+        <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <p className="text-muted-foreground">Memuat sesi pengguna...</p>
+        </div>
       </div>
     );
   }
    
+  // If loading is finished but there's no profile, it means something is wrong
+  // or user is not fully authenticated. Let the /loading page or login page handle it.
+  // We render the children to avoid flashes of content, but protected routes
+  // should handle this case individually if needed.
   if (!userProfile) {
-     // If still loading, show a spinner. If not loading and still no profile, it might be an error state
-     // but the dashboard or login page will handle the final redirection.
-    return (
+     return (
         <div className="flex h-screen items-center justify-center">
             <div className="flex flex-col items-center gap-4">
                 <Loader2 className="h-8 w-8 animate-spin" />
-                <p className="text-muted-foreground">Memuat profil pengguna...</p>
+                <p className="text-muted-foreground">Profil tidak ditemukan, mengalihkan...</p>
             </div>
         </div>
     );

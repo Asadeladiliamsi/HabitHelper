@@ -6,7 +6,6 @@ import { SiswaDashboardClient } from '@/components/siswa-dashboard-client';
 import { OrangTuaDashboardClient } from '@/components/orang-tua-dashboard-client';
 import { useAuth } from '@/firebase/provider';
 import { useRouter } from 'next/navigation';
-import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState } from 'react';
 import { collection, query, where, onSnapshot, doc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -24,15 +23,15 @@ export default function DashboardPage() {
   useEffect(() => {
     if (profileLoading) return;
     if (!userProfile) {
-        // If profile is still loading or not found, data loading is not yet complete.
-        setDataLoading(true);
+        // The /loading page should prevent this, but as a safeguard
+        router.replace('/login');
         return;
     }
 
     let unsubStudents: () => void = () => {};
     const role = userProfile.role;
-
     setDataLoading(true);
+
     if (role === 'siswa') {
       // The student document ID is the same as the user UID
       const studentDocRef = doc(db, 'students', userProfile.uid);
@@ -56,13 +55,12 @@ export default function DashboardPage() {
     
     return () => unsubStudents();
 
-  }, [profileLoading, userProfile]);
+  }, [profileLoading, userProfile, router]);
 
   useEffect(() => {
     if (!userProfile) return;
 
     let studentIds: string[] = [];
-    // The studentId for a 'siswa' is their own UID
     if (userProfile.role === 'siswa') {
         studentIds = [userProfile.uid];
     } else if (userProfile.role === 'orangtua') {
@@ -90,21 +88,22 @@ export default function DashboardPage() {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
-        <p className="ml-4 text-muted-foreground">Memuat data...</p>
+        <p className="ml-4 text-muted-foreground">Memuat data dasbor...</p>
       </div>
     );
   }
 
+  // The /loading page handles the primary routing, this is a safeguard.
   if (!userProfile) {
-     // This case is handled by the AppLayout, but as a fallback:
-     router.replace('/login');
      return (
         <div className="flex h-full w-full items-center justify-center">
             <p>Profil pengguna tidak ditemukan. Mengalihkan...</p>
         </div>
      );
   }
-  
+
+  // The check for class selection is now primarily on the /loading page.
+  // This is a secondary check in case the user navigates here directly.
   if (userProfile.role === 'siswa' && studentData && !studentData.class) {
       router.replace('/pilih-kelas');
       return (
@@ -114,11 +113,12 @@ export default function DashboardPage() {
       );
   }
 
-
+  // Render the correct dashboard based on the role.
   switch (userProfile.role) {
     case 'guru':
       return <DashboardClient />;
     case 'admin':
+      // The /loading page should have already redirected. This is a safeguard.
       router.replace('/admin/dashboard');
       return null;
     case 'orangtua':
@@ -136,6 +136,7 @@ export default function DashboardPage() {
          );
       }
     default:
+      // Should not happen, but as a fallback.
       router.replace('/login');
       return (
         <div className="flex h-full w-full items-center justify-center">
