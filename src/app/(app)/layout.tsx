@@ -29,7 +29,8 @@ import { useAuth } from '@/firebase/provider';
 import { signOut } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { useEffect, useState } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc } from 'firebase/firestore';
+import type { Student } from '@/lib/types';
 
 
 export default function AppLayout({
@@ -56,18 +57,16 @@ export default function AppLayout({
              router.replace('/admin/dashboard');
         } else if (userProfile.role === 'siswa') {
             // For students, check if they have selected a class
-            const studentQuery = query(collection(db, 'students'), where('linkedUserUid', '==', user.uid));
-            getDocs(studentQuery).then(studentSnapshot => {
+            const studentDocRef = doc(db, 'students', user.uid);
+            getDocs(query(collection(db, 'students'), where('linkedUserUid', '==', user.uid))).then(studentSnapshot => {
                 if (!studentSnapshot.empty) {
-                    const studentData = studentSnapshot.docs[0].data();
+                    const studentData = studentSnapshot.docs[0].data() as Student;
                     if (!studentData.class && pathname !== '/pilih-kelas') {
                         // If class is not set, redirect to class selection
                         router.replace('/pilih-kelas');
                     }
-                } else if (pathname !== '/link-account') {
-                    // If student data doesn't exist, they need to link their account
-                    router.replace('/link-account');
-                }
+                } 
+                // No need for an else block to redirect to link-account anymore
             });
         }
     }

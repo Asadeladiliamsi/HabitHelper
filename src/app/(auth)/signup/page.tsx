@@ -17,6 +17,9 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import Link from 'next/link';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import type { Habit } from '@/lib/types';
+import { HABIT_DEFINITIONS } from '@/lib/types';
+
 
 const formSchema = z.object({
   name: z.string().min(3, { message: 'Nama lengkap diperlukan.' }),
@@ -38,7 +41,7 @@ const formSchema = z.object({
     path: ['teacherCode'],
 }).refine(data => {
     // Jika peran adalah siswa, NISN harus diisi
-    if (data.role === 'siswa' && !data.nisn) {
+    if (data.role === 'siswa' && (!data.nisn || data.nisn.length < 3)) {
         return false;
     }
     return true;
@@ -75,7 +78,7 @@ export default function SignupPage() {
     setErrorMessage(null);
 
     try {
-        // 1. Validasi di muka (kode guru, dll.)
+        // 1. Validasi di muka (kode guru)
         if (data.role === 'guru') {
             const settingsDocRef = doc(db, 'app_settings', 'registration');
             const settingsDoc = await getDoc(settingsDocRef);
@@ -91,7 +94,7 @@ export default function SignupPage() {
       const user = userCredential.user;
       await updateProfile(user, { displayName: data.name });
 
-      // 3. Buat profil pengguna di Firestore menggunakan Batch
+      // 3. Buat profil pengguna dan data siswa (jika perlu) di Firestore menggunakan Batch
       const batch = writeBatch(db);
       const userDocRef = doc(db, 'users', user.uid);
       
@@ -104,6 +107,29 @@ export default function SignupPage() {
 
       if (data.role === 'siswa' && data.nisn) {
         userProfileData.nisn = data.nisn;
+        
+        // Buat dokumen siswa baru secara otomatis
+        const studentDocRef = doc(db, 'students', user.uid); // Gunakan UID pengguna sebagai ID dokumen siswa
+        const initialHabits: Habit[] = Object.entries(HABIT_DEFINITIONS).map(([habitName, subHabitNames], habitIndex) => ({
+          id: `${habitIndex + 1}`,
+          name: habitName,
+          subHabits: subHabitNames.map((subHabitName, subHabitIndex) => ({
+            id: `${habitIndex + 1}-${subHabitIndex + 1}`,
+            name: subHabitName,
+            score: 0, 
+          })),
+        }));
+
+        batch.set(studentDocRef, {
+            name: data.name,
+            nisn: data.nisn,
+            email: data.email,
+            linkedUserUid: user.uid,
+            class: '', // Kelas akan diisi nanti
+            avatarUrl: `https://avatar.vercel.sh/${data.nisn}.png`,
+            habits: initialHabits,
+            lockedDates: [],
+        });
       }
 
       batch.set(userDocRef, userProfileData);
@@ -112,14 +138,16 @@ export default function SignupPage() {
 
       toast({
         title: 'Pendaftaran Berhasil!',
-        description: 'Akun Anda telah dibuat. Mengalihkan ke halaman login...',
+        description: 'Akun Anda telah dibuat. Mengalihkan...',
       });
 
-      // Redirect ke halaman login setelah berhasil mendaftar
-      setTimeout(() => {
-          router.push('/login');
-          router.refresh();
-      }, 2000);
+      // Arahkan siswa untuk memilih kelas, atau yang lain ke dashboard
+      if (data.role === 'siswa') {
+        router.push('/pilih-kelas');
+      } else {
+        router.push('/dashboard');
+      }
+      router.refresh();
 
     } catch (error: any) {
       if (error.code === 'auth/email-already-in-use') {
@@ -128,8 +156,7 @@ export default function SignupPage() {
         setErrorMessage('Terjadi kesalahan saat pendaftaran. Silakan coba lagi.');
         console.error("Signup Error:", error);
       }
-    } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false); // Hanya set false jika terjadi error
     }
   };
 

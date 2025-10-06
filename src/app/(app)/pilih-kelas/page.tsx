@@ -12,7 +12,7 @@ import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
-import { doc, updateDoc, onSnapshot, query, collection, where, getDocs } from 'firebase/firestore';
+import { doc, updateDoc, onSnapshot, query, collection, where, getDocs, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Student, ClassData } from '@/lib/types';
 
@@ -70,23 +70,31 @@ export default function PilihKelasPage() {
     }
     
     setDataLoading(true);
-    const q = query(collection(db, 'students'), where('linkedUserUid', '==', user.uid));
-    const unsub = onSnapshot(q, (snapshot) => {
-      if (!snapshot.empty) {
-        const studentDoc = snapshot.docs[0];
-        const sData = { id: studentDoc.id, ...studentDoc.data() } as Student;
+    // Student doc ID is now the same as user UID
+    const studentDocRef = doc(db, 'students', user.uid);
+    const unsub = onSnapshot(studentDocRef, (doc) => {
+      if (doc.exists()) {
+        const sData = { id: doc.id, ...doc.data() } as Student;
         setStudentData(sData);
         if (sData.class) {
           router.replace('/dashboard');
         }
       } else {
+        // This might happen if the student doc wasn't created on signup, which would be an error.
+        // Or if the user is not a student.
         setStudentData(null);
+        toast({
+            variant: "destructive",
+            title: "Data Siswa Tidak Ditemukan",
+            description: "Data siswa Anda tidak dapat ditemukan. Mohon hubungi admin.",
+        });
+        router.replace('/login');
       }
       setDataLoading(false);
     });
 
     return () => unsub();
-  }, [user, authLoading, router]);
+  }, [user, authLoading, router, toast]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),

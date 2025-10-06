@@ -14,7 +14,7 @@ import { translations } from '@/lib/translations';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { LinkParentDialog } from './link-parent-dialog';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, serverTimestamp, getDocs, where } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, serverTimestamp, getDocs, where, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { HABIT_DEFINITIONS } from '@/lib/types';
 import { errorEmitter } from '@/lib/error-emitter';
@@ -90,6 +90,8 @@ export function ManageStudentsClient() {
   };
   
   const addStudent = (newStudentData: Omit<Student, 'id' | 'habits' | 'avatarUrl' | 'linkedUserUid'>) => {
+    // This function is now less likely to be used as students create their own accounts.
+    // Kept for manual creation by admin/teacher if needed.
     const initialHabits: Habit[] = Object.entries(HABIT_DEFINITIONS).map(([habitName, subHabitNames], habitIndex) => ({
       id: `${habitIndex + 1}`,
       name: habitName,
@@ -100,15 +102,21 @@ export function ManageStudentsClient() {
       })),
     }));
     
+    // Manual creation doesn't have a user UID, so we create a new doc ref
+    const studentCollectionRef = collection(db, 'students');
+    const studentDocRef = doc(studentCollectionRef);
+
     const finalData = {
       ...newStudentData,
       avatarUrl: `https://avatar.vercel.sh/${newStudentData.nisn}.png`,
       habits: initialHabits,
       createdAt: serverTimestamp(),
       lockedDates: [],
+      linkedUserUid: '', // Not linked on manual creation
+      class: newStudentData.class || '',
     };
 
-    return addDoc(collection(db, 'students'), finalData)
+    return setDoc(studentDocRef, finalData)
       .catch(async (serverError) => {
         const permissionError = new FirestorePermissionError({
           path: 'students',
@@ -136,10 +144,20 @@ export function ManageStudentsClient() {
       });
   }
 
-  const deleteStudent = (studentId: string) => {
+  const deleteStudent = async (studentId: string) => {
+    const batch = writeBatch(db);
     const studentDocRef = doc(db, 'students', studentId);
+    const userDocRef = doc(db, 'users', studentId); // studentId is the user UID now
+
+    // We need to check if a user profile doc exists with the same ID, and delete it too.
+    const userDocSnap = await getDoc(userDocRef);
+
+    batch.delete(studentDocRef);
+    if(userDocSnap.exists()) {
+        batch.delete(userDocRef);
+    }
     
-    return deleteDoc(studentDocRef)
+    return batch.commit()
       .catch(async (serverError) => {
         const permissionError = new FirestorePermissionError({
           path: studentDocRef.path,
@@ -173,21 +191,11 @@ export function ManageStudentsClient() {
   const handleDialogSave = async (studentData: Omit<Student, 'id' | 'habits' | 'avatarUrl' | 'linkedUserUid'>) => {
     try {
       if (selectedStudent) {
-        if (studentData.nisn && studentData.nisn !== selectedStudent.nisn) {
-            const nisnQuery = query(collection(db, 'students'), where('nisn', '==', studentData.nisn));
-            const nisnSnapshot = await getDocs(nisnQuery);
-            if (!nisnSnapshot.empty) {
-                throw new Error(`NISN ${studentData.nisn} sudah digunakan oleh siswa lain.`);
-            }
-        }
+        // Edit existing student
         await updateStudent(selectedStudent.id, studentData);
         toast({ title: "Sukses", description: "Data siswa berhasil diperbarui." });
       } else {
-        const nisnQuery = query(collection(db, 'students'), where('nisn', '==', studentData.nisn));
-        const nisnSnapshot = await getDocs(nisnQuery);
-        if (!nisnSnapshot.empty) {
-          throw new Error(`NISN ${studentData.nisn} sudah digunakan oleh siswa lain.`);
-        }
+        // Add new student (manual admin creation)
         await addStudent(studentData);
         toast({ title: "Sukses", description: `Siswa ${studentData.name} berhasil ditambahkan.` });
       }
@@ -220,18 +228,21 @@ export function ManageStudentsClient() {
   };
 
   const handleDeleteStudent = (student: Student) => {
-    deleteStudent(student.id).then(() => {
-        toast({
-            title: "Siswa Dihapus",
-            description: `Data untuk ${student.name} telah dihapus.`,
+    // We should show a confirmation dialog before deleting
+    if (confirm(`Apakah Anda yakin ingin menghapus data siswa ${student.name}? Tindakan ini juga akan menghapus akun pengguna terkait dan tidak dapat diurungkan.`)) {
+        deleteStudent(student.id).then(() => {
+            toast({
+                title: "Siswa Dihapus",
+                description: `Data untuk ${student.name} telah dihapus.`,
+            });
+        }).catch((error: any) => {
+            toast({
+                variant: "destructive",
+                title: "Gagal Menghapus",
+                description: error.message,
+            });
         });
-    }).catch((error: any) => {
-         toast({
-            variant: "destructive",
-            title: "Gagal Menghapus",
-            description: error.message,
-          });
-    });
+    }
   }
 
   const filteredStudents = students.filter(student => {
@@ -331,7 +342,7 @@ export function ManageStudentsClient() {
                                 Tertaut
                             </Badge>
                         ) : (
-                            <Badge variant="secondary">Belum Tertaut</Badge>
+                            <Badge variant="secondary">Dibuat Manual</Badge>
                         )}
                     </TableCell>
                     <TableCell>

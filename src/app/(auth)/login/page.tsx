@@ -62,13 +62,25 @@ export default function LoginPage() {
           // Role-based redirection logic
           if (userProfile.role === 'admin') {
             router.push('/admin/dashboard');
-          } else {
+          } else if (userProfile.role === 'siswa') {
+            // For students, check if they have a class set
+            const studentDocRef = doc(db, 'students', user.uid);
+            const studentDoc = await getDoc(studentDocRef);
+            if (studentDoc.exists() && studentDoc.data().class) {
+                router.push('/dashboard');
+            } else {
+                router.push('/pilih-kelas');
+            }
+          }
+          else {
             router.push('/dashboard');
           }
         } else {
-          // This case is for users that exist in Auth but not in Firestore.
-          // This might happen for students who haven't completed their profile/class selection.
-          router.push('/link-account'); 
+          // This case should ideally not happen with the new signup flow
+          // but as a fallback, we direct to login.
+          setErrorMessage("Profil pengguna tidak ditemukan. Silakan hubungi admin.");
+          setIsSubmitting(false);
+          return;
         }
         router.refresh();
       }
@@ -79,7 +91,6 @@ export default function LoginPage() {
         setErrorMessage('Terjadi kesalahan yang tidak diketahui. Silakan coba lagi nanti.');
         console.error(error);
       }
-    } finally {
       setIsSubmitting(false);
     }
   };
