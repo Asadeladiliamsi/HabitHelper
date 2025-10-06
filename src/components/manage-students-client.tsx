@@ -17,8 +17,6 @@ import { LinkParentDialog } from './link-parent-dialog';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, serverTimestamp, getDocs, where, writeBatch, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { HABIT_DEFINITIONS } from '@/lib/types';
-import { errorEmitter } from '@/lib/error-emitter';
-import { FirestorePermissionError } from '@/lib/errors';
 
 export function ManageStudentsClient() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -42,12 +40,11 @@ export function ManageStudentsClient() {
       (snapshot) => {
         const studentData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
         setStudents(studentData);
-        if (!unsubParents) setLoading(false); // Only stop loading if both are done
+        setLoading(false);
       },
       (error) => {
-        console.error("Permission error fetching students:", error)
-        const permissionError = new FirestorePermissionError({ path: 'students', operation: 'list' });
-        errorEmitter.emit('permission-error', permissionError);
+        console.error("Error fetching students:", error)
+        toast({ variant: 'destructive', title: 'Gagal Memuat Siswa', description: 'Tidak dapat mengambil data siswa dari database.' });
         setLoading(false);
       }
     );
@@ -56,13 +53,10 @@ export function ManageStudentsClient() {
       (snapshot) => {
         const parentData = snapshot.docs.map(doc => doc.data() as UserProfile);
         setParentUsers(parentData);
-        setLoading(false);
       },
       (error) => {
-        console.error("Permission error fetching parents:", error)
-        const permissionError = new FirestorePermissionError({ path: 'users', operation: 'list' });
-        errorEmitter.emit('permission-error', permissionError);
-        setLoading(false);
+        console.error("Error fetching parents:", error)
+        toast({ variant: 'destructive', title: 'Gagal Memuat Orang Tua', description: 'Tidak dapat mengambil data orang tua dari database.' });
       }
     );
 
@@ -70,7 +64,7 @@ export function ManageStudentsClient() {
       unsubStudents();
       unsubParents();
     };
-  }, []);
+  }, [toast]);
 
   const handleAddStudent = () => {
     setSelectedStudent(null);
@@ -111,32 +105,14 @@ export function ManageStudentsClient() {
       class: newStudentData.class || '',
     };
 
-    return setDoc(studentDocRef, finalData)
-      .catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
-          path: 'students',
-          operation: 'create',
-          requestResourceData: finalData,
-        });
-        errorEmitter.emit('permission-error', permissionError);
-        throw serverError;
-      });
+    return setDoc(studentDocRef, finalData);
   };
 
   const updateStudent = (studentId: string, updatedData: Partial<Omit<Student, 'id' | 'habits' | 'avatarUrl' | 'linkedUserUid'>>) => {
     const studentDocRef = doc(db, 'students', studentId);
     const finalData = { ...updatedData, updatedAt: serverTimestamp() };
     
-    return updateDoc(studentDocRef, finalData)
-      .catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
-          path: studentDocRef.path,
-          operation: 'update',
-          requestResourceData: finalData,
-        });
-        errorEmitter.emit('permission-error', permissionError);
-        throw serverError;
-      });
+    return updateDoc(studentDocRef, finalData);
   }
 
   const deleteStudent = async (studentId: string) => {
@@ -151,15 +127,7 @@ export function ManageStudentsClient() {
         batch.delete(userDocSnap.docs[0].ref);
     }
     
-    return batch.commit()
-      .catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
-          path: studentDocRef.path,
-          operation: 'delete',
-        });
-        errorEmitter.emit('permission-error', permissionError);
-        throw serverError;
-      });
+    return batch.commit();
   };
   
   const linkParentToStudent = (studentId: string, parentId: string) => {
@@ -170,16 +138,7 @@ export function ManageStudentsClient() {
     const studentDocRef = doc(db, 'students', studentId);
     const updateData = { parentId, parentName: parent.name };
 
-    return updateDoc(studentDocRef, updateData)
-      .catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
-          path: studentDocRef.path,
-          operation: 'update',
-          requestResourceData: updateData,
-        });
-        errorEmitter.emit('permission-error', permissionError);
-        throw serverError;
-      });
+    return updateDoc(studentDocRef, updateData);
   };
 
   const handleDialogSave = async (studentData: Omit<Student, 'id' | 'habits' | 'avatarUrl' | 'linkedUserUid'>) => {
@@ -196,7 +155,7 @@ export function ManageStudentsClient() {
        toast({
         variant: "destructive",
         title: "Gagal Menyimpan",
-        description: "Gagal menyimpan data siswa. Periksa izin Anda dan coba lagi.",
+        description: `Gagal menyimpan data siswa: ${error.message}`,
       });
     }
   };
@@ -214,7 +173,7 @@ export function ManageStudentsClient() {
          toast({
             variant: "destructive",
             title: "Gagal Menautkan",
-            description: "Gagal menautkan orang tua. Periksa izin Anda dan coba lagi.",
+            description: `Gagal menautkan orang tua: ${error.message}`,
           });
       }
   };
@@ -230,7 +189,7 @@ export function ManageStudentsClient() {
             toast({
                 variant: "destructive",
                 title: "Gagal Menghapus",
-                description: "Gagal menghapus siswa. Periksa izin Anda dan coba lagi.",
+                description: `Gagal menghapus siswa: ${error.message}`,
             });
         });
     }

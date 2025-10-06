@@ -3,7 +3,6 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from '@/contexts/theme-provider';
 import { FirebaseProvider } from '@/firebase/provider';
-import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 
 
 export const metadata: Metadata = {
@@ -30,7 +29,6 @@ export default function RootLayout({
           enableSystem
         >
           <FirebaseProvider>
-            <FirebaseErrorListener />
             {children}
           </FirebaseProvider>
           <Toaster />

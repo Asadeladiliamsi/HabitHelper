@@ -29,8 +29,6 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { collection, addDoc, serverTimestamp, onSnapshot, query, doc, writeBatch, setDoc, getDocs, where, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Student, UserProfile } from '@/lib/types';
-import { FirestorePermissionError } from '@/lib/errors';
-import { errorEmitter } from '@/lib/error-emitter';
 
 const formSchema = z.object({
   studentId: z.string().min(1, 'Siswa harus dipilih.'),
@@ -150,16 +148,7 @@ export function DataInputClient({ studentId: lockedStudentId, allowedHabits }: D
       timestamp: serverTimestamp()
     };
 
-    const docRef = doc(collection(db, 'habit_entries'));
-    
-    setDoc(docRef, newEntry).catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
-          path: docRef.path,
-          operation: 'create',
-          requestResourceData: newEntry,
-        });
-        errorEmitter.emit('permission-error', permissionError);
-      });
+    await addDoc(collection(db, 'habit_entries'), newEntry);
   };
 
   const onSubmit = async (data: FormValues) => {
@@ -182,12 +171,12 @@ export function DataInputClient({ studentId: lockedStudentId, allowedHabits }: D
         score: 4,
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to save habit entry:", error);
       toast({
         variant: "destructive",
         title: "Gagal Menyimpan",
-        description: "Terjadi kesalahan saat menyimpan data. Silakan coba lagi.",
+        description: `Terjadi kesalahan saat menyimpan data: ${error.message}`,
       });
     } finally {
       setIsLoading(false);
