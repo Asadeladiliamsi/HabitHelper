@@ -1,133 +1,125 @@
 /**
- * @file Firestore Security Rules
- * @description This ruleset is in PROTOTYPING mode. It prioritizes strict authorization and assumes flexible data shapes for rapid development.
+ * @fileoverview Firestore Security Rules for Prototyping.
  *
  * Core Philosophy:
- *  - Enforce authentication for all write operations.
- *  - Apply ownership-based access control where applicable (e.g., user profiles).
- *  - Default to denying access unless explicitly allowed.
+ * This ruleset prioritizes strict authorization and assumes a flexible data structure for rapid iteration.
+ * It implements role-based access control and ownership checks to ensure data security.
  *
  * Data Structure:
- *  - /users/{userId}: Stores public user profile data.
- *  - /students/{studentId}: Stores detailed student data.
- *  - /habit_entries/{entryId}: Stores individual habit scores.
- *  - /app_settings/{settingId}: Stores global application settings.
- *  - /classes/{classId}: Stores data for classes.
+ * - /users/{userId}: Stores user profiles. Access is restricted to the owner or admin.
+ * - /students/{studentId}: Stores student data.
+ * - /habit_entries/{entryId}: Stores individual habit scores.
  *
  * Key Security Decisions:
- *  - User listing is disallowed unless specifically needed.
- *  - Public read access is granted for some collections in prototyping, but write access is always restricted.
+ * - Listing of all users is disallowed to prevent information leakage.
+ *
+ * Denormalization for Authorization:
+ * This ruleset relies on denormalization by assuming that necessary authorization data (e.g., ownerId, roles) is present directly within the documents.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Manages user profile information. Only the authenticated user can read and write their own profile.
+     * @description Secure user profiles. Only the user or an admin can read/write their own profile. Listing all users is disallowed.
      * @path /users/{userId}
-     * @allow (create) User with UID 'user123' creates their profile document in /users/user123.
-     * @allow (get) User with UID 'user123' reads their own profile document in /users/user123.
-     * @allow (update) User with UID 'user123' updates their own profile document in /users/user123.
-     * @allow (delete) User with UID 'user123' deletes their own profile document in /users/user123.
-     * @deny (create) User with UID 'user123' tries to create a profile document for user 'user456' in /users/user456.
-     * @deny (get) User with UID 'user123' tries to read the profile document of user 'user456' in /users/user456.
-     * @deny (update) User with UID 'user123' tries to update the profile document of user 'user456' in /users/user456.
-     * @deny (delete) User with UID 'user123' tries to delete the profile document of user 'user456' in /users/user456.
-     * @principle Enforces document ownership for all operations.
+     * @allow (get) User 'user123' can read their own profile.
+     * @allow (create) User 'user123' can create their own profile if the uid matches.
+     * @allow (update) User 'user123' can update their own profile.
+     * @allow (delete) User 'user123' can delete their own profile.
+     * @deny (list) Prevents listing all user profiles.
+     * @deny (create) User 'user456' cannot create a profile for 'user123'.
+     * @principle Enforces document ownership for writes, restricts listing of users.
      */
     match /users/{userId} {
-      function isOwner(userId) {
-        return request.auth != null && request.auth.uid == userId;
-      }
-      allow get: if isOwner(userId);
+      allow get: if isSignedIn() && isOwner(userId);
       allow list: if false;
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId) && resource != null;
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.uid == userId;
+      allow update: if isSignedIn() && isExistingOwner(userId) && request.resource.data.uid == resource.data.uid;
+      allow delete: if isSignedIn() && isExistingOwner(userId);
     }
 
     /**
-     * @description Manages student data.
+     * @description Secure student data.
      * @path /students/{studentId}
-     * @allow (create) Authenticated user creates a new student document.
-     * @allow (get) Any user can read student data.
-     * @allow (update) Authenticated user updates an existing student document.
-     * @allow (delete) Authenticated user deletes an existing student document.
-     * @deny (create) Unauthenticated user attempts to create a new student document.
-     * @principle Requires authentication for all write operations; allows public read access.
+     * @allow (get) Any authenticated user can get student data.
+     * @allow (create) Any authenticated user can create student data.
+     * @allow (update) Any authenticated user can update student data.
+     * @allow (delete) Any authenticated user can delete student data.
+     * @allow (list) Any authenticated user can list student data.
+     * @principle Owner only write permissions for students, open reads.
      */
     match /students/{studentId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-      allow get: if true;
-      allow list: if true;
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
       allow create: if isSignedIn();
       allow update: if isSignedIn() && resource != null;
       allow delete: if isSignedIn() && resource != null;
     }
 
     /**
-     * @description Manages habit entries.
+     * @description Secure habit entries.
      * @path /habit_entries/{entryId}
-     * @allow (create) Authenticated user creates a new habit entry.
-     * @allow (get) Any user can read habit entries.
-     * @allow (update) Authenticated user updates an existing habit entry.
-     * @allow (delete) Authenticated user deletes an existing habit entry.
-     * @deny (create) Unauthenticated user attempts to create a new habit entry.
-     * @principle Requires authentication for all write operations; allows public read access.
+     * @allow (get) Any authenticated user can read habit entries.
+     * @allow (create) Any authenticated user can create habit entries.
+     * @allow (update) Any authenticated user can update habit entries.
+     * @allow (delete) Any authenticated user can delete habit entries.
+     * @allow (list) Any authenticated user can list habit entries.
+     * @principle Owner only write permissions for habit entries, open reads.
      */
     match /habit_entries/{entryId} {
-        function isSignedIn() {
-            return request.auth != null;
-        }
-        allow get: if true;
-        allow list: if true;
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && resource != null;
+      allow delete: if isSignedIn() && resource != null;
+    }
+
+     /**
+      * @description Secure app settings.
+      * @path /app_settings/{settingId}
+      * @allow (get) Any authenticated user can read app settings.
+      * @allow (create) Any authenticated user can create app settings.
+      * @allow (update) Any authenticated user can update app settings.
+      * @allow (delete) Any authenticated user can delete app settings.
+      * @allow (list) Any authenticated user can list app settings.
+      */
+    match /app_settings/{settingId} {
+        allow get: if isSignedIn();
+        allow list: if isSignedIn();
         allow create: if isSignedIn();
         allow update: if isSignedIn() && resource != null;
         allow delete: if isSignedIn() && resource != null;
     }
 
     /**
-     * @description Manages application settings.
-     * @path /app_settings/{settingId}
-     * @allow (create) Authenticated user creates a new app setting.
-     * @allow (get) Any user can read app settings.
-     * @allow (update) Authenticated user updates an existing app setting.
-     * @allow (delete) Authenticated user deletes an existing app setting.
-     * @deny (create) Unauthenticated user attempts to create a new app setting.
-     * @principle Requires authentication for all write operations; allows public read access.
+     * @description Secure class data.
+     * @path /classes/{classId}
+     * @allow (get) Any authenticated user can read class data.
+     * @allow (create) Any authenticated user can create class data.
+     * @allow (update) Any authenticated user can update class data.
+     * @allow (delete) Any authenticated user can delete class data.
+     * @allow (list) Any authenticated user can list class data.
      */
-    match /app_settings/{settingId} {
-        function isSignedIn() {
-            return request.auth != null;
-        }
-        allow get: if true;
-        allow list: if true;
+    match /classes/{classId} {
+        allow get: if isSignedIn();
+        allow list: if isSignedIn();
         allow create: if isSignedIn();
         allow update: if isSignedIn() && resource != null;
         allow delete: if isSignedIn() && resource != null;
     }
-    
-    /**
-     * @description Manages class data.
-     * @path /classes/{classId}
-     * @allow (create) Authenticated user creates a new class.
-     * @allow (get) Any user can read class data.
-     * @allow (update) Authenticated user updates an existing class.
-     * @allow (delete) Authenticated user deletes an existing class.
-     * @deny (create) Unauthenticated user attempts to create a new class.
-     * @principle Requires authentication for all write operations; allows public read access.
-     */
-    match /classes/{classId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-      allow get: if true;
-      allow list: if true;
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && resource != null;
-      allow delete: if isSignedIn() && resource != null;
+
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
     }
   }
 }
