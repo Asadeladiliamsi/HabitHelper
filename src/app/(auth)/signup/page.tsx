@@ -145,7 +145,7 @@ export default function SignupPage() {
       if (data.role === 'siswa') {
         router.replace('/pilih-kelas');
       } else {
-        router.replace('/loading');
+        router.replace('/dashboard');
       }
 
     } catch (error: any) {

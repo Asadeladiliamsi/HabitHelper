@@ -47,8 +47,8 @@ export default function LoginPage() {
         title: 'Login Berhasil',
         description: 'Mengarahkan ke aplikasi...',
       });
-      // Redirect to a central loading/routing page
-      router.replace('/loading');
+      // Redirect to the main dashboard page, which will handle role-based rendering/redirection.
+      router.replace('/dashboard');
     } catch (error: any) {
       if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
         setErrorMessage('Email atau kata sandi yang Anda masukkan salah. Mohon periksa kembali.');

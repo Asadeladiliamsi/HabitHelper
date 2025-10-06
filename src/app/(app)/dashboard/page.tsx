@@ -4,6 +4,7 @@ import { Loader2 } from 'lucide-react';
 import { DashboardClient } from '@/components/dashboard-client';
 import { SiswaDashboardClient } from '@/components/siswa-dashboard-client';
 import { OrangTuaDashboardClient } from '@/components/orang-tua-dashboard-client';
+import { AdminDashboardClient } from '@/components/admin-dashboard-client';
 import { useAuth } from '@/firebase/provider';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -56,11 +57,8 @@ export default function DashboardPage() {
          setChildStudents(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Student)));
          setDataLoading(false);
        });
-    } else if (role === 'admin') {
-      router.replace('/admin/dashboard');
-      return; // Stop further execution
     }
-    else { // 'guru'
+    else { // 'guru' or 'admin'
       setDataLoading(false);
     }
     
@@ -113,7 +111,7 @@ export default function DashboardPage() {
     case 'guru':
       return <DashboardClient />;
     case 'admin':
-      return null; // The useEffect above handles the redirect
+      return <AdminDashboardClient />;
     case 'orangtua':
       return <OrangTuaDashboardClient userProfile={userProfile} childStudents={childStudents} habitEntries={habitEntries} />;
     case 'siswa':

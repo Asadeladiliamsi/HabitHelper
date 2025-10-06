@@ -76,12 +76,12 @@ export default function AppLayout({
     );
   }
   
-  const dashboardPath = userProfile.role === 'admin' ? '/admin/dashboard' : '/dashboard';
+  const dashboardPath = '/dashboard';
 
   const navItems = [
     { href: dashboardPath, icon: LayoutDashboard, label: 'Dasbor', roles: ['guru', 'siswa', 'admin', 'orangtua'] },
     // Guru's main data entry page
-    { href: '/input-data', icon: Database, label: 'Input Data', roles: ['guru', 'admin'] },
+    { href: '/input-data', icon: Database, label: 'Input Data & Manajemen', roles: ['guru', 'admin'] },
     // Student's dedicated data entry page
     { href: '/input-data-siswa', icon: PencilLine, label: 'Input Data Harian', roles: ['siswa'] },
     // Parent's data entry page

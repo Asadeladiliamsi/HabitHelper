@@ -153,7 +153,13 @@ function TeacherCodeManager() {
     };
 
     useEffect(() => {
-        fetchTeacherCode();
+        const settingsDocRef = doc(db, 'app_settings', 'registration');
+        const unsubscribe = onSnapshot(settingsDocRef, (docSnap) => {
+          const code = docSnap.exists() ? docSnap.data().teacherCode : '';
+          setTeacherCode(code);
+          setCode(code);
+        });
+        return () => unsubscribe();
     }, []);
 
 
@@ -162,7 +168,6 @@ function TeacherCodeManager() {
         try {
             const settingsDocRef = doc(db, 'app_settings', 'registration');
             await setDoc(settingsDocRef, { teacherCode: code });
-            setTeacherCode(code);
             toast({
                 title: 'Sukses',
                 description: 'Kode registrasi guru berhasil diperbarui.',
