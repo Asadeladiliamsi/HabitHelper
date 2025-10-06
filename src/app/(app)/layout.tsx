@@ -51,7 +51,7 @@ export default function AppLayout({
     router.push('/login');
   };
   
-  if (loading || !user) {
+  if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -61,6 +61,8 @@ export default function AppLayout({
   }
    
   if (!userProfile) {
+     // If still loading, show a spinner. If not loading and still no profile, it might be an error state
+     // but the dashboard or login page will handle the final redirection.
     return (
         <div className="flex h-screen items-center justify-center">
             <div className="flex flex-col items-center gap-4">

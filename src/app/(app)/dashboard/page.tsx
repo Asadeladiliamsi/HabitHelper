@@ -32,12 +32,13 @@ export default function DashboardPage() {
     let unsubStudents: () => void = () => {};
     const role = userProfile.role;
 
+    setDataLoading(true);
     if (role === 'siswa') {
-      const q = query(collection(db, 'students'), where('linkedUserUid', '==', userProfile.uid));
-      unsubStudents = onSnapshot(q, (snapshot) => {
-        if (!snapshot.empty) {
-          const studentDoc = snapshot.docs[0];
-          setStudentData({ id: studentDoc.id, ...studentDoc.data() } as Student);
+      // The student document ID is the same as the user UID
+      const studentDocRef = doc(db, 'students', userProfile.uid);
+      unsubStudents = onSnapshot(studentDocRef, (doc) => {
+        if (doc.exists()) {
+          setStudentData({ id: doc.id, ...doc.data() } as Student);
         } else {
           setStudentData(null);
         }
@@ -49,9 +50,7 @@ export default function DashboardPage() {
          setChildStudents(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Student)));
          setDataLoading(false);
        });
-    } else if (role === 'guru' || role === 'admin') {
-      setDataLoading(false); // Guru/Admin data is handled in their specific components
-    } else {
+    } else { // 'guru' or 'admin'
       setDataLoading(false);
     }
     
@@ -60,26 +59,31 @@ export default function DashboardPage() {
   }, [profileLoading, userProfile]);
 
   useEffect(() => {
+    if (!userProfile) return;
+
     let studentIds: string[] = [];
-    if (studentData) { // For 'siswa'
-        studentIds = [studentData.id];
-    } else if (childStudents.length > 0) { // For 'orangtua'
+    // The studentId for a 'siswa' is their own UID
+    if (userProfile.role === 'siswa') {
+        studentIds = [userProfile.uid];
+    } else if (userProfile.role === 'orangtua') {
         studentIds = childStudents.map(s => s.id);
     }
-    
-    if (studentIds.length === 0) {
-        if (!dataLoading) setHabitEntries([]);
-        return;
-    }
 
-    const q = query(collection(db, 'habit_entries'), where('studentId', 'in', studentIds));
-    const unsubEntries = onSnapshot(q, (snapshot) => {
+    if (studentIds.length === 0) {
+      if (userProfile.role === 'guru' || userProfile.role === 'admin' || !dataLoading) {
+        setHabitEntries([]);
+      }
+      return;
+    }
+    
+    const entriesQuery = query(collection(db, 'habit_entries'), where('studentId', 'in', studentIds));
+    const unsubEntries = onSnapshot(entriesQuery, (snapshot) => {
         setHabitEntries(snapshot.docs.map(d => ({ ...d.data(), id: d.id, date: (d.data().date as Timestamp).toDate() } as HabitEntry)));
     });
 
     return () => unsubEntries();
 
-  }, [studentData, childStudents, dataLoading]);
+  }, [userProfile, childStudents, dataLoading]);
 
 
   if (profileLoading || dataLoading) {
@@ -100,6 +104,16 @@ export default function DashboardPage() {
         </div>
      );
   }
+  
+  if (userProfile.role === 'siswa' && studentData && !studentData.class) {
+      router.replace('/pilih-kelas');
+      return (
+        <div className="flex h-full w-full items-center justify-center">
+            <p>Anda belum memilih kelas. Mengalihkan...</p>
+        </div>
+      );
+  }
+
 
   switch (userProfile.role) {
     case 'guru':
