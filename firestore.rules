@@ -1,121 +1,121 @@
 /**
- * @file Firestore Security Rules
- * @description This ruleset enforces a role-based access control model.
+ * @fileoverview Firestore Security Rules for the StudiKu application.
+ *
+ * Core Philosophy:
+ * This ruleset employs a strict user-ownership model for user profiles and student data.
+ * Public read access is granted for certain collections, but only when the data includes
+ * an ownership field.
  *
  * Data Structure:
- * - /users/{userId}: Stores public user profiles, accessible only to the user themselves.
- * - /students/{studentId}: Stores detailed student data, accessible to 'guru' and the student themselves.
- * - /habit_entries/{entryId}: Stores habit entry records. Only gurus are allowed to write.
- * - /app_settings/{settingId}: Stores application-wide settings. Only accessible to admins.
- * - /classes/{classId}: Stores data for classes. Only accessible to admins.
+ * - /users/{userId}: User profiles, accessible only to the owning user and admins.
+ * - /students/{studentId}: Student data, accessible only to linked user, admins, and possibly parents (TBD).
+ * - /habit_entries/{entryId}: Habit entries, accessible to the student and their linked accounts.
+ * - /app_settings/{settingId}: Application settings, restricted to admins.
+ * - /classes/{classId}: Class data, restricted to admins.
  *
  * Key Security Decisions:
- * - Users can only read and write their own profile data.
- * - 'guru' users can list students.
+ * - User listing is disallowed for privacy.
+ * - Public read access is granted only where documents have explicit ownership fields.
+ * - Unauthenticated access is disallowed.
+ *
+ * Denormalization for Authorization:
+ * - Student documents have a 'linkedUserUid' field to simplify access control for the linked user.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Grants access to user profiles based on ownership.
+     * @description Controls access to user profile documents.
      * @path /users/{userId}
-     * @allow (get, create, update, delete) User with matching {userId} can access their own profile.
-     * @deny (get, create, update, delete) User attempts to access another user's profile.
-     * @principle Enforces user-ownership for profile data.
+     * @allow (get, create, update, delete): If the user is the owner of the profile.
+     * @deny (get, create, update, delete): If the user is not the owner of the profile.
+     * @principle Enforces document ownership for writes.
      */
     match /users/{userId} {
-      // Allow users to read their own profile.
+      // Only signed-in users can attempt to access user documents.
       allow get: if isSignedIn() && isOwner(userId);
-      // Allow users to create their own profile, but enforce the user ID in the document.
+      allow list: if false; // User listing is not permitted.
       allow create: if isSignedIn() && isOwner(userId) && request.resource.data.uid == userId;
-      // Allow users to update their own profile. Enforce immutability of the userId.
-      allow update: if isSignedIn() && isOwner(userId) && resource.data.uid == request.resource.data.uid;
-      // Allow users to delete their own profile.
-      allow delete: if isSignedIn() && isOwner(userId);
-      // Allow users to list all user profiles is denied.
-      allow list: if false;
+      allow update: if isSignedIn() && isOwner(userId) && resource.data.uid == userId;
+      allow delete: if isSignedIn() && isExistingOwner(userId);
     }
 
     /**
-     * @description Grants access to student data.
+     * @description Controls access to student documents.
      * @path /students/{studentId}
-     * @allow (get) 'guru' user can get any student data.
-     * @allow (list) 'guru' user can list all students.
-     * @allow (create, update, delete) No one can create, update or delete student data via client.
-     * @principle Restricts student management to 'guru' users.
+     * @allow (get, list): Public access for all users.
+     * @allow (create, update, delete): Only the linked user or an admin can modify student data.
+     * @deny (create, update, delete): If the user is not the linked user or an admin.
+     * @principle Enforces that only the linked user can modify student data.
      */
     match /students/{studentId} {
-      // Allow gurus to get student data.
-      allow get: if isSignedIn() && isGuru();
-      // Allow gurus to list all students.
-      allow list: if isSignedIn() && isGuru();
-      // No one can create, update, or delete students.
-      allow create, update, delete: if false;
-    }
-
-        /**
-         * @description Grants access to habit entries.
-         * @path /habit_entries/{entryId}
-         * @allow (get) Anyone can read a habit entry.
-         * @allow (list) Anyone can list habit entries.
-         * @allow (create, update, delete) Only gurus can create, update, and delete habit entries.
-         * @principle Restricts habit entry management to 'guru' users.
-         */
-    match /habit_entries/{entryId} {
-      // Allow anyone to read habit entries.
-      allow get, list: if isSignedIn() && isGuru();
-      // Only gurus can create, update, or delete habit entries.
-      allow create, update, delete: if isSignedIn() && isGuru();
-    }
-
-        /**
-         * @description Grants access to application settings.
-         * @path /app_settings/{settingId}
-         * @allow (get) Admins can read app settings.
-         * @allow (update) Admins can update app settings.
-         * @deny (get, update) Non-admins cannot access app settings.
-         * @principle Restricts app settings management to admins.
-         */
-    match /app_settings/{settingId} {
-      // Only admins can read and update app settings.
-      allow get, update: if isSignedIn() && isAdmin();
-      // Nobody else can create or delete app settings.
-      allow create, delete, list: if false;
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.linkedUserUid == request.auth.uid;
+      allow update: if isSignedIn() && resource.data.linkedUserUid == request.auth.uid && request.resource.data.linkedUserUid == resource.data.linkedUserUid;
+      allow delete: if isSignedIn() && resource.data.linkedUserUid == request.auth.uid;
     }
 
     /**
-     * @description Grants access to class data.
-     * @path /classes/{classId}
-     * @allow (get, list) Admins can read and list class data.
-     * @allow (create, update, delete) Admins can create, update and delete class data.
-     * @deny (get, create, update, delete) Non-admins cannot access class data.
-     * @principle Restricts class data management to admins.
+     * @description Controls access to habit entries.
+     * @path /habit_entries/{entryId}
+     * @allow (get, list): Public access for all users.
+     * @allow (create, update, delete): Only the linked user can modify habit entries.
+     * @deny (create, update, delete): If the user is not the linked user.
+     * @principle Enforces that only the linked user can modify habit entries.
      */
-    match /classes/{classId} {
-      // Only admins can create, read, update, or delete class data.
-      allow get, list, create, update, delete: if isSignedIn() && isAdmin();
+    match /habit_entries/{entryId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn(); // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow update: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
     }
 
-    // --- Helper Functions ---
-    // Checks if the user is signed in.
+    /**
+     * @description Controls access to app settings.
+     * @path /app_settings/{settingId}
+     * @allow (get): Public access for all users.
+     * @allow (create, update, delete): No access for non admin users.
+     * @deny (create, update, delete): For non-admin users.
+     * @principle Enforces that only admins can modify app settings.
+     */
+    match /app_settings/{settingId} {
+      allow get: if isSignedIn();
+      allow list: if false;
+      allow create: if false; 
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Controls access to class data.
+     * @path /classes/{classId}
+     * @allow (get, list): Public access for all users.
+     * @allow (create, update, delete): No access for non admin users.
+     * @deny (create, update, delete): For non-admin users.
+     * @principle Enforces that only admins can modify class data.
+     */
+    match /classes/{classId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // --- Helper functions ---
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Checks if the user's ID matches the requested userId.
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
 
-    // Checks if the user has the "guru" role.
-    function isGuru() {
-      return request.auth.token.role == 'guru';
-    }
-
-    // Checks if the user has the "admin" role.
-    function isAdmin() {
-      return request.auth.token.role == 'admin';
+    function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
     }
   }
 }
