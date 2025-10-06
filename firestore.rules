@@ -1,88 +1,134 @@
 /**
- * @file Firestore Security Rules
- * @description This ruleset prioritizes ease of use for teachers by granting them full access to all collections. Other user roles (students, parents) are not considered in this prototyping phase.
+ * @fileoverview Firestore Security Rules for the "Cerdik" application.
  *
- * @dataStructure
- *   - /users/{userId}: Stores public user profiles, accessible to all.
- *   - /students/{studentId}: Stores student data.
- *   - /habit_entries/{entryId}: Stores habit entry data.
- *   - /app_settings/{settingId}: Stores global app settings.
- *   - /classes/{classId}: Stores class data.
+ * Core Philosophy:
+ * This ruleset employs a strict user-ownership model for user profiles and students data, ensuring that only authenticated users can access their own data.
+ * Habit entries are open for public read, while write access is restricted based on the 'recordedBy' field matching the authenticated user.
+ * Global application settings are secured for administrative access only.
  *
- * @keySecurityDecisions
- *   - Teachers (users with the "guru" role) have full read and write access to all collections. This simplifies initial development and testing.
- *   - The ruleset does NOT perform extensive data validation in this prototype phase, focusing instead on role-based access control.
+ * Data Structure:
+ * - /users/{userId}: Stores public user profiles, accessible only by the user themselves.
+ * - /students/{studentId}: Stores detailed student data, accessible only by the linked user.
+ * - /habit_entries/{entryId}: Stores habit entry data. Public read, write restricted to the user who recorded the entry.
+ * - /app_settings/{settingId}: Stores global application settings. Write access is denied.
+ * - /classes/{classId}: Stores data for each class. Write access is denied.
+ *
+ * Key Security Decisions:
+ * - User profiles can only be read and written by the authenticated user with a matching UID.
+ * - Students data can only be read and written by the linked user.
+ * - Habit entries are publicly readable, but write access is restricted to the user who recorded the entry.
+ * - Listing of documents is generally allowed for owner-only collections.
+ * - Global application settings are read-only to prevent unauthorized modifications.
+ *
+ * Denormalization for Authorization:
+ * The `linkedUserUid` field in the `/students/{studentId}` document is used to directly link a student's data to a user's profile, avoiding the need for complex queries.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Manages access to user profiles. Teachers can read and write all user profiles.
+     * @description Controls access to user profile documents.
      * @path /users/{userId}
-     * @allow (get, list, create, update, delete) User with role 'guru'.
-     * @deny (create, update, delete) User without role 'guru'.
-     * @principle Grants full access to teachers.
+     * @allow (get, create, update, delete, list) if the request is made by the user with matching {userId}.
+     * @deny (get, create, update, delete, list) if the request is made by a different user or unauthenticated user.
+     * @principle Enforces document ownership for writes and restricts access to a user's own data tree.
      */
     match /users/{userId} {
-      allow get, list: if isSignedIn() && isGuru();
-      allow create, update, delete: if isSignedIn() && isGuru();
+      function isOwner(userId) {
+        return request.auth != null && request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.uid == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.uid == resource.data.uid;
+      allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Manages access to student data. Teachers can read and write all student data.
+     * @description Controls access to student documents.
      * @path /students/{studentId}
-     * @allow (get, list, create, update, delete) User with role 'guru'.
-     * @deny (create, update, delete) User without role 'guru'.
-     * @principle Grants full access to teachers.
+     * @allow (get, create, update, delete, list) if the request is made by the linked user.
+     * @deny (get, create, update, delete, list) if the request is made by a different user or an unauthenticated user.
+     * @principle Enforces document ownership for writes and restricts access to a user's own data tree via `linkedUserUid`.
      */
     match /students/{studentId} {
-      allow get, list: if isSignedIn() && isGuru();
-      allow create, update, delete: if isSignedIn() && isGuru();
+      function isLinkedUser(linkedUserUid) {
+        return request.auth != null && request.auth.uid == linkedUserUid;
+      }
+
+      function isExistingLinkedUser(linkedUserUid) {
+          return isLinkedUser(linkedUserUid) && resource != null;
+      }
+
+      allow get: if isLinkedUser(resource.data.linkedUserUid);
+      allow list: if false;
+      allow create: if isLinkedUser(request.resource.data.linkedUserUid);
+      allow update: if isExistingLinkedUser(resource.data.linkedUserUid) && request.resource.data.linkedUserUid == resource.data.linkedUserUid;
+      allow delete: if isExistingLinkedUser(resource.data.linkedUserUid);
     }
 
     /**
-     * @description Manages access to habit entry data. Teachers can read and write all habit entries.
+     * @description Controls access to habit entry documents.
      * @path /habit_entries/{entryId}
-     * @allow (get, list, create, update, delete) User with role 'guru'.
-     * @deny (create, update, delete) User without role 'guru'.
-     * @principle Grants full access to teachers.
+     * @allow (get, list) to everyone.
+     * @allow (create, update, delete) only if the `recordedBy` field matches the authenticated user.
+     * @deny (create, update, delete) if the `recordedBy` field does not match the authenticated user or if the user is unauthenticated.
+     * @principle Public read access with owner-only writes based on the `recordedBy` field.
      */
     match /habit_entries/{entryId} {
-      allow get, list: if isSignedIn() && isGuru();
-      allow create, update, delete: if isSignedIn() && isGuru();
+        function isSignedIn() {
+            return request.auth != null;
+        }
+
+        function isRecorder(recordedBy) {
+            return isSignedIn() && request.auth.uid == recordedBy;
+        }
+
+        function isExistingRecorder(recordedBy) {
+          return isRecorder(recordedBy) && resource != null;
+        }
+
+        allow get: if true;
+        allow list: if true;
+        allow create: if isRecorder(request.resource.data.recordedBy);
+        allow update: if isExistingRecorder(resource.data.recordedBy) && request.resource.data.recordedBy == resource.data.recordedBy;
+        allow delete: if isExistingRecorder(resource.data.recordedBy);
     }
 
     /**
-     * @description Manages access to app settings. Teachers can read and write all app settings.
+     * @description Controls access to app settings documents.
      * @path /app_settings/{settingId}
-     * @allow (get, list, create, update, delete) User with role 'guru'.
-     * @deny (create, update, delete) User without role 'guru'.
-     * @principle Grants full access to teachers.
+     * @allow (get, list) to everyone.
+     * @deny (create, update, delete) to everyone.
+     * @principle Restricts write access to app settings.
      */
     match /app_settings/{settingId} {
-      allow get, list: if isSignedIn() && isGuru();
-      allow create, update, delete: if isSignedIn() && isGuru();
+      allow get: if true;
+      allow list: if true;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
     }
 
     /**
-     * @description Manages access to class data. Teachers can read and write all class data.
+     * @description Controls access to class data documents.
      * @path /classes/{classId}
-     * @allow (get, list, create, update, delete) User with role 'guru'.
-     * @deny (create, update, delete) User without role 'guru'.
-     * @principle Grants full access to teachers.
+     * @allow (get, list) to everyone.
+     * @deny (create, update, delete) to everyone.
+     * @principle Restricts write access to class data.
      */
     match /classes/{classId} {
-      allow get, list: if isSignedIn() && isGuru();
-      allow create, update, delete: if isSignedIn() && isGuru();
-    }
-
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isGuru() {
-      return request.auth.token.role == 'guru';
+      allow get: if true;
+      allow list: if true;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
     }
   }
 }
