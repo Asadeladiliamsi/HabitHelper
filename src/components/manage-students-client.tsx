@@ -14,7 +14,7 @@ import { translations } from '@/lib/translations';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { LinkParentDialog } from './link-parent-dialog';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, serverTimestamp, getDocs, where, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, serverTimestamp, getDocs, where, writeBatch, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { HABIT_DEFINITIONS } from '@/lib/types';
 import { errorEmitter } from '@/lib/error-emitter';
@@ -42,13 +42,13 @@ export function ManageStudentsClient() {
       (snapshot) => {
         const studentData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
         setStudents(studentData);
+        if (!unsubParents) setLoading(false); // Only stop loading if both are done
       },
       (error) => {
-        const permissionError = new FirestorePermissionError({
-          path: 'students',
-          operation: 'list',
-        });
+        console.error("Permission error fetching students:", error)
+        const permissionError = new FirestorePermissionError({ path: 'students', operation: 'list' });
         errorEmitter.emit('permission-error', permissionError);
+        setLoading(false);
       }
     );
 
@@ -59,10 +59,8 @@ export function ManageStudentsClient() {
         setLoading(false);
       },
       (error) => {
-        const permissionError = new FirestorePermissionError({
-          path: 'users',
-          operation: 'list',
-        });
+        console.error("Permission error fetching parents:", error)
+        const permissionError = new FirestorePermissionError({ path: 'users', operation: 'list' });
         errorEmitter.emit('permission-error', permissionError);
         setLoading(false);
       }
@@ -90,8 +88,6 @@ export function ManageStudentsClient() {
   };
   
   const addStudent = (newStudentData: Omit<Student, 'id' | 'habits' | 'avatarUrl' | 'linkedUserUid'>) => {
-    // This function is now less likely to be used as students create their own accounts.
-    // Kept for manual creation by admin/teacher if needed.
     const initialHabits: Habit[] = Object.entries(HABIT_DEFINITIONS).map(([habitName, subHabitNames], habitIndex) => ({
       id: `${habitIndex + 1}`,
       name: habitName,
@@ -102,7 +98,6 @@ export function ManageStudentsClient() {
       })),
     }));
     
-    // Manual creation doesn't have a user UID, so we create a new doc ref
     const studentCollectionRef = collection(db, 'students');
     const studentDocRef = doc(studentCollectionRef);
 
@@ -112,7 +107,7 @@ export function ManageStudentsClient() {
       habits: initialHabits,
       createdAt: serverTimestamp(),
       lockedDates: [],
-      linkedUserUid: '', // Not linked on manual creation
+      linkedUserUid: '',
       class: newStudentData.class || '',
     };
 
@@ -124,7 +119,7 @@ export function ManageStudentsClient() {
           requestResourceData: finalData,
         });
         errorEmitter.emit('permission-error', permissionError);
-        throw new Error("Gagal menambahkan siswa karena masalah izin.");
+        throw serverError;
       });
   };
 
@@ -140,21 +135,20 @@ export function ManageStudentsClient() {
           requestResourceData: finalData,
         });
         errorEmitter.emit('permission-error', permissionError);
-        throw new Error("Gagal memperbarui data siswa karena masalah izin.");
+        throw serverError;
       });
   }
 
   const deleteStudent = async (studentId: string) => {
     const batch = writeBatch(db);
     const studentDocRef = doc(db, 'students', studentId);
-    const userDocRef = doc(db, 'users', studentId); // studentId is the user UID now
+    const userDocRef = doc(db, 'users', studentId);
 
-    // We need to check if a user profile doc exists with the same ID, and delete it too.
-    const userDocSnap = await getDoc(userDocRef);
+    const userDocSnap = await getDocs(query(collection(db, 'users'), where('uid', '==', studentId)));
 
     batch.delete(studentDocRef);
-    if(userDocSnap.exists()) {
-        batch.delete(userDocRef);
+    if(!userDocSnap.empty) {
+        batch.delete(userDocSnap.docs[0].ref);
     }
     
     return batch.commit()
@@ -164,7 +158,7 @@ export function ManageStudentsClient() {
           operation: 'delete',
         });
         errorEmitter.emit('permission-error', permissionError);
-        throw new Error("Tidak dapat menghapus siswa karena masalah izin.");
+        throw serverError;
       });
   };
   
@@ -184,18 +178,16 @@ export function ManageStudentsClient() {
           requestResourceData: updateData,
         });
         errorEmitter.emit('permission-error', permissionError);
-        throw new Error("Gagal menautkan orang tua karena masalah izin.");
+        throw serverError;
       });
   };
 
   const handleDialogSave = async (studentData: Omit<Student, 'id' | 'habits' | 'avatarUrl' | 'linkedUserUid'>) => {
     try {
       if (selectedStudent) {
-        // Edit existing student
         await updateStudent(selectedStudent.id, studentData);
         toast({ title: "Sukses", description: "Data siswa berhasil diperbarui." });
       } else {
-        // Add new student (manual admin creation)
         await addStudent(studentData);
         toast({ title: "Sukses", description: `Siswa ${studentData.name} berhasil ditambahkan.` });
       }
@@ -204,7 +196,7 @@ export function ManageStudentsClient() {
        toast({
         variant: "destructive",
         title: "Gagal Menyimpan",
-        description: error.message,
+        description: "Gagal menyimpan data siswa. Periksa izin Anda dan coba lagi.",
       });
     }
   };
@@ -222,13 +214,12 @@ export function ManageStudentsClient() {
          toast({
             variant: "destructive",
             title: "Gagal Menautkan",
-            description: error.message,
+            description: "Gagal menautkan orang tua. Periksa izin Anda dan coba lagi.",
           });
       }
   };
 
   const handleDeleteStudent = (student: Student) => {
-    // We should show a confirmation dialog before deleting
     if (confirm(`Apakah Anda yakin ingin menghapus data siswa ${student.name}? Tindakan ini juga akan menghapus akun pengguna terkait dan tidak dapat diurungkan.`)) {
         deleteStudent(student.id).then(() => {
             toast({
@@ -239,7 +230,7 @@ export function ManageStudentsClient() {
             toast({
                 variant: "destructive",
                 title: "Gagal Menghapus",
-                description: error.message,
+                description: "Gagal menghapus siswa. Periksa izin Anda dan coba lagi.",
             });
         });
     }
