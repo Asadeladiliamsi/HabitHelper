@@ -29,7 +29,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export default function PilihKelasPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, userProfile, loading: authLoading } = useAuth();
   const [studentData, setStudentData] = useState<Student | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
@@ -39,7 +39,6 @@ export default function PilihKelasPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    // Fetch available classes from Firestore
     const classesRef = collection(db, 'classes');
     
     const unsubClasses = onSnapshot(classesRef, (snapshot) => {
@@ -47,7 +46,6 @@ export default function PilihKelasPage() {
 
         const unlockedClassNames = PREDEFINED_KELAS_LIST.filter(className => {
             const classDoc = allFetchedClasses.find(c => c.id === className);
-            // If class is not in firestore, it's considered unlocked. If it is, check isLocked status.
             return !classDoc || !classDoc.isLocked;
         });
 
@@ -56,7 +54,7 @@ export default function PilihKelasPage() {
     }, (error) => {
         console.error("Error fetching classes: ", error);
         setClassesLoading(false);
-        setAvailableClasses(PREDEFINED_KELAS_LIST); // Fallback to all classes on error
+        setAvailableClasses(PREDEFINED_KELAS_LIST); 
     });
 
     return () => unsubClasses();
@@ -64,13 +62,17 @@ export default function PilihKelasPage() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user) {
+    if (!user || !userProfile) {
       router.replace('/login');
       return;
     }
     
+    if (userProfile.role !== 'siswa') {
+      router.replace('/dashboard');
+      return;
+    }
+    
     setDataLoading(true);
-    // Student doc ID is now the same as user UID
     const studentDocRef = doc(db, 'students', user.uid);
     const unsub = onSnapshot(studentDocRef, (doc) => {
       if (doc.exists()) {
@@ -80,8 +82,6 @@ export default function PilihKelasPage() {
           router.replace('/dashboard');
         }
       } else {
-        // This might happen if the student doc wasn't created on signup, which would be an error.
-        // Or if the user is not a student.
         setStudentData(null);
         toast({
             variant: "destructive",
@@ -94,7 +94,7 @@ export default function PilihKelasPage() {
     });
 
     return () => unsub();
-  }, [user, authLoading, router, toast]);
+  }, [user, userProfile, authLoading, router, toast]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -127,7 +127,7 @@ export default function PilihKelasPage() {
         title: 'Kelas Berhasil Disimpan',
         description: `Anda telah terdaftar di kelas ${data.kelas}. Mengalihkan ke dasbor...`,
       });
-      router.push('/dashboard');
+      // Refresh to trigger re-evaluation in /loading page
       router.refresh(); 
     } catch (error: any) {
       toast({
@@ -135,7 +135,6 @@ export default function PilihKelasPage() {
         title: 'Gagal Menyimpan Kelas',
         description: `Terjadi kesalahan: ${error.message}`,
       });
-    } finally {
       setIsSubmitting(false);
     }
   };
